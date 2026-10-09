@@ -1,0 +1,872 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w121175909",
+        "country_code": "ca",
+        "wikidata": "Q820763",
+        "feature_tags": {
+          "website": "https://vancouver.ca/",
+          "addr:housenumber": "453",
+          "phone": "+1-604-873-7000",
+          "amenity": "townhall",
+          "opening_hours": "Mo-Fr 08:30-17:00",
+          "addr:street": "West 12th Avenue",
+          "wikipedia": "en:Vancouver City Hall",
+          "addr:postcode": "V5Y 1V4",
+          "building": "government",
+          "addr:city": "Vancouver",
+          "height": "14",
+          "townhall:type": "city"
+        },
+        "categories": [
+          "townhall",
+          "government building"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.11395730777639,
+          49.260889109224436
+        ]
+      },
+      "bbox": [
+        -123.1139573077764,
+        49.260889109224436,
+        -123.1139573077764,
+        49.260889109224436
+      ],
+      "center": [
+        -123.11395730777639,
+        49.260889109224436
+      ],
+      "place_name": "Vancouver City Hall, 453 West 12th Avenue, Vancouver, British Columbia V5Y 1V4, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 1,
+      "id": "poi.59421599",
+      "text": "Vancouver City Hall",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1030238911",
+          "id": "address.20497319",
+          "text": "West 12th Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "West 12th Avenue"
+        },
+        {
+          "ref": "osm:w121175909",
+          "id": "postal_code.4436087",
+          "text": "V5Y 1V4",
+          "country_code": "ca",
+          "text_en": "V5Y 1V4"
+        },
+        {
+          "ref": "osm:n3248641069",
+          "id": "place.4913577",
+          "text": "Cambie Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Cambie Village"
+        },
+        {
+          "ref": "osm:r11656695",
+          "id": "municipal_district.151605",
+          "text": "Mount Pleasant",
+          "country_code": "ca",
+          "wikidata": "Q6922863",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Mount Pleasant"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "language": "en",
+      "text_en": "Vancouver City Hall",
+      "language_en": "en",
+      "place_name_en": "Vancouver City Hall, 453 West 12th Avenue, Vancouver, British Columbia V5Y 1V4, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n3666684801",
+        "country_code": "ca",
+        "feature_tags": {
+          "historic": "monument",
+          "start_date": "1986"
+        },
+        "categories": [
+          "monument"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.11473958194256,
+          49.26055356833752
+        ]
+      },
+      "bbox": [
+        -123.11473958194256,
+        49.26055356833752,
+        -123.11473958194256,
+        49.26055356833752
+      ],
+      "center": [
+        -123.11473958194256,
+        49.26055356833752
+      ],
+      "place_name": "Vancouver City Hall, Cambie Village, Vancouver, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 1,
+      "id": "poi.55240258",
+      "text": "Vancouver City Hall",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1030238911",
+          "id": "address.20497319",
+          "text": "West 12th Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "West 12th Avenue"
+        },
+        {
+          "ref": "osm:n13302187376",
+          "id": "postal_code.3216126",
+          "text": "V5Z 3Y8",
+          "country_code": "ca",
+          "text_en": "V5Z 3Y8"
+        },
+        {
+          "ref": "osm:n3248641069",
+          "id": "place.4913577",
+          "text": "Cambie Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Cambie Village"
+        },
+        {
+          "ref": "osm:r11656695",
+          "id": "municipal_district.151605",
+          "text": "Mount Pleasant",
+          "country_code": "ca",
+          "wikidata": "Q6922863",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Mount Pleasant"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancouver City Hall",
+      "place_name_en": "Vancouver City Hall, Cambie Village, Vancouver, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n3666684399",
+        "country_code": "ca",
+        "wikidata": "Q27919857",
+        "feature_tags": {
+          "historic": "memorial",
+          "memorial": "statue"
+        },
+        "categories": [
+          "memorial"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.11393693089485,
+          49.2611940151207
+        ]
+      },
+      "bbox": [
+        -123.11393693089487,
+        49.2611940151207,
+        -123.11393693089487,
+        49.2611940151207
+      ],
+      "center": [
+        -123.11393693089485,
+        49.2611940151207
+      ],
+      "place_name": "George Vancouver, Cambie Village, Vancouver, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.799411,
+      "id": "poi.55240257",
+      "text": "George Vancouver",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1030238911",
+          "id": "address.20497319",
+          "text": "West 12th Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "West 12th Avenue"
+        },
+        {
+          "ref": "osm:w121175909",
+          "id": "postal_code.4436087",
+          "text": "V5Y 1V4",
+          "country_code": "ca",
+          "text_en": "V5Y 1V4"
+        },
+        {
+          "ref": "osm:n3248641069",
+          "id": "place.4913577",
+          "text": "Cambie Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Cambie Village"
+        },
+        {
+          "ref": "osm:r11656695",
+          "id": "municipal_district.151605",
+          "text": "Mount Pleasant",
+          "country_code": "ca",
+          "wikidata": "Q6922863",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Mount Pleasant"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "George Vancouver",
+      "place_name_en": "George Vancouver, Cambie Village, Vancouver, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:r17286359",
+        "country_code": "ca",
+        "wikidata": "Q7914187",
+        "feature_tags": {
+          "addr:province": "BC",
+          "operator:type": "public",
+          "wheelchair": "yes",
+          "website": "https://www.vch.ca/en/location/vancouver-general-hospital",
+          "amenity": "hospital",
+          "operator:wikidata": "Q7914144",
+          "emergency": "yes",
+          "type": "multipolygon",
+          "addr:postcode": "V5Z 0A2",
+          "operator": "Vancouver Coastal Health",
+          "addr:city": "Vancouver",
+          "healthcare": "hospital",
+          "addr:housenumber": "899",
+          "ref": "VGH",
+          "phone": "+1-604-875-4111",
+          "healthcare:speciality": "emergency",
+          "addr:street": "West 12th Avenue",
+          "wikipedia": "en:Vancouver General Hospital",
+          "beds": "1900"
+        },
+        "categories": [
+          "hospital"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.12266923526369,
+          49.261842768078964
+        ]
+      },
+      "bbox": [
+        -123.12266923526367,
+        49.261842768078964,
+        -123.12266923526367,
+        49.261842768078964
+      ],
+      "center": [
+        -123.12266923526369,
+        49.261842768078964
+      ],
+      "place_name": "Vancouver General Hospital, 803 West 12th Avenue, Vancouver, British Columbia V5Z 0A2, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.772811,
+      "id": "poi.66501568",
+      "text": "Vancouver General Hospital",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1030238911",
+          "id": "address.20497319",
+          "text": "West 12th Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "West 12th Avenue"
+        },
+        {
+          "ref": "osm:w123824614",
+          "id": "postal_code.4618576",
+          "text": "V5Z 0A2",
+          "country_code": "ca",
+          "text_en": "V5Z 0A2"
+        },
+        {
+          "ref": "osm:n3248641069",
+          "id": "place.4913577",
+          "text": "Cambie Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Cambie Village"
+        },
+        {
+          "ref": "osm:r11670619",
+          "id": "municipal_district.151601",
+          "text": "Fairview",
+          "country_code": "ca",
+          "wikidata": "Q5430770",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Fairview"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancouver General Hospital",
+      "place_name_en": "Vancouver General Hospital, 803 West 12th Avenue, Vancouver, British Columbia V5Z 0A2, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w123824617",
+        "country_code": "ca",
+        "feature_tags": {
+          "access": "yes",
+          "leisure": "playground"
+        },
+        "categories": [
+          "playground"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.12111259456935,
+          49.25989670242915
+        ]
+      },
+      "bbox": [
+        -123.12111259456933,
+        49.25989670242915,
+        -123.12111259456933,
+        49.25989670242915
+      ],
+      "center": [
+        -123.12111259456935,
+        49.25989670242915
+      ],
+      "place_name": "Vancouver General Hospital Playground, Cambie Village, Vancouver, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.645707,
+      "id": "poi.55828411",
+      "text": "Vancouver General Hospital Playground",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1202209173",
+          "id": "address.27836259",
+          "text": "West 13th Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "West 13th Avenue"
+        },
+        {
+          "ref": "caGeonames:V5Z 4E4",
+          "id": "postal_code.4096318",
+          "text": "V5Z 4E4",
+          "country_code": "ca",
+          "text_en": "V5Z 4E4"
+        },
+        {
+          "ref": "osm:n3248641069",
+          "id": "place.4913577",
+          "text": "Cambie Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Cambie Village"
+        },
+        {
+          "ref": "osm:r11670619",
+          "id": "municipal_district.151601",
+          "text": "Fairview",
+          "country_code": "ca",
+          "wikidata": "Q5430770",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Fairview"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancouver General Hospital Playground",
+      "place_name_en": "Vancouver General Hospital Playground, Cambie Village, Vancouver, Canada"
+    }
+  ],
+  "query": [
+    "vancouver",
+    "city",
+    "hall",
+    "453",
+    "west",
+    "12th",
+    "avenue",
+    "vancouver",
+    "british",
+    "columbia",
+    "canada"
+  ],
+  "attribution": "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>"
+}

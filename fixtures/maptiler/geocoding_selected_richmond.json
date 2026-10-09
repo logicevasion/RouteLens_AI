@@ -1,0 +1,630 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:r2221097",
+        "country_code": "ca",
+        "wikidata": "Q236837",
+        "kind": "admin_area",
+        "place_designation": "city",
+        "place_type_name": [
+          "municipality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.1374143064022,
+          49.16316819009346
+        ]
+      },
+      "bbox": [
+        -123.30997053533794,
+        49.08603962999402,
+        -122.95721713453533,
+        49.26194232300576
+      ],
+      "center": [
+        -123.1374143064022,
+        49.16316819009346
+      ],
+      "place_name": "Richmond, British Columbia, Canada",
+      "place_type": [
+        "municipality"
+      ],
+      "relevance": 1,
+      "id": "municipality.268624",
+      "text": "Richmond",
+      "place_type_name": [
+        "municipality"
+      ],
+      "context": [
+        {
+          "ref": "osm:w852475165",
+          "id": "major_landform.3708144",
+          "text": "Lulu Island",
+          "country_code": "ca",
+          "wikidata": "Q1477379",
+          "feature_tags": {
+            "place": "island",
+            "wikipedia": "en:Lulu Island"
+          },
+          "categories": [
+            "island"
+          ],
+          "text_en": "Lulu Island"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Richmond",
+      "place_name_en": "Richmond, British Columbia, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w504946312",
+        "country_code": "ca",
+        "wikidata": "Q22378667",
+        "feature_tags": {
+          "place": "island"
+        },
+        "categories": [
+          "island"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.14460244351415,
+          49.20246480431218
+        ]
+      },
+      "bbox": [
+        -123.14859911799431,
+        49.20095721788789,
+        -123.14105439931153,
+        49.2043505281258
+      ],
+      "center": [
+        -123.14460244351415,
+        49.20246480431218
+      ],
+      "place_name": "Richmond Island, British Columbia, Canada",
+      "place_type": [
+        "major_landform"
+      ],
+      "relevance": 0.940741,
+      "id": "major_landform.3668523",
+      "text": "Richmond Island",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Richmond Island",
+      "place_name_en": "Richmond Island, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w303392063",
+        "country_code": "ca",
+        "kind": "street",
+        "place_type_name": [
+          "address"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.03117502480745,
+          49.30296569652552
+        ]
+      },
+      "bbox": [
+        -123.03215134888887,
+        49.30296569652552,
+        -123.03117502480745,
+        49.30327591714452
+      ],
+      "center": [
+        -123.03117502480745,
+        49.30296569652552
+      ],
+      "place_name": "Richmond Street, North Vancouver, British Columbia V7J 1B2, Canada",
+      "place_type": [
+        "address"
+      ],
+      "relevance": 0.940741,
+      "id": "address.20759731",
+      "text": "Richmond Street",
+      "place_type_name": [
+        "address"
+      ],
+      "context": [
+        {
+          "ref": "caGeonames:V7J 1B2",
+          "id": "postal_code.3947415",
+          "text": "V7J 1B2",
+          "country_code": "ca",
+          "text_en": "V7J 1B2"
+        },
+        {
+          "ref": "osm:n1249540878",
+          "id": "place.5104832",
+          "text": "North Vancouver City",
+          "country_code": "ca",
+          "kind": "virtual_place",
+          "text_en": "North Vancouver City"
+        },
+        {
+          "ref": "osm:r1524229",
+          "id": "municipality.266625",
+          "text": "North Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q2000891",
+          "kind": "admin_area",
+          "place_designation": "town",
+          "text_en": "North Vancouver"
+        },
+        {
+          "ref": "osm:w398106649",
+          "id": "major_landform.3880707",
+          "text": "Seymour River",
+          "country_code": "ca",
+          "wikidata": "Q280026",
+          "feature_tags": {
+            "waterway": "river"
+          },
+          "categories": [
+            "river"
+          ],
+          "language": "en",
+          "text_en": "Seymour River",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Richmond Street",
+      "place_name_en": "Richmond Street, North Vancouver, British Columbia V7J 1B2, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w1182565173",
+        "country_code": "ca",
+        "kind": "street",
+        "place_type_name": [
+          "address"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.89865780621767,
+          49.22517277310503
+        ]
+      },
+      "bbox": [
+        -122.90008564124905,
+        49.21650451023535,
+        -122.89380300790071,
+        49.23466092059343
+      ],
+      "center": [
+        -122.89865780621767,
+        49.22517277310503
+      ],
+      "place_name": "Richmond Street, New Westminster, British Columbia V3L 3K4, Canada",
+      "place_type": [
+        "address"
+      ],
+      "relevance": 0.940741,
+      "id": "address.27645645",
+      "text": "Richmond Street",
+      "place_type_name": [
+        "address"
+      ],
+      "context": [
+        {
+          "ref": "caGeonames:V3L 3K4",
+          "id": "postal_code.4530708",
+          "text": "V3L 3K4",
+          "country_code": "ca",
+          "text_en": "V3L 3K4"
+        },
+        {
+          "ref": "osm:n2490551534",
+          "id": "place.4908163",
+          "text": "Victory Heights",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Victory Heights"
+        },
+        {
+          "ref": "osm:r11687633",
+          "id": "municipal_district.151586",
+          "text": "McBride Sapperton",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "text_en": "McBride Sapperton"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Richmond Street",
+      "place_name_en": "Richmond Street, New Westminster, British Columbia V3L 3K4, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w26345654",
+        "country_code": "ca",
+        "kind": "street",
+        "place_type_name": [
+          "address"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.18125233054161,
+          49.1283354629452
+        ]
+      },
+      "bbox": [
+        -123.19179844111206,
+        49.1283354629452,
+        -123.18125233054162,
+        49.12835060110192
+      ],
+      "center": [
+        -123.18125233054161,
+        49.1283354629452
+      ],
+      "place_name": "Richmond Street, Richmond, British Columbia V7E 1S8, Canada",
+      "place_type": [
+        "address"
+      ],
+      "relevance": 0.940741,
+      "id": "address.23129040",
+      "text": "Richmond Street",
+      "place_type_name": [
+        "address"
+      ],
+      "context": [
+        {
+          "ref": "caGeonames:V7E 1S8",
+          "id": "postal_code.4676463",
+          "text": "V7E 1S8",
+          "country_code": "ca",
+          "text_en": "V7E 1S8"
+        },
+        {
+          "ref": "osm:n12520139945",
+          "id": "place.5043677",
+          "text": "Steveston Village",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "Steveston Village"
+        },
+        {
+          "ref": "osm:r11681639",
+          "id": "municipal_district.151679",
+          "text": "Steveston",
+          "country_code": "ca",
+          "wikidata": "Q996469",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Steveston"
+        },
+        {
+          "ref": "osm:r2221097",
+          "id": "municipality.268624",
+          "text": "Richmond",
+          "country_code": "ca",
+          "wikidata": "Q236837",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Richmond"
+        },
+        {
+          "ref": "osm:w852475165",
+          "id": "major_landform.3708144",
+          "text": "Lulu Island",
+          "country_code": "ca",
+          "wikidata": "Q1477379",
+          "feature_tags": {
+            "place": "island",
+            "wikipedia": "en:Lulu Island"
+          },
+          "categories": [
+            "island"
+          ],
+          "text_en": "Lulu Island"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Richmond Street",
+      "place_name_en": "Richmond Street, Richmond, British Columbia V7E 1S8, Canada"
+    }
+  ],
+  "query": [
+    "richmond",
+    "british",
+    "columbia",
+    "canada"
+  ],
+  "attribution": "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>"
+}

@@ -1,0 +1,855 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5324559457",
+        "country_code": "ca",
+        "wikidata": "Q3722244",
+        "feature_tags": {
+          "addr:province": "BC",
+          "wheelchair": "yes",
+          "internet_access": "no",
+          "operator:wikidata": "Q130560850",
+          "public_transport": "station",
+          "operator": "BC Rapid Transit Company",
+          "addr:city": "Burnaby",
+          "network": "Translink",
+          "addr:housenumber": "4401",
+          "subway": "yes",
+          "network:wikidata": "Q1142140",
+          "station": "subway",
+          "railway:ref": "MT",
+          "addr:street": "Beresford Street",
+          "railway": "station",
+          "wikipedia": "en:Metrotown station",
+          "start_date": "1986-01-03"
+        },
+        "categories": [
+          "railway station",
+          "train station",
+          "station"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00389461219311,
+          49.22585243517196
+        ]
+      },
+      "bbox": [
+        -123.0038946121931,
+        49.22585243517196,
+        -123.0038946121931,
+        49.22585243517196
+      ],
+      "center": [
+        -123.00389461219311,
+        49.22585243517196
+      ],
+      "place_name": "Metrotown, 4401 Beresford Street, Burnaby, British Columbia V5H 4J5, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 1,
+      "id": "poi.59399883",
+      "text": "Metrotown",
+      "place_type_name": [
+        null
+      ],
+      "matching_text": "Metrotown Station",
+      "matching_place_name": "Metrotown Station, 4401 Beresford Street, Burnaby, British Columbia V5H 4J5, Canada",
+      "context": [
+        {
+          "ref": "osm:w1112384104",
+          "id": "address.21676319",
+          "text": "Beresford Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Beresford Street"
+        },
+        {
+          "ref": "caGeonames:V5H 4J5",
+          "id": "postal_code.3655287",
+          "text": "V5H 4J5",
+          "country_code": "ca",
+          "text_en": "V5H 4J5"
+        },
+        {
+          "ref": "osm:r20678353",
+          "id": "municipal_district.153177",
+          "text": "Metrotown",
+          "country_code": "ca",
+          "wikidata": "Q3954717",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Metrotown"
+        },
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Metrotown",
+      "place_name_en": "Metrotown, 4401 Beresford Street, Burnaby, British Columbia V5H 4J5, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w94065534",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "wheelchair": "yes",
+          "public_transport": "station",
+          "level": "0",
+          "amenity": "bus_station"
+        },
+        "categories": [
+          "bus station",
+          "station"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00296935047402,
+          49.226064827650625
+        ]
+      },
+      "bbox": [
+        -123.00296935047399,
+        49.226064827650625,
+        -123.00296935047399,
+        49.226064827650625
+      ],
+      "center": [
+        -123.00296935047402,
+        49.226064827650625
+      ],
+      "place_name": "Metrotown Station, Metrotown Station Loop, Burnaby, British Columbia V5H 4J5, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 1,
+      "id": "poi.65983416",
+      "text": "Metrotown Station",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1162236472",
+          "id": "address.25588097",
+          "text": "Metrotown Station Loop",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Metrotown Station Loop"
+        },
+        {
+          "ref": "caGeonames:V5H 4J5",
+          "id": "postal_code.3655287",
+          "text": "V5H 4J5",
+          "country_code": "ca",
+          "text_en": "V5H 4J5"
+        },
+        {
+          "ref": "osm:r20678353",
+          "id": "municipal_district.153177",
+          "text": "Metrotown",
+          "country_code": "ca",
+          "wikidata": "Q3954717",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Metrotown"
+        },
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Metrotown Station",
+      "place_name_en": "Metrotown Station, Metrotown Station Loop, Burnaby, British Columbia V5H 4J5, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n25325833",
+        "country_code": "ca",
+        "wikidata": "Q1956306",
+        "feature_tags": {
+          "wheelchair": "yes",
+          "network:short": "TL",
+          "subway": "yes",
+          "operator:wikidata": "Q130560850",
+          "station": "subway",
+          "railway:ref": "GM",
+          "public_transport": "station",
+          "railway": "station",
+          "wikipedia": "en:Gilmore station (SkyTrain)",
+          "operator": "BC Rapid Transit Company LTD.",
+          "network": "Translink",
+          "start_date": "2002-08-31"
+        },
+        "categories": [
+          "railway station",
+          "train station",
+          "station"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.01341813057661,
+          49.26500435941998
+        ]
+      },
+      "bbox": [
+        -123.01341813057661,
+        49.26500435941998,
+        -123.01341813057661,
+        49.26500435941998
+      ],
+      "center": [
+        -123.01341813057661,
+        49.26500435941998
+      ],
+      "place_name": "Gilmore, 2186 Gilmore Avenue, Burnaby, British Columbia V5C 6A8, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.888889,
+      "id": "poi.64840249",
+      "text": "Gilmore",
+      "place_type_name": [
+        null
+      ],
+      "matching_text": "Gilmore Station",
+      "matching_place_name": "Gilmore Station, 2186 Gilmore Avenue, Burnaby, British Columbia V5C 6A8, Canada",
+      "context": [
+        {
+          "ref": "osm:w1044395149",
+          "id": "address.24376962",
+          "text": "Gilmore Avenue",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Gilmore Avenue"
+        },
+        {
+          "ref": "osm:n13621743683",
+          "id": "postal_code.4481356",
+          "text": "V5C 6A8",
+          "country_code": "ca",
+          "text_en": "V5C 6A8"
+        },
+        {
+          "ref": "osm:n9112679470",
+          "id": "place.4984930",
+          "text": "West Central Valley",
+          "country_code": "ca",
+          "kind": "place",
+          "place_designation": "neighbourhood",
+          "text_en": "West Central Valley"
+        },
+        {
+          "ref": "osm:r21063594",
+          "id": "municipal_district.153198",
+          "text": "Brentwood",
+          "country_code": "ca",
+          "wikidata": "Q4961788",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Brentwood"
+        },
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Gilmore",
+      "place_name_en": "Gilmore, 2186 Gilmore Avenue, Burnaby, British Columbia V5C 6A8, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5536532054",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "shelter": "no",
+          "bench": "yes",
+          "bin": "yes",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "10",
+          "ref": "60195",
+          "tactile_paving": "yes",
+          "lit": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00489071756601,
+          49.22635932911302
+        ]
+      },
+      "bbox": [
+        -123.00489071756601,
+        49.22635932911302,
+        -123.00489071756601,
+        49.22635932911302
+      ],
+      "center": [
+        -123.00489071756601,
+        49.22635932911302
+      ],
+      "place_name": "Metrotown Station Bay 10, 4405 Central Boulevard, Burnaby, British Columbia V5H 2Y4, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.885185,
+      "id": "poi.65354602",
+      "text": "Metrotown Station Bay 10",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1213729292",
+          "id": "address.19720886",
+          "text": "Central Boulevard",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Central Boulevard"
+        },
+        {
+          "ref": "caGeonames:V5H 2Y4",
+          "id": "postal_code.4538847",
+          "text": "V5H 2Y4",
+          "country_code": "ca",
+          "text_en": "V5H 2Y4"
+        },
+        {
+          "ref": "osm:r20678353",
+          "id": "municipal_district.153177",
+          "text": "Metrotown",
+          "country_code": "ca",
+          "wikidata": "Q3954717",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Metrotown"
+        },
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Metrotown Station Bay 10",
+      "place_name_en": "Metrotown Station Bay 10, 4405 Central Boulevard, Burnaby, British Columbia V5H 2Y4, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5123496421",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "shelter": "yes",
+          "bench": "yes",
+          "bin": "yes",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "11",
+          "ref": "60211",
+          "tactile_paving": "yes",
+          "check_date:shelter": "2025-11-17",
+          "lit": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop",
+          "departures_board": "timetable"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00419334322214,
+          49.22604577805321
+        ]
+      },
+      "bbox": [
+        -123.00419334322216,
+        49.22604577805321,
+        -123.00419334322216,
+        49.22604577805321
+      ],
+      "center": [
+        -123.00419334322214,
+        49.22604577805321
+      ],
+      "place_name": "Metrotown Station Bay 11, 4405 Central Boulevard, Burnaby, British Columbia V5H 4J1, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.885185,
+      "id": "poi.65312511",
+      "text": "Metrotown Station Bay 11",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1213729292",
+          "id": "address.19720886",
+          "text": "Central Boulevard",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Central Boulevard"
+        },
+        {
+          "ref": "caGeonames:V5H 4J1",
+          "id": "postal_code.3588125",
+          "text": "V5H 4J1",
+          "country_code": "ca",
+          "text_en": "V5H 4J1"
+        },
+        {
+          "ref": "osm:r20678353",
+          "id": "municipal_district.153177",
+          "text": "Metrotown",
+          "country_code": "ca",
+          "wikidata": "Q3954717",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Metrotown"
+        },
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Metrotown Station Bay 11",
+      "place_name_en": "Metrotown Station Bay 11, 4405 Central Boulevard, Burnaby, British Columbia V5H 4J1, Canada"
+    }
+  ],
+  "query": [
+    "metrotown",
+    "station",
+    "burnaby",
+    "british",
+    "columbia",
+    "canada"
+  ],
+  "attribution": "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>"
+}

@@ -1,0 +1,846 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n7231793765",
+        "country_code": "ca",
+        "feature_tags": {
+          "brand:wikidata": "Q1032001",
+          "addr:housenumber": "811",
+          "amenity": "post_office",
+          "brand:wikipedia": "en:Canada Post",
+          "operator:wikidata": "Q1032001",
+          "operator:wikipedia": "en:Canada Post",
+          "addr:street": "Columbia Street",
+          "addr:postcode": "V3M 1B0",
+          "brand": "Canada Post",
+          "addr:unit": "1",
+          "operator": "Canada Post",
+          "addr:city": "New Westminster"
+        },
+        "categories": [
+          "post office"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.91260227560997,
+          49.20084855801232
+        ]
+      },
+      "bbox": [
+        -122.91260227560997,
+        49.20084855801232,
+        -122.91260227560997,
+        49.20084855801232
+      ],
+      "center": [
+        -122.91260227560997,
+        49.20084855801232
+      ],
+      "place_name": "New Westminster Station, 811 Columbia Street, New Westminster, British Columbia V3M 1B0, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 1,
+      "id": "poi.65571699",
+      "text": "New Westminster Station",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1224911731",
+          "id": "address.24846022",
+          "text": "Columbia Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Columbia Street"
+        },
+        {
+          "ref": "osm:n7231793765",
+          "id": "postal_code.3503547",
+          "text": "V3M 1B0",
+          "country_code": "ca",
+          "text_en": "V3M 1B0"
+        },
+        {
+          "ref": "osm:r11687544",
+          "id": "municipal_district.151582",
+          "text": "Downtown",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "place_designation": "neighbourhood",
+          "text_en": "Downtown"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "New Westminster Station",
+      "place_name_en": "New Westminster Station, 811 Columbia Street, New Westminster, British Columbia V3M 1B0, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n1720001556",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "wheelchair": "yes",
+          "shelter": "yes",
+          "bench": "no",
+          "bin": "yes",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "10",
+          "ref": "61657",
+          "tactile_paving": "yes",
+          "lit": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.91414722800255,
+          49.20121090271642
+        ]
+      },
+      "bbox": [
+        -122.91414722800253,
+        49.20121090271642,
+        -122.91414722800253,
+        49.20121090271642
+      ],
+      "center": [
+        -122.91414722800255,
+        49.20121090271642
+      ],
+      "place_name": "New Westminster Station Bay 10, 892 Carnarvon Street, New Westminster, British Columbia V3M 0C6, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.877778,
+      "id": "poi.64938079",
+      "text": "New Westminster Station Bay 10",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1056535511",
+          "id": "address.23307995",
+          "text": "Carnarvon Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Carnarvon Street"
+        },
+        {
+          "ref": "caGeonames:V3M 0C6",
+          "id": "postal_code.4183362",
+          "text": "V3M 0C6",
+          "country_code": "ca",
+          "text_en": "V3M 0C6"
+        },
+        {
+          "ref": "osm:r11687544",
+          "id": "municipal_district.151582",
+          "text": "Downtown",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "place_designation": "neighbourhood",
+          "text_en": "Downtown"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "New Westminster Station Bay 10",
+      "place_name_en": "New Westminster Station Bay 10, 892 Carnarvon Street, New Westminster, British Columbia V3M 0C6, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5861765730",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "note": "Unloading only",
+          "wheelchair": "yes",
+          "shelter": "no",
+          "bench": "no",
+          "bin": "no",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "8",
+          "ref": "61655",
+          "tactile_paving": "yes",
+          "lit": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop",
+          "route_ref": "103"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.91344281286001,
+          49.201567548962004
+        ]
+      },
+      "bbox": [
+        -122.91344281286001,
+        49.201567548962004,
+        -122.91344281286001,
+        49.201567548962004
+      ],
+      "center": [
+        -122.91344281286001,
+        49.201567548962004
+      ],
+      "place_name": "New Westminster Station Bay 8, 817 Carnarvon Street, New Westminster, British Columbia V3M 1E9, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.877778,
+      "id": "poi.65393715",
+      "text": "New Westminster Station Bay 8",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w1056535511",
+          "id": "address.23307995",
+          "text": "Carnarvon Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "Carnarvon Street"
+        },
+        {
+          "ref": "osm:w983752641",
+          "id": "postal_code.3378698",
+          "text": "V3M 1E9",
+          "country_code": "ca",
+          "text_en": "V3M 1E9"
+        },
+        {
+          "ref": "osm:r11687544",
+          "id": "municipal_district.151582",
+          "text": "Downtown",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "place_designation": "neighbourhood",
+          "text_en": "Downtown"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "New Westminster Station Bay 8",
+      "place_name_en": "New Westminster Station Bay 8, 817 Carnarvon Street, New Westminster, British Columbia V3M 1E9, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5861765729",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "wheelchair": "yes",
+          "shelter": "yes",
+          "bench": "yes",
+          "bin": "yes",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "7",
+          "ref": "61654",
+          "tactile_paving": "yes",
+          "lit": "yes",
+          "covered": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop",
+          "route_ref": "106"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.91352830827236,
+          49.201412885733994
+        ]
+      },
+      "bbox": [
+        -122.91352830827236,
+        49.201412885733994,
+        -122.91352830827236,
+        49.201412885733994
+      ],
+      "center": [
+        -122.91352830827236,
+        49.201412885733994
+      ],
+      "place_name": "New Westminster Station Bay 7, McNeely Street, New Westminster, British Columbia V3M 1E9, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.877778,
+      "id": "poi.65393714",
+      "text": "New Westminster Station Bay 7",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w33123863",
+          "id": "address.21244046",
+          "text": "McNeely Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "McNeely Street"
+        },
+        {
+          "ref": "osm:w983752641",
+          "id": "postal_code.3378698",
+          "text": "V3M 1E9",
+          "country_code": "ca",
+          "text_en": "V3M 1E9"
+        },
+        {
+          "ref": "osm:r11687544",
+          "id": "municipal_district.151582",
+          "text": "Downtown",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "place_designation": "neighbourhood",
+          "text_en": "Downtown"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "New Westminster Station Bay 7",
+      "place_name_en": "New Westminster Station Bay 7, McNeely Street, New Westminster, British Columbia V3M 1E9, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n5861765728",
+        "country_code": "ca",
+        "feature_tags": {
+          "bus": "yes",
+          "shelter": "yes",
+          "bench": "yes",
+          "bin": "no",
+          "network:wikipedia": "en:TransLink (British Columbia)",
+          "public_transport": "platform",
+          "operator": "Coast Mountain Bus Company",
+          "network": "Translink",
+          "local_ref": "6",
+          "ref": "61653",
+          "tactile_paving": "yes",
+          "lit": "yes",
+          "network:wikidata": "Q1142140",
+          "highway": "bus_stop",
+          "route_ref": "HandyDart"
+        },
+        "categories": [
+          "bus stop",
+          "stop"
+        ],
+        "place_type_name": [
+          null
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.91338078677654,
+          49.20129436868378
+        ]
+      },
+      "bbox": [
+        -122.91338078677656,
+        49.20129436868378,
+        -122.91338078677656,
+        49.20129436868378
+      ],
+      "center": [
+        -122.91338078677654,
+        49.20129436868378
+      ],
+      "place_name": "New Westminster Station Bay 6, McNeely Street, New Westminster, British Columbia V3M 1C4, Canada",
+      "place_type": [
+        "poi"
+      ],
+      "relevance": 0.877778,
+      "id": "poi.65393608",
+      "text": "New Westminster Station Bay 6",
+      "place_type_name": [
+        null
+      ],
+      "context": [
+        {
+          "ref": "osm:w33123863",
+          "id": "address.21244046",
+          "text": "McNeely Street",
+          "country_code": "ca",
+          "kind": "street",
+          "text_en": "McNeely Street"
+        },
+        {
+          "ref": "osm:n10757802306",
+          "id": "postal_code.3438834",
+          "text": "V3M 1C4",
+          "country_code": "ca",
+          "text_en": "V3M 1C4"
+        },
+        {
+          "ref": "osm:r11687544",
+          "id": "municipal_district.151582",
+          "text": "Downtown",
+          "country_code": "ca",
+          "kind": "admin_area",
+          "place_designation": "neighbourhood",
+          "text_en": "Downtown"
+        },
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "New Westminster Station Bay 6",
+      "place_name_en": "New Westminster Station Bay 6, McNeely Street, New Westminster, British Columbia V3M 1C4, Canada"
+    }
+  ],
+  "query": [
+    "new",
+    "westminster",
+    "station",
+    "new",
+    "westminster",
+    "british",
+    "columbia",
+    "canada"
+  ],
+  "attribution": "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>"
+}

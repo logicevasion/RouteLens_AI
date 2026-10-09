@@ -1,0 +1,634 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:r11674025",
+        "country_code": "ca",
+        "wikidata": "Q1076204",
+        "kind": "admin_area",
+        "place_designation": "suburb",
+        "place_type_name": [
+          "locality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.11813659965992,
+          49.28249294135585
+        ]
+      },
+      "bbox": [
+        -123.13670352101327,
+        49.27064571044244,
+        -123.09944026172161,
+        49.29531318833886
+      ],
+      "center": [
+        -123.11813659965992,
+        49.28249294135585
+      ],
+      "place_name": "Downtown, British Columbia, Canada",
+      "place_type": [
+        "municipal_district"
+      ],
+      "relevance": 0.814815,
+      "id": "municipal_district.151618",
+      "text": "Downtown",
+      "place_type_name": [
+        "locality"
+      ],
+      "context": [
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Downtown",
+      "place_name_en": "Downtown, Vancouver, Metro Vancouver Regional District, British Columbia, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n9212938299",
+        "country_code": "ca",
+        "kind": "virtual_place",
+        "place_type_name": [
+          "locality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.16616997443526,
+          49.2503801392453
+        ]
+      },
+      "bbox": [
+        -123.1680028885603,
+        49.25013787030284,
+        -123.16433706031019,
+        49.25062240699887
+      ],
+      "center": [
+        -123.16616997443526,
+        49.2503801392453
+      ],
+      "place_name": "Vancovuer, Vancouver, Canada",
+      "place_type": [
+        "place"
+      ],
+      "relevance": 0.804527,
+      "id": "place.5107543",
+      "text": "Vancovuer",
+      "place_type_name": [
+        "locality"
+      ],
+      "context": [
+        {
+          "ref": "osm:r11671370",
+          "id": "municipal_district.151608",
+          "text": "Arbutus-Ridge",
+          "country_code": "ca",
+          "wikidata": "Q3505250",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Arbutus-Ridge"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancovuer",
+      "place_name_en": "Vancovuer, Vancouver, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:n8943324531",
+        "country_code": "ca",
+        "kind": "virtual_place",
+        "place_type_name": [
+          "locality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.03345892578363,
+          49.20788466838478
+        ]
+      },
+      "bbox": [
+        -123.03345892578363,
+        49.20788466838478,
+        -123.03345892578363,
+        49.20788466838478
+      ],
+      "center": [
+        -123.03345892578363,
+        49.20788466838478
+      ],
+      "place_name": "Vancouvert, Vancouver, Canada",
+      "place_type": [
+        "place"
+      ],
+      "relevance": 0.804527,
+      "id": "place.5133198",
+      "text": "Vancouvert",
+      "place_type_name": [
+        "locality"
+      ],
+      "context": [
+        {
+          "ref": "osm:r11673951",
+          "id": "municipal_district.151616",
+          "text": "Killarney",
+          "country_code": "ca",
+          "wikidata": "Q6407298",
+          "kind": "admin_area",
+          "place_designation": "suburb",
+          "text_en": "Killarney"
+        },
+        {
+          "ref": "osm:r1852574",
+          "id": "municipality.267545",
+          "text": "Vancouver",
+          "country_code": "ca",
+          "wikidata": "Q24639",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "language": "en",
+          "text_en": "Vancouver",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancouvert",
+      "place_name_en": "Vancouvert, Vancouver, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:r11687544",
+        "country_code": "ca",
+        "kind": "admin_area",
+        "place_designation": "neighbourhood",
+        "place_type_name": [
+          "locality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.90763951838017,
+          49.203405945073435
+        ]
+      },
+      "bbox": [
+        -122.92052518576384,
+        49.19876688663844,
+        -122.89341140538454,
+        49.21214330691827
+      ],
+      "center": [
+        -122.90763951838017,
+        49.203405945073435
+      ],
+      "place_name": "Downtown, British Columbia, Canada",
+      "place_type": [
+        "municipal_district"
+      ],
+      "relevance": 0.722222,
+      "id": "municipal_district.151582",
+      "text": "Downtown",
+      "place_type_name": [
+        "locality"
+      ],
+      "context": [
+        {
+          "ref": "osm:r1377803",
+          "id": "municipality.265532",
+          "text": "New Westminster",
+          "country_code": "ca",
+          "wikidata": "Q876122",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "New Westminster"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Downtown",
+      "place_name_en": "Downtown, New Westminster, Metro Vancouver Regional District, British Columbia, Canada"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ref": "osm:w357808526",
+        "country_code": "ca",
+        "kind": "virtual_place",
+        "place_type_name": [
+          "locality"
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00662132575087,
+          49.28237918881685
+        ]
+      },
+      "bbox": [
+        -123.01887885291023,
+        49.28121141393681,
+        -122.99436379859144,
+        49.2835469360435
+      ],
+      "center": [
+        -123.00662132575087,
+        49.28237918881685
+      ],
+      "place_name": "Vancouver, Burnaby, Canada",
+      "place_type": [
+        "place"
+      ],
+      "relevance": 0.722222,
+      "id": "place.5125523",
+      "text": "Vancouver",
+      "place_type_name": [
+        "locality"
+      ],
+      "context": [
+        {
+          "ref": "osm:r2221119",
+          "id": "municipality.268625",
+          "text": "Burnaby",
+          "country_code": "ca",
+          "wikidata": "Q244025",
+          "kind": "admin_area",
+          "place_designation": "city",
+          "text_en": "Burnaby"
+        },
+        {
+          "ref": "osm:r2218280",
+          "id": "county.24296",
+          "text": "Metro Vancouver Regional District",
+          "country_code": "ca",
+          "wikidata": "Q1061069",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Metro Vancouver Regional District",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r390867",
+          "id": "region.2109",
+          "text": "British Columbia",
+          "country_code": "ca",
+          "wikidata": "Q1973",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "British Columbia",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r15552769",
+          "id": "major_landform.4159518",
+          "text": "Burrard Peninsula",
+          "country_code": "ca",
+          "wikidata": "Q1016903",
+          "feature_tags": {
+            "natural": "peninsula",
+            "wikipedia": "en:Burrard Peninsula",
+            "type": "multipolygon"
+          },
+          "categories": [
+            "peninsula"
+          ],
+          "language": "en",
+          "text_en": "Burrard Peninsula",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:r1428125",
+          "id": "country.216",
+          "text": "Canada",
+          "country_code": "ca",
+          "wikidata": "Q16",
+          "kind": "admin_area",
+          "language": "en",
+          "text_en": "Canada",
+          "language_en": "en"
+        },
+        {
+          "ref": "osm:n36966063",
+          "id": "continental_marine.4",
+          "text": "North America",
+          "wikidata": "Q49",
+          "feature_tags": {
+            "note": "https://lists.openstreetmap.org/pipermail/talk/2019-December/083609.html",
+            "sqkm": "24709000",
+            "place": "continent",
+            "wikipedia": "en:North America",
+            "population": "528720588"
+          },
+          "categories": [
+            "continent"
+          ],
+          "language": "en",
+          "text_en": "North America",
+          "language_en": "en"
+        }
+      ],
+      "text_en": "Vancouver",
+      "place_name_en": "Vancouver, Burnaby, Canada"
+    }
+  ],
+  "query": [
+    "downtown",
+    "vancouver",
+    "vancouver",
+    "british",
+    "columbia",
+    "canada"
+  ],
+  "attribution": "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>"
+}
