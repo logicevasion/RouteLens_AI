@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 0 — Integration Readiness  
-**Phase status:** In progress — Assignment 0A repository baseline completed; human review pending
+**Phase status:** In progress — Assignments 0A and 0B completed; human review pending
 **Human acceptance:** Pending  
 **Git checkpoint:** No commit or push performed; initial worktree was clean on `main` tracking `origin/main`
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents. No application source, automated tests, API integration scripts, or response fixtures were found. This is a planning and harness repository at present.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignment 0B has since added OpenWeather response fixtures. No application features are implemented.
 
 ## 2. Established Planning Artifacts
 
@@ -37,9 +37,9 @@ All four root harness files are present and readable. All five listed planning d
 
 The inspected tracked files comprise the four root harness documents, `README.md`, `LICENSE`, and the five planning documents under `docs/`. No backend, frontend, source code, dependency manifest, or application configuration was found. Therefore, no application features are implemented in the inspected repository baseline.
 
-No automated test infrastructure, test fixtures, API integration scripts, or build tooling was found.
+No automated test infrastructure, API integration scripts, or build tooling was found. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
-`.gitignore` is present and includes `.env`. `.env.example` and local `.env`/`.env.*` files were not found; secret values were not read. No credentials were created or inspected. The environment setup required for later integration work remains outstanding.
+`.gitignore` is present and includes `.env`. Assignment 0A found no local environment files; during Assignment 0B, an ignored `.env` defined `OPENWEATHER_API_KEY`. The key value was not displayed or copied, and successful current and forecast requests were made with it. `.env.example` remains absent.
 
 ## 4. Planning Research Baseline
 
@@ -52,11 +52,9 @@ Substantial external-data research was completed before implementation.
 | DriveBC Open511 | Regional bounding-box fetching, pagination, and relevance separation investigated |
 | ECCC GeoMet / SWOB | Live observations retrieved; sparse stations and missing values characterized |
 | TransLink | API key tested; GTFS Static and Service Alerts investigated; matching approach established |
-| OpenWeather | Provider selected; practical endpoint/schema validation remains pending |
+| OpenWeather | Current and 5 day / 3 hour endpoints and live schemas verified in Assignment 0B; active plan/quota remain unknown |
 
-These findings are documented in the planning artifacts.
-
-They are **planning evidence**, not confirmation of working repository integrations.
+These findings are documented in the planning artifacts. They are planning evidence, separate from repository verification; Assignment 0B's live OpenWeather results are recorded in the integration note and fixtures.
 
 Do not repeat completed research unless a specific readiness requirement or implementation discrepancy warrants it.
 
@@ -64,12 +62,12 @@ Do not repeat completed research unless a specific readiness requirement or impl
 
 | Workstream | Status | Remaining Requirement |
 |---|---|---|
-| OpenWeather | Pending validation | Verify accessible endpoints, schemas, forecast granularity, and fixtures |
+| OpenWeather | Validated — current and forecast endpoints | Review account-specific plan/quota and applicable terms; evidence and fixtures are in `docs/integration-notes/openweather-readiness.md` and `fixtures/openweather/` |
 | MapTiler | Pending validation | Verify geocoding/autocomplete, credentials, and basemap access |
 | openrouteservice | Pending validation | Verify routing, returned geometry, and alternatives |
 | OpenRouter | Pending validation | Verify candidate vision/text models and structured-output capabilities |
-| Environment configuration | Partial | `.gitignore` excludes `.env`; add `.env.example` and verify credential availability/handling |
-| Fixtures and evidence | Pending | No repository fixtures found; capture representative fixtures during relevant integration work |
+| Environment configuration | Partial | `.gitignore` excludes `.env`; working local OpenWeather variable exists; add `.env.example` and document required names |
+| Fixtures and evidence | Partial | OpenWeather current/forecast fixtures added; preserve representative fixtures for other early integrations |
 
 The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
@@ -79,7 +77,7 @@ Phase 0 is **In progress**; Assignment 0A established the repository baseline, w
 
 ## 6. Verification Evidence
 
-**Assignment 0A repository verification: Completed for the checks listed below.**
+**Assignment 0A/0B repository and integration verification: Recorded below.**
 
 | Verification Area | Latest Known Result |
 |---|---|
@@ -88,13 +86,20 @@ Phase 0 is **In progress**; Assignment 0A established the repository baseline, w
 | Backend tests / pytest | Not run — no application or test infrastructure found; outside Assignment 0A scope |
 | Ruff | Not run — no Python application code found; outside Assignment 0A scope |
 | Frontend build | Not run — no frontend or build tooling found; outside Assignment 0A scope |
-| Live Phase 0 integration checks | Not run — explicitly outside Assignment 0A scope |
-| Environment configuration | Partial — `.gitignore` excludes `.env`; `.env.example` and local env files absent |
-| Credential/secret contents | Not inspected, by design |
+| Assignment 0A live Phase 0 checks | Not run — explicitly outside Assignment 0A scope |
+| Assignment 0B OpenWeather current endpoint | Passed on retry — initial request returned HTTP 401; later request returned HTTP 200 and `cod=200` |
+| Assignment 0B OpenWeather forecast endpoint | Passed — HTTP 200, `cod=200`, 40 forecast entries at exact 3-hour spacing over five days |
+| Assignment 0B response fixtures | Passed — actual successful JSON bodies saved under `fixtures/openweather/` |
+| Assignment 0B schema review | Passed — current and forecast field presence, missing precipitation objects, explicit forecast zero values, and timestamps inspected |
+| Assignment 0B API documentation review | Passed — endpoint details, request guidance, cache recommendation, and public pricing reviewed; account plan/remaining quota remain unverified |
+| Assignment 0A environment configuration | Partial — `.gitignore` excluded `.env`; `.env.example` and local env files were absent at that inspection |
+| Assignment 0B OpenWeather configuration | Passed for access — ignored `.env` defines `OPENWEATHER_API_KEY`; value not exposed; both endpoints succeeded on retry |
+| Credential value | Not displayed or copied into artifacts; passed only to the authorized OpenWeather requests |
+| Assignment 0B fixture validity and credential scan | Passed — both fixtures parse as JSON and the configured key value is absent from changed artifacts |
 | Initial repository Git status | Passed — clean `main` tracking `origin/main` before this state update |
-| Final repository Git status | Passed — only `PROJECT_STATE.md` is modified |
+| Assignment 0A final repository Git status | Passed — only `PROJECT_STATE.md` was modified for that assignment |
 
-Planning-stage API experiments are recorded separately from repository verification. No external APIs were called during Assignment 0A.
+Planning-stage API experiments are recorded separately from repository verification. No external APIs were called during Assignment 0A. Assignment 0B's OpenWeather attempt and documentation-derived findings are recorded in `docs/integration-notes/openweather-readiness.md`.
 
 Future updates should include meaningful verification results, relevant environment context, and unresolved failures.
 
@@ -122,10 +127,10 @@ Do not silently convert observed implementation differences into changes to appr
 
 ### Known Readiness Gaps
 
-- OpenWeather requires practical endpoint/schema validation.
+- OpenWeather current and forecast endpoints and their observed schemas are verified. The account's subscription, remaining quota, and plan-specific terms remain unknown and should be confirmed before broader use or release.
 - MapTiler, openrouteservice, and OpenRouter require Phase 0 access/capability verification.
-- `.env.example` is absent, no local environment file was found, and required credentials are not established by this inspection.
-- No representative repository fixtures or integration-check scripts were found.
+- `.env.example` is absent. A local ignored `.env` defines the working OpenWeather key; its value was not exposed.
+- No integration-check scripts were found. OpenWeather current and forecast fixtures now exist; fixtures for other early integrations remain outstanding.
 - The `README.md` currently describes DriveBC Cameras as a planned core source, while `APP_SPEC.md` explicitly excludes DriveBC Cameras from the MVP. The README also says the project is in active development despite this inventory finding no application implementation. These README statements were not changed under Assignment 0A scope.
 
 These are outstanding readiness requirements, not confirmed service failures.
@@ -156,11 +161,11 @@ Only record a Git checkpoint as completed when confirmed by the human or verifie
 
 Codex must not stage, commit, push, merge, rebase, tag, or rewrite Git history.
 
-## 10. Assignment 0A Result and Next Expected Action
+## 10. Phase 0 Assignment Status and Next Expected Action
 
-Assignment 0A repository baseline and SDD harness validation are complete and ready for human review. The worktree was clean before the authorized `PROJECT_STATE.md` update; no other files were changed, and no Git history operation was performed.
+Assignments 0A and 0B are complete and ready for human review. OpenWeather current and forecast access, observed schemas, and representative fixtures are documented. The active account plan and remaining quota are unknown. No application features or Git history operations were introduced.
 
-Continue Phase 0 only through a subsequent bounded assignment consistent with `BUILD_PLAN.md`. Do not begin Phase 1 until Phase 0 has been accepted by the human developer.
+Continue remaining Phase 0 readiness work through bounded assignments consistent with `BUILD_PLAN.md`. Do not begin Phase 1 until Phase 0 has been accepted by the human developer.
 
 After each meaningful assignment, Codex should update this document with:
 
