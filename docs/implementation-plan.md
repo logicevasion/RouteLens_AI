@@ -23,7 +23,7 @@ The plan is intended primarily for:
 
 This document is a roadmap, not a live progress tracker.
 
-Current implementation state should eventually be recorded separately in:
+Current implementation state should be recorded separately in:
 
 > `PROJECT_STATE.md`
 
@@ -35,7 +35,7 @@ RouteLens should be built using **vertical slices / tracer-bullet development**.
 
 Avoid a horizontal sequence such as:
 
-```text
+```text id="0d8f4d"
 build entire backend
         ↓
 build all adapters
@@ -49,19 +49,21 @@ finally integrate
 
 Instead, build narrow end-to-end capabilities:
 
-```text
-external source
-      ↓
+```text id="49cb17"
+real source / user action
+        ↓
+validation
+        ↓
 normalization
-      ↓
-business / geospatial logic
-      ↓
+        ↓
+deterministic matching
+        ↓
 API
-      ↓
+        ↓
 frontend
-      ↓
+        ↓
 observable behavior
-      ↓
+        ↓
 verification
 ```
 
@@ -75,10 +77,10 @@ Each phase should be small enough that:
 
 - Codex can implement it within a bounded context;
 - the human can review it in one sitting;
-- the functionality can be tested behaviorally;
+- functionality can be tested behaviorally;
 - the phase can become one logical human-created Git commit.
 
-A phase should not attempt to implement several unrelated systems at once.
+A phase should not attempt several unrelated systems at once.
 
 ---
 
@@ -88,7 +90,7 @@ Codex does not own Git history.
 
 For every implementation phase:
 
-```text
+```text id="5771af"
 Planning agent defines phase
         ↓
 Codex implements
@@ -108,11 +110,11 @@ Next phase
 
 Codex must not:
 
-- commit
-- push
-- merge
-- tag
-- rewrite Git history
+- commit;
+- push;
+- merge;
+- tag;
+- rewrite Git history.
 
 The accepted human commit forms the stable checkpoint before the next phase begins.
 
@@ -138,8 +140,8 @@ A phase is not complete solely because Codex reports that implementation succeed
 
 For each external data source, use the following pattern where practical:
 
-```text
-inspect live source once
+```text id="708903"
+inspect live source
         ↓
 understand actual schema / behavior
         ↓
@@ -160,7 +162,26 @@ Representative fixtures should be retained for repeatable development.
 
 ---
 
-# 7. Architecture Evolution Rule
+# 7. Source-Specific Validation Principle
+
+The data-source research has already reduced substantial uncertainty.
+
+Implementation should preserve those findings rather than rediscovering everything from scratch.
+
+Examples:
+
+- Road Ahead uses two datasets and benefits from detail-page enrichment;
+- Open511 is fetched regionally and paginated;
+- SWOB is sparse and must be interpreted conservatively;
+- Vancouver camera image URLs require catalogue enrichment;
+- TransLink Service Alerts require GTFS identifier matching;
+- OpenWeather still needs practical endpoint/schema validation.
+
+When live behavior contradicts the documented design, report the discrepancy rather than silently inventing a new architecture.
+
+---
+
+# 8. Architecture Evolution Rule
 
 Do not construct all infrastructure before it is needed.
 
@@ -168,31 +189,32 @@ Use **just-in-time implementation**.
 
 Examples:
 
-- add SQLite/SQLAlchemy when persistence or caching becomes necessary;
-- add image caching when camera functionality arrives;
-- add structured AI contracts when AI functionality arrives;
-- add transit-specific logic when the transit slice begins.
+- introduce SQLite/SQLAlchemy when caching/persistence becomes useful;
+- add Road Ahead detail caching only when enrichment is implemented;
+- add camera image caching when the camera slice arrives;
+- add GTFS parsing only in the Transit phase;
+- add structured AI contracts when each AI capability arrives.
 
 Do not pre-build speculative subsystems merely because they appear in the final technical design.
 
 ---
 
-# 8. Planned Phase Overview
+# 9. Planned Phase Overview
 
-The initial roadmap is:
+The roadmap is:
 
-```text
+```text id="483031"
 Phase 0   Integration Readiness
 Phase 1   Application Shell + Map
 Phase 2   Journey Input + Geocoding
 Phase 3   Drive Route Candidates + Selection
 Phase 4   Road Ahead Vertical Slice
-Phase 5   Regional Road Context
+Phase 5   Regional Road Context — DriveBC Open511
 Phase 6   Current + Near-Term Weather
 Phase 7   Vancouver Camera Pipeline
-Phase 8   Camera AI Analysis
+Phase 8   Multi-View Camera AI Analysis
 Phase 9   Journey Relevance + Timeline Refinement
-Phase 10  Transit Mode
+Phase 10  Transit Mode — GTFS Static + Service Alerts
 Phase 11  AI Journey Briefing
 Phase 12  Integration Hardening
 Phase 13  Presentation + Demo Polish
@@ -204,95 +226,147 @@ Later phases may be adjusted based on discoveries from the working application.
 
 ---
 
-# 9. Phase 0 — Integration Readiness
+# 10. Phase 0 — Integration Readiness
 
 ## Objective
 
-Resolve external-service uncertainty before substantial implementation begins.
+Resolve remaining external-service uncertainty before substantial implementation begins.
 
-This phase should verify that the planned services are actually usable and that required credentials or access methods are available.
+Much of the original discovery work has already been completed during planning.
 
-## Integrations to Verify
+This phase should therefore confirm, capture, and close the remaining integration gaps rather than repeat all previous exploration.
 
-At minimum:
+## Already Investigated
 
-- MapTiler
-- openrouteservice
-- Vancouver webcams
-- Vancouver Road Ahead
-- DriveBC Open511
-- DriveBC cameras
-- ECCC GeoMet / SWOB
-- OpenWeatherMap
-- TransLink GTFS-Realtime
-- OpenRouter
+Planning/research has already established:
 
-## Required Work
+### Vancouver Webcams
 
-For each relevant source:
+- structured geolocated camera metadata exists;
+- dataset provides camera page URLs;
+- directional JPEG URLs require page enrichment;
+- one-nearest-intersection / multi-view strategy is locked.
 
-- identify actual endpoint(s);
-- confirm whether authentication is required;
-- verify available API key;
-- make one successful request where possible;
-- inspect representative response structure;
-- note update/freshness behavior;
-- identify obvious rate-limit or usage constraints;
-- record any source-specific implementation concerns.
+### Vancouver Road Ahead
 
-Create or update:
+- both Current Road Closures and Projects Under Construction were inspected;
+- full geometry is available;
+- geometry types include `LineString`, `MultiLineString`, and `GeometryCollection`;
+- short dataset fields can be incomplete;
+- detail pages provide useful schedule/restriction context;
+- daily validated cache strategy is locked.
 
-```text
+### DriveBC Open511
+
+- active regional event strategy is defined;
+- regional bbox approach is defined;
+- pagination is required;
+- map-wide visibility and journey-specific matching are separate;
+- 5–15 minute initial cache policy is agreed.
+
+### ECCC SWOB
+
+- live feasibility has been tested;
+- Vancouver-area observations were successfully retrieved;
+- station coverage is sparse;
+- missing measurements must remain unknown;
+- station catalogue may not contain every realtime station;
+- 10–15 minute initial cache is reasonable.
+
+### TransLink
+
+- API key has been obtained and tested;
+- GTFS Static files were inspected;
+- Service Alerts feed was successfully decoded/explored;
+- route/direction matching is viable;
+- selector specificity rules are understood;
+- request-header behavior requires explicit client handling;
+- Trip Updates and Vehicle Positions are deferred.
+
+## Remaining High-Priority Readiness Work
+
+### OpenWeather
+
+This is the largest unresolved source integration.
+
+Before Phase 6:
+
+- test the existing API key;
+- determine accessible endpoint(s);
+- inspect actual schema;
+- confirm current-condition fields;
+- confirm forecast fields;
+- determine practical lookahead granularity;
+- determine request/cache strategy;
+- save representative fixtures.
+
+### MapTiler
+
+Confirm:
+
+- autocomplete/geocoding access;
+- key behavior;
+- basemap/style integration.
+
+### openrouteservice
+
+Confirm:
+
+- route endpoint access;
+- route-alternative behavior;
+- representative Metro Vancouver journeys.
+
+### OpenRouter
+
+Confirm:
+
+- chosen candidate vision model accepts multiple images;
+- chosen text model supports reliable structured output;
+- actual model identifiers/configuration.
+
+## Configuration Work
+
+Create/update:
+
+```text id="2f6359"
 .env.example
 ```
 
-with required configuration names.
+with names for required configuration.
 
 Ensure:
 
-```text
+```text id="1bdc86"
 .env
 ```
 
 is Git-ignored.
 
-Save representative source responses as fixtures where appropriate.
-
-## Important Questions to Resolve
-
-Examples:
-
-- Does Road Ahead return usable point/line geometry?
-- What exact Open511 event geometry is available?
-- How are Vancouver webcam metadata and image URLs structured?
-- Are camera capture timestamps exposed?
-- Which ECCC/SWOB endpoint is easiest for current local observations?
-- What useful near-term granularity is available from OpenWeatherMap?
-- What TransLink realtime feeds are accessible?
-- Does ORS reliably provide route alternatives?
-- Which OpenRouter vision/text models appear viable?
+No secret value should enter fixtures or logs.
 
 ## Acceptance Criteria
 
-- required API credentials are known or confirmed unnecessary;
-- every core source has an identified access method;
-- at least one representative response has been inspected for each accessible source;
-- fixtures exist for sources where implementation will shortly begin;
-- no major integration blocker remains undiscovered.
+- every core MVP source has a known access path;
+- all required credentials are available or confirmed unnecessary;
+- OpenWeather has undergone actual API exploration;
+- MapTiler and ORS access are verified;
+- OpenRouter candidate models can be called successfully;
+- representative fixtures exist for sources needed in early phases;
+- no major source-access blocker remains undiscovered.
 
 ## Non-Goals
 
-Do not build the full application.
+Do not build application features during this phase.
 
-This phase exists to reduce uncertainty.
+The purpose is integration certainty.
 
 ---
 
-# 10. Phase 1 — Application Shell + Map
+# 11. Phase 1 — Application Shell + Map
 
 ## Objective
 
-Create the basic RouteLens application and establish the polished desktop visual foundation.
+Create the RouteLens application foundation and establish the polished desktop visual shell.
 
 The phase should end with a real interactive map visible inside the intended desktop layout.
 
@@ -302,7 +376,7 @@ Create minimal FastAPI application.
 
 Include:
 
-```text
+```text id="adeb4c"
 GET /api/health
 ```
 
@@ -312,23 +386,23 @@ No major domain logic yet.
 
 Create:
 
-- React
-- Vite
-- TypeScript
-- Tailwind
-- MapLibre
-- Framer Motion
-- Lucide
+- React;
+- Vite;
+- TypeScript;
+- Tailwind;
+- MapLibre;
+- Framer Motion;
+- Lucide.
 
 Build the primary desktop shell:
 
-```text
+```text id="0db85f"
 top journey controls area
 left map area
 right intelligence panel area
 ```
 
-Integrate MapTiler dark basemap.
+Integrate a dark MapTiler basemap.
 
 ## Initial Visual Standard
 
@@ -340,48 +414,48 @@ The UI should already establish:
 - elevated panel styling;
 - basic loading/status design language.
 
-Do not defer all styling until the end.
+Do not defer all styling until the final phase.
 
-However, deep polish is not required yet.
+Deep polish is not required yet.
 
 ## Acceptance Criteria
 
 - frontend starts locally;
 - FastAPI starts locally;
 - frontend can reach backend health endpoint;
-- MapLibre renders MapTiler basemap;
+- MapLibre renders the MapTiler basemap;
 - full desktop shell is visible;
 - right panel placeholder exists;
 - project runs without unnecessary infrastructure.
 
 ## Verification
 
-- backend tests for health endpoint;
+- health endpoint test;
 - Ruff;
 - frontend build;
-- manually verify map interaction and layout.
+- manual map interaction/layout verification.
 
 ---
 
-# 11. Phase 2 — Journey Input + Geocoding
+# 12. Phase 2 — Journey Input + Geocoding
 
 ## Objective
 
-Allow the user to enter/select a real origin and Vancouver destination.
+Allow the user to enter and select a real origin and Vancouver destination.
 
-This phase establishes the first real user interaction.
+This establishes the first real user interaction.
 
 ## Backend / Integration
 
-Add MapTiler geocoding/autocomplete support using the chosen architecture.
+Add MapTiler geocoding/autocomplete support.
 
 Normalize selected places into:
 
-```text
+```text id="60340f"
 Location
 ```
 
-Implement destination support validation.
+Implement deterministic destination validation.
 
 The backend must reject unsupported destinations outside the City of Vancouver.
 
@@ -389,7 +463,7 @@ The backend must reject unsupported destinations outside the City of Vancouver.
 
 Implement:
 
-```text
+```text id="979675"
 JourneyInput
 AddressAutocomplete
 ModeSelector
@@ -398,8 +472,8 @@ Analyze/continue control
 
 For this phase:
 
-- Drive can be the primary active mode;
-- Transit can be visible but may remain incomplete.
+- Drive is the primary active mode;
+- Transit can be visible but does not need transit-service selection yet.
 
 Origin must be manually selected.
 
@@ -410,9 +484,9 @@ No current-location permission.
 The user should:
 
 1. type an origin;
-2. select suggestion;
-3. type destination;
-4. select suggestion;
+2. select a suggestion;
+3. type a destination;
+4. select a suggestion;
 5. receive clear validation if destination is unsupported.
 
 ## Acceptance Criteria
@@ -431,29 +505,27 @@ The user should:
 - mocked geocoder tests where useful;
 - Ruff;
 - frontend build;
-- manual test with several Metro Vancouver origins and Vancouver/non-Vancouver destinations.
+- manual test with representative Metro Vancouver origins and Vancouver/non-Vancouver destinations.
 
 ---
 
-# 12. Phase 3 — Drive Route Candidates + Selection
+# 13. Phase 3 — Drive Route Candidates + Selection
 
 ## Objective
 
-Turn the selected origin/destination into visible approximate driving-route context.
+Turn selected origin/destination into visible approximate driving-route context.
 
-At the end of this phase, RouteLens should support the basic:
+At the end of this phase, RouteLens supports:
 
 > enter trip → see plausible routes → select closest route
-
-workflow.
 
 ## Backend
 
 Add openrouteservice integration.
 
-Normalize results into:
+Normalize into:
 
-```text
+```text id="d6afe3"
 RouteCandidate
 SelectedRoute
 ```
@@ -461,13 +533,13 @@ SelectedRoute
 Return:
 
 - up to three candidates where available;
-- one route when alternatives are unavailable.
+- one candidate where alternatives are unavailable.
 
 ## Frontend
 
 Implement:
 
-```text
+```text id="854b27"
 RouteSelector
 RouteLayer
 ```
@@ -476,389 +548,636 @@ Display:
 
 - candidate routes;
 - selected route;
-- clearly muted alternatives.
+- muted alternatives.
 
-Ask the user:
+Ask:
 
 > Which route most closely matches your planned trip?
 
-The UI must not imply that RouteLens is recommending the optimal route.
+Do not imply that RouteLens recommends the optimal route.
 
 ## Acceptance Criteria
 
 - route request works for real Metro Vancouver → Vancouver journeys;
-- at least one route is returned for supported test cases;
+- at least one route is returned for supported examples;
 - alternatives appear where ORS provides them;
 - user can select a route;
 - selected route becomes visually prominent;
-- selected route is represented in application state as `SelectedRoute`.
+- selected route is represented in application state.
 
 ## Verification
 
-Test representative routes such as:
+Test representative journeys such as:
 
-- New Westminster → downtown Vancouver
-- Burnaby → UBC area
-- Richmond → downtown Vancouver
-- North Vancouver → Vancouver
-- Surrey → Vancouver
+- New Westminster → downtown Vancouver;
+- Burnaby → UBC;
+- Richmond → downtown Vancouver;
+- North Vancouver → Vancouver;
+- Surrey → Vancouver.
 
 Exact Google Maps reproduction is not required.
 
 ---
 
-# 13. Phase 4 — Vancouver Road Ahead Vertical Slice
+# 14. Phase 4 — Vancouver Road Ahead Vertical Slice
 
 ## Objective
 
 Build the first complete telemetry slice.
 
-This phase proves the central RouteLens architecture:
+This phase proves the central RouteLens pipeline:
 
-```text
-live city source
-→ adapter
+```text id="82a9f4"
+live municipal source
+→ validated cache
 → normalization
-→ geospatial relevance
+→ projected geometry
+→ route relevance
+→ selective detail enrichment
 → API
 → map
 → journey interpretation
 ```
 
+## Data Sources
+
+Integrate both:
+
+- Road Ahead — Current Road Closures;
+- Road Ahead — Projects Under Construction.
+
 ## Backend
 
 Implement:
 
-```text
-vancouver_road_ahead.py
+```text id="aef9df"
+road_ahead.py
 ```
 
-Add normalized:
+Normalize into:
 
-```text
+```text id="74ba45"
 CityEvent
 ```
 
-Implement initial Shapely route relevance:
+Preserve:
 
-- convert selected route to geometry;
-- create route buffer;
-- include relevant construction/closure events;
-- exclude clearly unrelated events.
+- source ID;
+- source URL;
+- full geometry;
+- representative point;
+- project/location text;
+- source timestamps/metadata.
 
-Introduce basic source status/error isolation.
+Do not depend on `street` being populated.
+
+Do not treat `comp_date` as authoritative proof of event end.
+
+## Geometry
+
+Support:
+
+- `LineString`;
+- `MultiLineString`;
+- `GeometryCollection`.
+
+Use a suitable projected CRS for metre-based distance/buffer calculations.
+
+## Cache
+
+Implement the locked approximate 24-hour structured-dataset cache.
+
+Behavior:
+
+1. use fresh valid cache when available;
+2. refresh when stale;
+3. validate downloaded payload;
+4. replace old cache only after validation;
+5. retain stale valid cache on refresh failure;
+6. expose stale status.
+
+## Geospatial Relevance
+
+Implement:
+
+- direct route intersection;
+- nearby supplemental candidates.
+
+Locked rule:
+
+> Preserve **all direct route overlaps** before applying a limit to nearby supplemental events.
+
+## Selective Detail Enrichment
+
+For geographically relevant candidates:
+
+- fetch the Road Ahead detail page;
+- deterministically extract useful schedule/restriction information;
+- cache enrichment;
+- retain base dataset event if enrichment fails.
+
+Useful enrichment may include:
+
+- full title/location;
+- description;
+- status;
+- work schedule;
+- exceptions;
+- closure/restriction information.
+
+Do not use an LLM for HTML parsing.
 
 ## API
 
 Begin or extend:
 
-```text
+```text id="269819"
 POST /api/trips/analyze
 ```
 
-For now, the analysis may contain primarily Road Ahead evidence.
+For now, the analysis may primarily contain Road Ahead evidence.
 
 ## Frontend
 
-Add Road Ahead events to:
+Add:
 
-- MapPanel
-- initial Along Your Route section
+- Road Ahead geometry/markers to map;
+- initial Along Your Route section.
 
-Relevant events should appear visibly on/near the route.
+The UI should distinguish:
 
-## Placeholder Journey Summary
+- direct overlaps;
+- nearby context
+
+where useful.
+
+## Placeholder Summary
 
 A deterministic summary may be used.
 
 Example:
 
-```text
-2 construction events found near the selected journey.
+```text id="004a2b"
+3 Road Ahead events intersect the selected journey.
+1 additional nearby construction project was found.
 ```
 
 Do not add final LLM briefing yet.
 
 ## Acceptance Criteria
 
-Given a selected drive route:
+Given a selected route:
 
-- Road Ahead is fetched;
-- payload is normalized;
-- relevant events are filtered;
-- unrelated distant events are excluded;
-- relevant construction appears on map;
+- both Road Ahead datasets are loaded;
+- validated cache works;
+- full geometries normalize correctly;
+- direct intersections are detected;
+- all direct intersections survive candidate limiting;
+- nearby candidates can be ranked separately;
+- relevant detail pages enrich successfully where supported;
+- parser failure falls back to base event;
+- map displays relevant geometry;
 - route panel displays useful event information;
 - Road Ahead failure does not crash the whole analysis.
 
 ## Tests
 
-Include fixtures covering:
+Include fixtures for:
 
-- typical valid event;
-- empty response;
-- malformed/partial event;
-- route-near event;
-- distant event.
+- valid closure;
+- valid construction project;
+- `LineString`;
+- `MultiLineString`;
+- `GeometryCollection`;
+- null/missing optional fields;
+- direct overlap;
+- nearby event;
+- distant event;
+- more direct overlaps than supplemental candidate limit;
+- valid detail-page enrichment;
+- failed detail-page parse;
+- stale-cache fallback.
 
 This is the first major architectural proof point.
 
 ---
 
-# 14. Phase 5 — Regional Road Context
+# 15. Phase 5 — Regional Road Context: DriveBC Open511
 
 ## Objective
 
-Extend road awareness beyond Vancouver municipal construction.
+Extend road awareness beyond City of Vancouver municipal data using DriveBC Open511.
 
-Add:
+This phase provides regional road context for journeys approaching Vancouver.
 
-- DriveBC Open511
-- DriveBC cameras
-
-This creates useful journey context for approaches into Vancouver.
+DriveBC cameras are **not** part of this phase or the MVP.
 
 ## Backend
 
 Implement:
 
-```text
+```text id="ac368f"
 drivebc_open511.py
-drivebc_cameras.py
 ```
 
-Open511 events normalize primarily into:
+Normalize events into:
 
-```text
+```text id="28a21f"
 CityEvent
 ```
 
-DriveBC camera metadata normalize into:
+Preserve:
 
-```text
-Camera
+- source event ID;
+- headline/description;
+- event type/subtypes;
+- severity;
+- status;
+- full geography;
+- road/direction information where available;
+- schedule;
+- created/updated timestamps.
+
+## Regional Fetch Strategy
+
+Fetch a regional dataset rather than querying only around the selected route.
+
+Initial provisional bbox:
+
+```text id="bd7f23"
+-123.45,48.99,-122.45,49.49
 ```
 
-Reuse existing geospatial relevance services rather than introducing a separate relevance system.
+Before locking it in code, verify it covers the intended Metro Vancouver region sufficiently.
 
-## Relevance
+Fetch:
 
-DriveBC data should be surfaced primarily where useful for:
+- `status=ACTIVE`;
+- all event types;
+- all severities.
 
-- highways;
-- bridges;
-- major approach corridors;
-- road events near selected route.
+Do not discard `MINOR` or `UNKNOWN` severity at ingestion.
 
-Do not load/display irrelevant province-wide telemetry.
+## Pagination
+
+Retrieve all matching pages.
+
+Do not assume a single `limit=100` request is complete.
+
+## Cache
+
+Implement regional Open511 caching.
+
+Initial TTL:
+
+> approximately 5–15 minutes.
+
+Reuse the same regional dataset across route changes.
+
+If refresh fails:
+
+- retain last valid cache;
+- mark it stale;
+- continue where practical.
+
+## Map Behavior
+
+Show active Open511 events throughout the supported regional area.
+
+Map visibility is not equivalent to journey relevance.
+
+The user may see events that do not qualify for the briefing.
+
+## Journey Relevance
+
+Filter briefing candidates deterministically using, where available:
+
+- route geometry;
+- proximity;
+- affected roads;
+- direction;
+- schedule;
+- temporal applicability;
+- severity;
+- event type.
+
+An `ACTIVE` event may still be scheduled for a future time.
+
+Do not assume current applicability solely from status.
+
+## Cross-Source Behavior
+
+Road Ahead and Open511 should coexist through normalized `CityEvent` models.
+
+Do not implement aggressive cross-source deduplication.
+
+Preserve source attribution.
 
 ## Frontend
 
 Add:
 
-- regional road events;
-- relevant DriveBC camera markers.
-
-The primary destination camera feature is not implemented yet.
-
-DriveBC camera imagery may be viewable in a basic form if easy, but dedicated camera UX belongs to a later phase.
+- regional Open511 event layer;
+- event details;
+- route-relevant emphasis.
 
 ## Acceptance Criteria
 
-- relevant Open511 events appear;
-- distant events are excluded from automated findings;
-- useful DriveBC cameras appear along appropriate approach corridors;
-- Road Ahead and Open511 coexist through common normalized models;
-- failure of either source remains isolated.
+- regional Open511 events fetch successfully;
+- pagination retrieves all pages;
+- all active severities/types remain available;
+- regional events appear on map;
+- route-relevant subset is identified separately;
+- distant map-visible events do not automatically enter briefing candidates;
+- Open511 cache is reused across route changes;
+- stale-cache fallback works;
+- failure remains isolated;
+- no DriveBC camera functionality is introduced.
 
 ---
 
-# 15. Phase 6 — Current + Near-Term Weather
+# 16. Phase 6 — Current + Near-Term Weather
 
 ## Objective
 
-Add meaningful destination weather context while preserving the distinction between observed and forecast conditions.
+Add destination weather context while preserving the distinction between:
+
+- measured station observations;
+- structured current/forecast data;
+- later camera-derived visual evidence.
 
 This phase combines:
 
-- ECCC SWOB
-- OpenWeatherMap
+- ECCC SWOB;
+- OpenWeather.
 
-because their value is strongest when presented together.
+## Phase 6A — OpenWeather Validation
 
-## Backend
+Before final adapter implementation:
+
+- test the existing API key;
+- identify the actual accessible endpoint/product;
+- inspect real response schema;
+- confirm available current fields;
+- confirm forecast fields;
+- confirm timestamp granularity;
+- determine useful lookahead;
+- determine cache/refresh policy;
+- save fixtures.
+
+Do not implement speculative fields that the actual endpoint does not provide.
+
+## Backend — SWOB
 
 Implement:
 
-```text
+```text id="a0f682"
 eccc_swob.py
-openweathermap.py
 ```
 
-Normalize into:
+Fetch recent observations for a Vancouver-area bbox.
 
-```text
-WeatherObservation
-WeatherForecast
+Initial tested bbox:
+
+```text id="b46af4"
+-123.30,49.15,-122.85,49.35
 ```
 
-Select an appropriate current observation near the destination.
+Group by station.
 
-Extract only useful product fields.
+Select latest valid observation per station.
 
-Retrieve near-term forecast information focused roughly on:
+Do not assume the separate station catalogue contains every realtime station.
 
-```text
-30 minutes – 2 hours
-```
+Use embedded coordinates where possible.
+
+Normalize useful fields such as:
+
+- temperature;
+- precipitation measurements;
+- visibility;
+- wind where actually available;
+- snow depth where available;
+- timestamps.
+
+## SWOB Selection
+
+Select useful evidence using:
+
+- proximity;
+- freshness;
+- measurement availability.
+
+The nearest station is not automatically the most useful.
+
+Missing precipitation remains unknown.
+
+Zero measured precipitation means zero for that station/time window only.
+
+No neighborhood interpolation.
+
+## SWOB Cache
+
+Initial TTL:
+
+> approximately 10–15 minutes.
+
+Stale fallback may be used with clear age/status.
+
+## Backend — OpenWeather
+
+Implement the final adapter only after validation.
+
+Normalize actual supported fields into the RouteLens weather models.
+
+Potential information may include:
+
+- current temperature;
+- current conditions;
+- precipitation probability/amount if available;
+- forecast timestamps;
+- near-term conditions.
 
 ## Frontend
 
-Add destination weather section showing clearly separate:
+Add destination weather UI that clearly separates:
 
-```text
-Observed
-Forecast
+```text id="9423e6"
+Measured observation
+Structured current/forecast
 ```
 
-Examples:
+Do not call both simply “current weather” without provenance.
 
-```text
-Observed 8 min ago
-11°C · light wind · recent precipitation
+Example:
 
-Near-term
-Light rain possible within the next hour
+```text id="f6b7f9"
+ECCC observation · 8m ago
+11°C · 0 mm hourly precipitation
+
+OpenWeather
+Light rain possible later in the near term
 ```
 
 ## Acceptance Criteria
 
-- nearest useful current observation is selected;
-- forecast data is retrieved;
-- observation and forecast remain structurally distinct;
-- timestamps/freshness are visible;
-- either weather source may fail independently;
-- journey remains usable when one is unavailable.
+- OpenWeather actual endpoint/schema has been validated;
+- OpenWeather adapter reflects real available fields;
+- SWOB latest observations group correctly by station;
+- realtime stations absent from catalogue are not discarded automatically;
+- useful station selection considers measurement availability;
+- missing values remain unknown;
+- SWOB and OpenWeather remain structurally separate;
+- source timestamps/freshness appear in UI;
+- either source may fail independently;
+- journey remains usable with one weather source unavailable.
 
 ---
 
-# 16. Phase 7 — Vancouver Camera Pipeline
+# 17. Phase 7 — Vancouver Camera Pipeline
 
 ## Objective
 
-Implement the signature visual-data pipeline without AI analysis yet.
+Implement the signature camera data pipeline without AI interpretation yet.
 
 This phase introduces:
 
-- Vancouver camera adapter;
-- destination camera ranking;
-- backend image proxy;
-- temporary latest-image cache;
-- dedicated camera UX;
-- SQLite/SQLAlchemy where needed.
+- Vancouver camera metadata ingestion;
+- standalone camera-catalogue enrichment;
+- directional image extraction;
+- nearest usable intersection selection;
+- multi-view image retrieval;
+- ephemeral image cache;
+- destination camera UI;
+- SQLite/SQLAlchemy where justified.
 
-## Backend
+## Camera Catalogue Enrichment
 
-Implement:
+Implement a standalone enrichment script.
 
-```text
-vancouver_cameras.py
+Conceptual:
+
+```text id="d2aa75"
+official Vancouver camera metadata
+        ↓
+validate
+        ↓
+visit each camera webpage
+        ↓
+extract directional image URLs
+        ↓
+validate image endpoints
+        ↓
+write enriched local catalogue
 ```
 
-Normalize cameras into:
+Do not guess JPEG filenames.
 
-```text
-Camera
+The enriched catalogue should retain:
+
+- camera/intersection ID;
+- name;
+- coordinates;
+- page URL;
+- available directional views;
+- image URLs;
+- catalogue fetch/enrichment time.
+
+## Catalogue Cache
+
+Initial policy:
+
+> infrequent refresh, approximately 24 hours as a starting point.
+
+Retain the last valid catalogue if refresh/enrichment fails.
+
+## Destination Camera Selection
+
+For each journey:
+
+1. sort camera intersections by destination distance;
+2. inspect the nearest candidate;
+3. verify at least one usable image;
+4. if unusable, try the next-nearest candidate;
+5. select the first usable intersection.
+
+The MVP selects:
+
+> one nearest usable camera intersection.
+
+No multiple-intersection analysis.
+
+## Image Retrieval
+
+Fetch all usable directional views from the selected intersection.
+
+Typical count may be 2–4, but the code must tolerate fewer.
+
+## Image Storage
+
+Locked:
+
+- ephemeral/cache-only;
+- overwrite current cached frames;
+- no historical archive;
+- no time-series accumulation.
+
+Suggested structure:
+
+```text id="9052c6"
+data/cache/cameras/{intersection_id}/{view_id}.jpg
 ```
-
-Implement destination-camera ranking based on:
-
-1. distance;
-2. freshness;
-3. source preference if useful.
-
-Select:
-
-- one primary camera;
-- a small number of alternatives.
 
 ## Persistence
 
-Introduce SQLite + SQLAlchemy as needed for:
+Introduce SQLite/SQLAlchemy only as needed for:
 
-- source cache;
-- camera metadata;
-- cached image metadata.
+- source cache metadata;
+- camera catalogue metadata;
+- current image metadata.
 
-Do not build unrelated persistence infrastructure.
-
-## Image Proxy
-
-Implement:
-
-```text
-GET /api/cameras/{id}/image
-```
-
-Behavior:
-
-```text
-fresh cached image?
-     ↓
-yes → return cache
-
-no
- ↓
-fetch upstream
- ↓
-overwrite camera cache
- ↓
-return same frame
-```
-
-No historical archive.
+Do not build unrelated persistence abstractions.
 
 ## Frontend
 
 Implement:
 
-```text
+```text id="b97d07"
 DestinationConditions
 CameraDetail
 ```
 
-The Journey Overview should prominently display:
+Prominently display:
 
-- primary camera image;
-- location/name;
-- image freshness;
-- alternative thumbnails.
+- selected intersection;
+- all usable directional views;
+- image retrieval freshness.
 
-Map camera markers should be interactive.
+Map may show Vancouver camera intersections where useful.
 
-Clicking a camera should transition the right panel into CameraDetail.
-
-Back returns to JourneyOverview.
+Alternative intersection browsing is optional rather than core.
 
 ## Acceptance Criteria
 
-- Vancouver cameras load;
-- primary destination camera is automatically selected;
-- alternatives are displayed;
-- image proxy works;
-- repeated fresh requests reuse cache;
-- stale cache is refreshed;
-- no historical images are retained;
-- map camera click opens CameraDetail;
-- Back restores JourneyOverview.
+- official camera metadata loads;
+- enrichment script extracts real directional image URLs;
+- broken/missing views are tolerated;
+- enriched catalogue is persisted locally;
+- nearest usable camera is selected;
+- fallback to next candidate works;
+- all usable directional images fetch successfully;
+- images are served through RouteLens/backend;
+- current frames overwrite prior frames;
+- no historical archive is created;
+- destination-condition UI displays multi-view imagery.
 
 ---
 
-# 17. Phase 8 — Camera AI Analysis
+# 18. Phase 8 — Multi-View Camera AI Analysis
 
 ## Objective
 
-Add multimodal interpretation to the camera pipeline.
+Add multimodal interpretation to the selected Vancouver camera intersection.
 
 This is the first major AI capability.
 
@@ -870,279 +1189,490 @@ All calls originate from FastAPI.
 
 Input:
 
-- the exact cached image used by the UI;
-- constrained structured-analysis prompt.
+- all usable current directional images from the selected intersection;
+- constrained structured prompt;
+- minimal camera metadata if useful.
 
 Output:
 
-```text
+```text id="4b748e"
 CameraObservation
 ```
 
 validated through Pydantic.
 
-## Automatic Behavior
+## One Inference Per Intersection
 
-The primary destination camera should be analyzed automatically during journey analysis.
+Locked behavior:
 
-Alternative cameras should be analyzed only when explicitly selected, unless a fresh cached analysis already exists.
+> one multimodal request analyzes all usable views together.
 
-## Camera Analysis Cache
-
-Reuse analysis while associated image remains fresh.
-
-A new camera frame invalidates the old current-frame analysis.
+Do not make one model call per directional image unless implementation evidence demonstrates a clear need.
 
 ## Structured Fields
 
-At minimum:
+Core fields include:
 
-- precipitation visible
-- precipitation type
-- road surface
-- traffic level
-- visibility
-- confidence
-- concise note
+- precipitation visible;
+- precipitation type where supportable;
+- road surface;
+- visibility;
+- image-quality assessment;
+- confidence;
+- concise notes.
+
+Traffic density is optional and should not expand the scope into traffic-speed inference.
+
+## Prompt Behavior
+
+The model must:
+
+- use only supplied imagery;
+- distinguish wet pavement from active precipitation;
+- avoid inferring dry conditions solely from no visible rainfall;
+- explicitly represent uncertainty;
+- note glare/obstruction/poor resolution;
+- avoid identifying individuals;
+- avoid invented meteorological values.
+
+## Cache / Reuse
+
+Reuse current analysis where it corresponds to the same cached image set and remains fresh enough.
+
+A newly fetched image set invalidates the old current-frame analysis.
 
 ## Failure Behavior
 
 If AI analysis fails:
 
-- camera image remains available;
-- other journey telemetry remains available;
-- UI shows camera-analysis unavailable;
+- camera imagery remains visible;
+- weather/road/transit data remain usable;
+- camera analysis is marked unavailable;
 - invalid LLM output does not break journey analysis.
 
 ## Acceptance Criteria
 
-- primary camera analysis occurs automatically;
+- all usable intersection views can be sent in one OpenRouter request;
 - structured output validates;
-- same fresh frame does not trigger unnecessary repeat AI calls;
-- alternate camera can trigger analysis on demand;
-- malformed AI output fails safely;
-- frontend displays camera observations clearly.
+- uncertainty/null values are supported;
+- wet-road vs active-rain distinction is reflected;
+- analysis is associated with the current image set;
+- duplicate calls are avoided where reusable;
+- malformed output fails safely;
+- frontend displays the normalized camera observation.
 
 ---
 
-# 18. Phase 9 — Journey Relevance + Timeline Refinement
+# 19. Phase 9 — Journey Relevance + Timeline Refinement
 
 ## Objective
 
-Turn the growing set of telemetry into a coherent deterministic journey model before adding the final LLM briefing.
+Turn the growing telemetry set into a coherent deterministic journey model before adding the final text LLM briefing.
 
-This phase should refine:
+This phase refines:
 
-- relevance ranking;
-- event importance;
-- event density;
+- event relevance;
+- applicability;
+- importance;
+- evidence density;
 - timeline ordering;
-- Journey Status foundation.
+- Journey Status foundation;
+- provenance/freshness presentation.
 
 ## Backend
 
-Combine current:
+Combine:
 
-- construction;
-- road incidents;
-- cameras;
-- camera observations;
-- observed weather;
-- forecast weather.
+- Road Ahead;
+- Open511;
+- SWOB;
+- OpenWeather;
+- camera observations.
 
-Refine deterministic scoring using:
+Transit is added in Phase 10.
 
-- distance;
-- route intersection;
+Refine deterministic ranking using:
+
+- direct route overlap;
+- route distance;
 - destination proximity;
 - freshness;
-- severity;
+- source-reported severity;
+- temporal applicability;
+- travel direction where available;
 - source type.
 
-Limit automated important findings to approximately:
+## Candidate Handling
 
-```text
-3–6
-```
+Preserve:
 
-Build normalized timeline events.
+- all directly applicable road overlaps;
+- top supplemental nearby events.
+
+Do not impose a global N limit that removes direct overlaps.
+
+## Evidence Categories
+
+Keep evidence types distinct:
+
+- source-reported road condition;
+- measured weather;
+- structured weather forecast/current data;
+- camera AI observation.
 
 ## Timeline
 
-Order relevant events approximately along the journey.
+Build normalized timeline events.
+
+Order geographic events approximately along the route.
 
 Example:
 
-```text
+```text id="c82c3c"
 START
   │
-  ● construction
+  ● road construction
   │
-  ● road incident
+  ● regional incident
   │
-  ● visual condition
+  ● changing weather context
   │
 DESTINATION
-  ● rain likely
+  ● camera observation
 ```
 
-Do not ask the LLM to invent this ordering.
+Do not ask the LLM to invent route order.
 
 ## Frontend
 
-Implement final intended:
+Implement/refine:
 
-```text
+```text id="ae8744"
 JourneyTimeline
 JourneyStatus
 AlongYourRoute
+SourceFreshness
 ```
 
-The map may still expose more telemetry than the timeline.
+Map may expose more regional telemetry than the timeline.
+
+## Insight Density
+
+Target approximately:
+
+> 3–6 important automated findings
+
+while retaining all direct route overlaps when necessary.
+
+The 3–6 target applies to the interpreted/highlighted experience, not necessarily every map item.
 
 ## Acceptance Criteria
 
-- route evidence is ranked deterministically;
-- timeline contains only important events;
-- irrelevant map telemetry does not automatically become a highlighted insight;
-- no more than roughly 3–6 important findings appear in the automated experience;
-- destination conditions receive appropriate priority.
+- direct overlaps remain preserved;
+- nearby supplemental events are ranked deterministically;
+- temporal/directional caveats remain available;
+- weather evidence categories remain distinguishable;
+- timeline is deterministic;
+- regional map data does not automatically become briefing data;
+- source provenance/freshness is retained;
+- missing values remain unknown.
 
 ---
 
-# 19. Phase 10 — Transit Mode
+# 20. Phase 10 — Transit Mode: GTFS Static + Service Alerts
 
 ## Objective
 
-Add useful transit journey analysis while deliberately avoiding full transit navigation.
+Add useful service-specific Transit mode while deliberately avoiding full transit routing.
 
-Drive behavior should already be stable before this phase.
+Drive/geographic behavior should already be stable.
 
-## Backend
+## MVP Transit Scope
 
-Implement TransLink GTFS-Realtime integration.
+Include:
 
-Focus on:
+- GTFS Static route/direction reference data;
+- user-selected ordered transit legs;
+- GTFS-Realtime Service Alerts.
 
-1. service alerts;
-2. trip updates / delays;
-3. other useful realtime disruption information.
+Explicitly do not include:
 
-Normalize into:
+- Trip Updates;
+- Vehicle Positions;
+- exact transit itinerary generation;
+- boarding/exiting stop selection;
+- transit map visualization.
 
-```text
-TransitAlert
+---
+
+## Phase 10A — GTFS Static Preprocessing
+
+Implement GTFS Static ingestion.
+
+Required files:
+
+- `routes.txt`;
+- `trips.txt`.
+
+`stops.txt` may be retained for future use but is not required for core MVP selection.
+
+Build searchable route index containing:
+
+- `route_id`;
+- `route_short_name`;
+- `route_long_name`;
+- `route_type`.
+
+Build direction/headsign index from `trips.txt`.
+
+Do not expose every trip row.
+
+Derive passenger-friendly direction choices.
+
+Do not assume `direction_id=0/1` has a universal directional meaning.
+
+## GTFS Static Cache
+
+Initial operational policy:
+
+> approximately weekly or on new official feed publication.
+
+Use validated replacement.
+
+---
+
+## Phase 10B — Transit Selection UI
+
+When Transit mode is selected, allow the user to build ordered legs.
+
+Example:
+
+```text id="380e2c"
+Leg 1
+R5 Hastings
+Toward Downtown Vancouver
+
+Leg 2
+Expo Line
 ```
 
-## Transit Corridor
+Support:
 
-Implement a broad approximate journey corridor.
+- buses;
+- SkyTrain lines;
+- multiple legs;
+- direction where meaningful.
 
-The first version may use:
+Preserve official IDs beneath friendly labels.
 
-- direct origin/destination geometry;
-- broadened relevance buffer;
-- experimentally useful approximate path if justified.
+---
 
-Do not imply exact bus/SkyTrain routing.
+## Phase 10C — Service Alerts
 
-## Relevance
+Implement TransLink GTFS-Realtime Service Alerts.
 
-Transit mode may use wider relevance than drive mode.
+Decode binary Protocol Buffers.
 
-Test whether useful service information can be associated with:
+Use explicit HTTP headers known to work with the endpoint.
 
-- journey area;
-- affected routes;
-- affected stops;
-- destination context.
+Handle:
 
-The exact heuristic may be adjusted based on real testing.
+- 403;
+- rate limits;
+- malformed payload;
+- API unavailability.
+
+Never log the API key.
+
+## Alert Cache
+
+Initial policy:
+
+> approximately 30–60 seconds.
+
+Reuse feed across repeated analyses.
+
+---
+
+## Alert Normalization
+
+Preserve:
+
+- header text;
+- description text;
+- cause/effect;
+- active periods;
+- all informed-entity selectors;
+- source URL where available.
+
+Do not depend only on enums.
+
+---
+
+## Deterministic Matching
+
+For each selected transit leg, compare:
+
+- `route_id`;
+- optional `direction_id`.
+
+Classify matches.
+
+### Route + matching direction
+
+Strong service-level match.
+
+### Route without direction restriction
+
+Potentially relevant to either direction.
+
+### Route + stop selector
+
+Location-specific; do not call it route-wide automatically.
+
+### Trip-specific selector
+
+Do not assume applicability without trip identity.
+
+### Opposite direction only
+
+Exclude unless another selector independently matches.
+
+Multiple selectors in one alert are alternatives within that alert.
+
+---
+
+## Temporal Applicability
+
+Use active periods where available.
+
+Preserve source text for schedule qualifications.
+
+Do not mark an old-start-date alert stale merely because the start date is old.
+
+Do not assume an open-ended active period means a restriction applies continuously.
+
+---
 
 ## Frontend
 
 Transit mode should:
 
-- retain map/camera/weather information;
-- add transit alerts;
-- clearly identify transit-related disruptions;
-- avoid pretending RouteLens knows the authoritative itinerary.
+- retain road/weather/camera geographic context;
+- show the ordered selected transit legs;
+- display matching service alerts;
+- communicate alert scope clearly;
+- avoid implying exact transit routing;
+- avoid unsupported delay estimates.
 
-## Acceptance Criteria
-
-- selecting Transit changes analysis behavior;
-- TransLink data is queried only when appropriate;
-- relevant alerts appear;
-- generic journey corridor is visible;
-- road/weather/camera information still functions;
-- transit failure is isolated.
+No transit map overlays.
 
 ---
 
-# 20. Phase 11 — AI Journey Briefing
+## Acceptance Criteria
+
+- GTFS Static route index builds successfully;
+- SkyTrain routes with empty short names remain searchable;
+- direction choices derive from trip/headsign data;
+- user can add ordered transit legs;
+- canonical GTFS IDs are preserved;
+- Service Alerts decode successfully;
+- explicit request headers work;
+- route/direction matching works;
+- opposite-direction-only alert is excluded;
+- directionless route alert remains potentially relevant;
+- stop-specific scope is preserved;
+- trip-specific applicability is not overstated;
+- open-ended active periods are handled conservatively;
+- Transit failure remains isolated;
+- no Trip Updates/Vehicle Positions/transit visualization are introduced.
+
+---
+
+# 21. Phase 11 — AI Journey Briefing
 
 ## Objective
 
-Add the final text-model interpretation layer after the underlying structured evidence is stable.
+Add the final text-model synthesis after the structured evidence pipeline is stable.
 
 ## Backend
 
-Create compact evidence payload containing only relevant information.
+Build a compact evidence payload containing only normalized relevant information.
 
 Possible input:
 
-```text
+```text id="d13fbf"
 Trip
 SelectedRoute
-important CityEvents
+
+Important Road Ahead Events
+Relevant Open511 Events
+
 CameraObservation
-WeatherObservation
-WeatherForecast
-TransitAlerts
+
+SWOB Observations
+OpenWeather Current/Forecast
+
+Selected Transit Legs
+Matched Transit Alerts
+
+Source freshness / unavailable sources
+
 JourneyTimeline
 ```
 
-Do not send raw external API payloads.
+Do not send:
 
-Call OpenRouter text model.
+- raw JSON feeds;
+- entire GTFS feed;
+- raw HTML;
+- every regional Open511 event;
+- unrelated telemetry.
 
-Require structured response:
+## OpenRouter
 
-```text
+Call the selected text model.
+
+Require:
+
+```text id="51cc5a"
 JourneyBriefing
 ```
 
 with:
 
-```text
+```text id="252a26"
 status
 summary
 highlights[]
 recommendation
 ```
 
-Validate with Pydantic.
+Validate through Pydantic.
 
 ## Behavioral Requirements
 
-The model must:
+The LLM must:
 
-- only use supplied evidence;
+- use only supplied evidence;
+- distinguish source-reported, measured, forecast, and visually inferred conditions;
 - remain concise;
 - avoid invented disruptions;
+- avoid invented travel times;
+- avoid invented delay durations;
+- preserve uncertainty;
 - allow “journey looks clear” outcomes;
-- avoid unnecessary urgency;
-- keep highlights aligned with deterministic findings.
+- avoid unnecessary urgency.
 
 ## Frontend
 
-Replace any temporary deterministic summary with final:
+Replace temporary deterministic summary with:
 
-```text
+```text id="fa6dad"
 RouteLens AI Briefing
 ```
 
-while maintaining structured UI control over:
+Maintain structured UI control over:
 
 - status;
 - summary;
@@ -1151,92 +1681,165 @@ while maintaining structured UI control over:
 
 ## Acceptance Criteria
 
-- valid structured briefing produced;
+- valid structured briefing is produced;
 - malformed output fails safely;
-- clear journeys receive appropriately calm output;
-- findings correspond to actual supplied evidence;
-- briefing does not become a wall of text.
+- clear journeys receive calm output;
+- findings correspond to supplied evidence;
+- evidence disagreements can be expressed;
+- transit specificity is not lost;
+- no unsupported delay/closure/weather claim is introduced;
+- output remains concise.
 
 ---
 
-# 21. Phase 12 — Integration Hardening
+# 22. Phase 12 — Integration Hardening
 
 ## Objective
 
-Improve reliability after all major product capabilities exist.
+Improve reliability after all major MVP capabilities exist.
 
 This is not a new-feature phase.
 
-## Areas to Review
-
-### Partial Failure
+## Partial Failure
 
 Test combinations such as:
 
-```text
-Road Ahead unavailable
-TransLink unavailable
+```text id="5a4eab"
+Road Ahead refresh fails
+Open511 unavailable
+SWOB unavailable
+OpenWeather unavailable
+camera catalogue stale
 camera image unavailable
 camera AI unavailable
-forecast unavailable
+TransLink unavailable
+OpenRouter text call unavailable
 ```
 
 The remaining application should still work where possible.
 
-### Cache Behavior
+---
+
+## Cache Behavior
 
 Verify:
 
-- expiry;
-- stale handling;
-- repeated requests;
-- raw source cache;
-- camera-image cache;
-- camera-analysis cache.
+- Road Ahead 24-hour cache;
+- Road Ahead stale fallback;
+- detail-page cache;
+- Open511 5–15 minute cache;
+- SWOB 10–15 minute cache;
+- camera catalogue cache;
+- ephemeral image overwrite behavior;
+- GTFS Static cache;
+- Service Alert short cache;
+- OpenWeather cache once finalized.
 
-### Timeouts / Retries
+---
+
+## Cache Integrity
 
 Confirm:
 
-- explicit source timeouts;
-- minimal retry behavior;
-- slow services do not stall indefinitely.
+- malformed new payload does not replace valid cache;
+- stale age is reported;
+- cached provenance is retained;
+- atomic replacement is used where practical.
 
-### Logging
+---
 
-Confirm useful logging for:
+## Geometry
 
-- fetch success/failure;
-- cache hits;
-- LLM latency/errors;
-- total analysis timing.
+Verify:
 
-### Empty States
+- projection correctness;
+- `LineString`;
+- `MultiLineString`;
+- `GeometryCollection`;
+- direct overlap preservation;
+- regional Open511 matching.
+
+---
+
+## Transit
+
+Verify:
+
+- route index freshness;
+- GTFS Static and realtime IDs align;
+- direction matching;
+- missing direction handling;
+- stop-specific alerts;
+- trip-specific alerts;
+- active-period edge cases.
+
+---
+
+## Weather
+
+Verify:
+
+- missing SWOB measurements;
+- zero vs missing precipitation;
+- stale station observations;
+- disagreement between SWOB/OpenWeather/camera;
+- OpenWeather field absence.
+
+---
+
+## Camera
+
+Verify:
+
+- broken camera page;
+- missing direction;
+- broken JPEG;
+- nearest camera unusable;
+- next-nearest fallback;
+- partial view availability;
+- multimodal failure.
+
+---
+
+## Logging
+
+Confirm logging for:
+
+- source fetch success/failure;
+- cache hit/miss/stale fallback;
+- pagination counts;
+- number of records normalized;
+- LLM call latency/errors;
+- total analysis time.
+
+No secrets in logs.
+
+---
+
+## Empty States
 
 Test:
 
-- no construction;
-- no incidents;
-- no nearby camera;
-- no transit alerts;
-- clear weather;
+- no Road Ahead match;
+- no journey-relevant Open511 event;
+- no usable camera;
+- no useful SWOB reading;
+- no matching Transit alert;
 - no significant findings.
-
-### API Validation
-
-Test malformed/unsupported input.
 
 ## Acceptance Criteria
 
 - individual source failures remain isolated;
-- useful source-status information reaches frontend;
-- error states are understandable;
-- no common failure path results in unnecessary full application failure;
-- caches behave predictably.
+- validated caches behave predictably;
+- stale data is labeled;
+- no common edge case unnecessarily crashes analysis;
+- missing values remain unknown;
+- source statuses reach frontend;
+- error messages are understandable.
 
 ---
 
-# 22. Phase 13 — Presentation + Demo Polish
+# 23. Phase 13 — Presentation + Demo Polish
 
 ## Objective
 
@@ -1244,7 +1847,9 @@ Turn the functioning MVP into a presentation-ready product.
 
 This phase is protected from feature creep.
 
-Do not add major new integrations.
+Do not add new major integrations.
+
+---
 
 ## Loading UX
 
@@ -1252,34 +1857,61 @@ Improve analysis-state feedback.
 
 Example:
 
-```text
+```text id="3114ab"
 Analyzing journey…
 
 ✓ route loaded
-✓ construction checked
-✓ road events checked
-✓ cameras checked
+✓ municipal road data checked
+✓ regional road events checked
 ✓ weather checked
-✓ transit checked
+✓ destination camera checked
+✓ transit alerts checked
 ✓ generating briefing
 ```
 
-Exact implementation may differ.
+Exact wording may differ.
 
-## Freshness UI
+---
 
-Ensure clear labels such as:
+## Freshness UX
 
-```text
-Camera · captured 4m ago
+Ensure clear source-specific labels.
+
+Examples:
+
+```text id="04126a"
+Camera · retrieved 4m ago
+
 ECCC · observed 9m ago
-DriveBC · updated 3m ago
-Road Ahead · updated 42m ago
+
+DriveBC · refreshed 3m ago
+
+Road Ahead · dataset fetched 6h ago
+
+TransLink · refreshed 35s ago
+
+OpenWeather · refreshed 8m ago
 ```
+
+Stale sources should look distinct.
+
+---
 
 ## Failure UX
 
-Ensure partial errors are visible without overwhelming the interface.
+Ensure partial-source errors are visible without overwhelming the interface.
+
+Examples:
+
+```text id="61794a"
+Camera observation unavailable
+
+TransLink alerts unavailable
+
+Road Ahead using cached data from 27h ago
+```
+
+---
 
 ## Motion
 
@@ -1287,11 +1919,14 @@ Refine:
 
 - route reveal;
 - card entrance;
-- CameraDetail transition;
+- destination camera presentation;
+- panel transition;
 - Live indicator;
-- small loading states.
+- loading states.
 
 Avoid decorative excess.
+
+---
 
 ## Visual Cleanup
 
@@ -1299,72 +1934,103 @@ Review:
 
 - spacing;
 - hierarchy;
-- camera prominence;
+- destination-condition prominence;
+- multi-view camera layout;
 - marker design;
 - route contrast;
 - typography;
+- transit alert presentation;
+- source/freshness badges;
 - empty states;
 - panel balance;
-- overflow/scroll behavior.
+- scroll behavior.
+
+---
 
 ## Demo Routes
 
-Identify a small set of reliable Vancouver demo journeys that exercise different capabilities.
+Identify several reliable scenarios that exercise different capabilities.
 
-Examples might include:
+Examples:
 
-- regional drive into downtown;
-- bridge/highway approach;
-- journey with useful Vancouver cameras;
-- transit journey with realistic TransLink context.
+### Drive
 
-Exact routes should be selected based on live conditions available near presentation time.
+Regional journey into downtown with:
+
+- ORS route;
+- Road Ahead event;
+- Open511 context;
+- camera intersection;
+- weather.
+
+### Transit
+
+Journey with:
+
+- approximate geographic route;
+- one or more selected transit services;
+- Service Alert behavior;
+- weather/camera context.
+
+Exact routes should be chosen near presentation time based on live conditions.
+
+---
 
 ## Demo Smoke Test
 
 Perform end-to-end rehearsal:
 
-```text
+```text id="3f8099"
 fresh application start
-→ input journey
+→ origin/destination
+→ mode
 → route selection
+→ optional transit-service selection
 → analysis
-→ camera
-→ road telemetry
+→ Road Ahead
+→ Open511
 → weather
+→ multi-view camera
+→ camera AI
+→ transit alerts if applicable
 → timeline
 → briefing
-→ alternative camera
 ```
 
-Verify no developer-only setup is needed during the presentation.
-
-## Acceptance Criteria
-
-- primary demo journey works reliably;
-- loading states are clear;
-- errors degrade gracefully;
-- no major visual rough edges remain;
-- final experience communicates the RouteLens concept within seconds;
-- no new major feature is introduced during this phase.
+Verify no developer-only intervention is needed during the demo.
 
 ---
 
-# 23. Expected Evolution of Later Phases
+## Acceptance Criteria
+
+- primary drive demo works reliably;
+- primary transit demo works reliably;
+- loading states are clear;
+- errors degrade gracefully;
+- no major visual rough edges remain;
+- destination camera feature is visually strong;
+- final experience communicates RouteLens within seconds;
+- no new major feature is introduced.
+
+---
+
+# 24. Expected Evolution of Later Phases
 
 Phases 0–6 are deliberately defined more tightly.
 
 Phases 7 onward may change based on:
 
-- actual API behavior;
-- quality of camera metadata;
-- camera-image availability;
-- LLM model performance;
-- observed UI interaction;
-- transit relevance testing;
-- runtime latency.
+- camera-page consistency;
+- directional image availability;
+- image quality;
+- OpenRouter vision performance;
+- GTFS preprocessing realities;
+- alert selector edge cases;
+- OpenWeather API behavior;
+- runtime latency;
+- UI feedback.
 
-Changes should preserve the product requirements unless implementation evidence shows that a requirement itself needs reconsideration.
+Changes should preserve product requirements unless real implementation evidence shows a requirement itself needs reconsideration.
 
 If architecture changes materially:
 
@@ -1380,7 +2046,31 @@ If only build sequence changes:
 
 ---
 
-# 24. Development Artifacts Created From This Plan
+# 25. Deferred Features Must Stay Deferred
+
+The following are explicitly outside MVP implementation unless scope is deliberately reopened:
+
+- DriveBC cameras;
+- multiple Vancouver camera intersections per journey;
+- historical camera archive;
+- camera time-series analysis;
+- image upscaling;
+- camera traffic-speed estimation;
+- GTFS-Realtime Trip Updates;
+- GTFS-Realtime Vehicle Positions;
+- exact transit trip selection;
+- boarding/exiting stop selection;
+- full transit routing;
+- transit network map;
+- vehicle markers;
+- weather-station interpolation;
+- complex cross-source event deduplication.
+
+Codex should not implement these opportunistically.
+
+---
+
+# 26. Development Artifacts Created From This Plan
 
 This document is not intended to be Codex's complete working context.
 
@@ -1388,7 +2078,7 @@ Before implementation begins, derive the project SDD harness.
 
 Recommended root files:
 
-```text
+```text id="ad086e"
 AGENTS.md
 APP_SPEC.md
 BUILD_PLAN.md
@@ -1397,67 +2087,72 @@ PROJECT_STATE.md
 
 ---
 
-# 25. Relationship to APP_SPEC.md
+# 27. Relationship to APP_SPEC.md
 
 `APP_SPEC.md` should become the concise Codex-facing implementation specification.
 
 It should derive relevant truths from:
 
-```text
+```text id="f2d7df"
 docs/prd.md
 +
 docs/technical-design.md
 ```
 
-but omit unnecessary product rationale and discussion history.
+while omitting unnecessary planning rationale and discussion history.
 
-It should focus on:
+Focus on:
 
 - system invariants;
-- major architecture;
+- architecture;
 - expected behavior;
-- key model boundaries;
-- non-negotiable constraints.
+- model boundaries;
+- core source responsibilities;
+- important constraints;
+- deferred scope.
 
 ---
 
-# 26. Relationship to BUILD_PLAN.md
+# 28. Relationship to BUILD_PLAN.md
 
-`BUILD_PLAN.md` should convert the current phase from this roadmap into an operational coding task.
+`BUILD_PLAN.md` converts the current roadmap phase into an operational coding task.
 
 For example:
 
-```text
+```text id="07f2dc"
 docs/implementation-plan.md
 
 Phase 4
-Vancouver Road Ahead vertical slice
+Road Ahead Vertical Slice
 ```
 
-becomes something closer to:
+becomes:
 
-```text
+```text id="ea680d"
 BUILD_PLAN.md
 
-CURRENT PHASE:
+CURRENT PHASE
 Road Ahead Vertical Slice
 
-Objective:
+Objective
 ...
 
-Files/modules likely involved:
+Relevant source behavior
 ...
 
-Requirements:
+Scope
 ...
 
-Non-goals:
+Non-goals
 ...
 
-Acceptance criteria:
+Acceptance criteria
 ...
 
-Verification:
+Verification
+...
+
+Stop conditions
 ...
 ```
 
@@ -1465,16 +2160,17 @@ The build plan may evolve more frequently than this implementation roadmap.
 
 ---
 
-# 27. Relationship to PROJECT_STATE.md
+# 29. Relationship to PROJECT_STATE.md
 
 `PROJECT_STATE.md` tracks reality.
 
 It should answer:
 
-- which phase has been completed;
+- which phase has completed;
 - which phase is current;
 - what functionality actually exists;
-- important implementation decisions discovered during development;
+- what real source behaviors were discovered;
+- important implementation decisions;
 - known issues;
 - deferred work;
 - verification status;
@@ -1484,32 +2180,34 @@ Do not turn `implementation-plan.md` into a progress log.
 
 ---
 
-# 28. Relationship to AGENTS.md
+# 30. Relationship to AGENTS.md
 
 `AGENTS.md` should define project-wide coding-agent behavior.
 
 Likely rules include:
 
 - inspect existing code before changing it;
+- read the SDD harness;
 - respect documented architecture;
-- remain within current phase scope;
+- remain within current phase;
 - avoid unrelated refactoring;
-- use existing patterns where possible;
+- preserve source provenance;
+- do not convert missing data into defaults;
+- do not implement deferred features;
 - run required verification;
 - report uncertainty;
-- do not invent missing requirements;
 - never commit or push;
-- stop and report major blockers rather than redesigning the product autonomously.
+- stop/report when live source behavior materially invalidates the design.
 
 ---
 
-# 29. Planning-Agent Role During Implementation
+# 31. Planning-Agent Role During Implementation
 
 The planning agent remains active throughout development.
 
 For each phase:
 
-```text
+```text id="53adf4"
 docs/
 +
 SDD harness
@@ -1524,69 +2222,64 @@ bounded Codex prompt
 The planning agent should:
 
 - understand the current phase;
-- identify only relevant architecture/context;
+- incorporate relevant source-specific research;
+- identify only necessary architecture/context;
 - produce a tightly scoped implementation prompt;
 - define acceptance criteria;
-- define verification expectations;
-- prevent accidental scope expansion.
+- define verification;
+- prevent scope expansion.
 
-The planning agent does not need to redesign RouteLens before every phase.
+The planning agent does not redesign RouteLens before every phase.
 
 ---
 
-# 30. Codex Role During Implementation
-
-Codex is responsible primarily for bounded implementation.
+# 32. Codex Role During Implementation
 
 For a given phase, Codex should:
 
-1. inspect relevant repository state;
-2. read applicable project instructions;
-3. understand the current bounded task;
+1. inspect current repository state;
+2. read project instructions;
+3. understand current bounded task;
 4. implement only the required capability;
-5. use available feedback loops while working;
+5. use available feedback loops;
 6. add/update tests;
-7. run required verification;
-8. report changes and unresolved issues;
-9. leave Git history untouched.
+7. run verification;
+8. perform safe live integration checks where required;
+9. update `PROJECT_STATE.md` where appropriate;
+10. report changes/deviations;
+11. leave Git history untouched.
 
-Codex should not autonomously decide to implement future phases.
+Codex should not autonomously move into future phases.
 
 ---
 
-# 31. Human Role During Implementation
+# 33. Human Role During Implementation
 
 The human remains responsible for:
 
-- accepting/rejecting phase output;
-- architectural judgment;
-- product judgment;
-- reviewing significant implementation choices;
+- phase acceptance;
+- architecture/product judgment;
+- significant dependency approval;
+- review of source adapters;
+- review of geospatial logic;
+- review of caching/data integrity;
+- review of transit matching;
+- review of AI contracts/prompts;
 - behavioral QA;
-- deciding whether discovered issues require plan/design changes;
+- visual QA;
+- deciding whether discoveries require design changes;
 - Git commits;
-- deciding when to advance to the next phase.
+- deciding when to advance.
 
-Manual code review should prioritize:
-
-- source adapters;
-- data models;
-- geospatial logic;
-- caching;
-- AI contracts/prompts;
-- error handling;
-- dependencies;
-- API key handling.
-
-Ordinary generated UI/CSS and trivial helpers may receive lighter review if behavior is correct.
+Ordinary React/CSS/helpers may receive lighter review where behavior is correct.
 
 ---
 
-# 32. Implementation Mental Model
+# 34. Implementation Mental Model
 
 The development path should remain:
 
-```text
+```text id="a4c5a4"
 VERIFY DEPENDENCIES
         ↓
 CREATE VISUAL SHELL
@@ -1595,17 +2288,19 @@ ENTER A REAL JOURNEY
         ↓
 DRAW A REAL ROUTE
         ↓
-ADD ONE REAL CITY SIGNAL
+ADD MUNICIPAL ROAD DATA
         ↓
-ADD MORE DETERMINISTIC SIGNALS
+ADD REGIONAL ROAD CONTEXT
         ↓
-ADD CAMERAS
+ADD STRUCTURED + MEASURED WEATHER
         ↓
-ADD MULTIMODAL AI
+ADD VANCOUVER CAMERA PIPELINE
         ↓
-TURN SIGNALS INTO A JOURNEY MODEL
+ADD MULTI-VIEW CAMERA AI
         ↓
-ADD TRANSIT
+REFINE JOURNEY RELEVANCE
+        ↓
+ADD TRANSIT SERVICE SELECTION + ALERTS
         ↓
 ADD FINAL AI SYNTHESIS
         ↓
@@ -1616,15 +2311,15 @@ POLISH
 
 At every step, RouteLens should become more visibly real.
 
-The implementation should avoid long periods where large amounts of infrastructure exist without a user-observable feature.
+Avoid long periods where infrastructure exists without user-visible value.
 
 ---
 
-# 33. Final Implementation Principle
+# 35. Final Implementation Principle
 
 The purpose of this plan is not to predict every implementation detail perfectly.
 
-It is to provide a disciplined path toward a working RouteLens MVP while allowing real application behavior to inform later decisions.
+It is to provide a disciplined path toward a working RouteLens MVP while allowing real source behavior to inform later decisions.
 
 The guiding rule is:
 

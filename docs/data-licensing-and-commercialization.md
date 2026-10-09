@@ -16,24 +16,25 @@ This document is **engineering and licensing research, not legal advice**.
 
 Terms, pricing, licences, APIs, and provider policies may change. They should be rechecked before public launch or commercialization.
 
-**Research status:** October 7, 2026.
+**Original licensing research:** October 7, 2026  
+**MVP scope updated:** October 9, 2026
 
 ---
 
 # 2. Scope
 
-The main analysis covers the seven planned RouteLens MVP information sources:
+The main analysis covers the six current RouteLens MVP information-source groups:
 
-1. Vancouver webcams
+1. Vancouver Traffic Webcams
 2. Vancouver Road Ahead
 3. DriveBC Open511
-4. DriveBC cameras
-5. Environment and Climate Change Canada GeoMet / SWOB
-6. TransLink GTFS-Realtime
-7. OpenWeather
+4. Environment and Climate Change Canada GeoMet / SWOB
+5. TransLink GTFS Static + GTFS-Realtime Service Alerts
+6. OpenWeather
 
-A short appendix also records previously considered or possible future sources:
+A separate future/deferred section records sources that are not part of the current MVP:
 
+- DriveBC Cameras
 - ECCC weather radar
 - Vancouver 311
 - Metro Vancouver AirMap
@@ -41,9 +42,9 @@ A short appendix also records previously considered or possible future sources:
 
 This document does **not** currently constitute a full terms review of infrastructure/service providers such as:
 
-- MapTiler
-- openrouteservice
-- OpenRouter
+- MapTiler;
+- openrouteservice;
+- OpenRouter.
 
 Those services should be reviewed separately before commercial deployment.
 
@@ -65,60 +66,68 @@ Typically:
 - redistribution permitted subject to attribution;
 - no unusual dependence on revocable custom permissions.
 
-Green does not mean “no obligations.”
+Green does not mean:
 
-Attribution and licence terms still apply.
+> no obligations.
+
+Attribution and licence conditions still apply.
 
 ## Yellow
 
 Usable, but important terms, limitations, rights ambiguity, commercial conditions, rate limits, or asset-specific restrictions require attention.
 
-A Yellow source may be entirely reasonable for the MVP while still deserving review before commercialization.
+A Yellow source may be entirely reasonable for a portfolio/datathon MVP while still deserving review before public deployment or commercialization.
 
 ## Red
 
-Use is unsuitable for the intended product without obtaining additional permission, changing the architecture, or replacing the source.
+Use is unsuitable for the intended product without:
+
+- additional permission;
+- contractual changes;
+- architectural changes;
+- or replacement of the source.
 
 No current core RouteLens structured-data source is classified Red.
 
-Some **forms of use of camera imagery** would become effectively Red unless permission is obtained.
+Certain forms of raw camera-image use could become effectively Red unless adequate rights are established.
 
 ---
 
-# 4. Current MVP Summary
+# 4. Current MVP Licensing Summary
 
-| Source | Current Risk | Main Reason |
-|---|---|---|
-| Vancouver Road Ahead | **Green** | Explicit Open Government Licence – Vancouver |
-| Vancouver webcam metadata | **Green** | City Open Data material under OGL-Vancouver |
-| Vancouver webcam images | **Yellow** | Publicly accessible image asset rights are not clearly established by the metadata licence |
-| DriveBC Open511 | **Green** | Explicit OGL-BC |
-| DriveBC camera imagery | **Yellow** | No clear evidence that Open511/OGL-BC covers the JPEG imagery; general B.C. web copyright is restrictive |
-| ECCC GeoMet / SWOB | **Green** | Explicit Open Government Licence – Canada |
-| TransLink GTFS-Realtime | **Yellow** | Custom, revocable licence; API approval/key, limits, required attribution, commercial conditions |
-| OpenWeather | **Yellow** | Commercial use allowed under current plans, but ODbL, visible attribution, plan limits and database share-alike considerations apply |
+| Source | Risk | Current RouteLens Role | Main Reason |
+|---|---|---|---|
+| Vancouver Road Ahead | **Green** | Municipal construction and closures | Explicit Open Government Licence – Vancouver |
+| Vancouver webcam metadata | **Green** | Camera locations/pages/catalogue | City Open Data material under OGL-Vancouver |
+| Vancouver webcam images | **Yellow** | Ephemeral destination visual evidence | Metadata licence does not clearly establish unrestricted rights to linked JPEGs |
+| DriveBC Open511 | **Green** | Regional road events | Explicit Open Government Licence – British Columbia |
+| ECCC GeoMet / SWOB | **Green** | Measured weather observations | Explicit Open Government Licence – Canada |
+| TransLink GTFS Static + Service Alerts | **Yellow** | Transit selection/reference + service alerts | Custom TransLink terms, API approval/key, attribution, usage/commercial conditions |
+| OpenWeather | **Yellow** | Structured current and near-term weather | Commercial terms / ODbL, attribution, plan limits, database implications |
 
-The overall RouteLens data posture is therefore:
+Current overall posture:
 
-> **Healthy overall, with the main commercialization attention concentrated around camera imagery, TransLink, and OpenWeather licensing conditions.**
+> **The core structured-data foundation is strong, while the main commercialization attention is concentrated around Vancouver camera imagery, TransLink, and OpenWeather.**
+
+DriveBC camera imagery remains Yellow research but is **not a current MVP dependency**.
 
 ---
 
 # 5. City of Vancouver Open Government Licence
 
-The City of Vancouver publishes its open data under the **Open Government Licence – Vancouver**.
+The City of Vancouver publishes qualifying open datasets under the **Open Government Licence – Vancouver**.
 
-The licence grants a worldwide, royalty-free, perpetual, non-exclusive right to use covered information, including commercially, and permits copying, modification, adaptation, publication and distribution for lawful purposes.
+The licence permits broad lawful reuse of covered information, including commercial use, modification, adaptation, publication, and distribution.
 
 Attribution is required.
 
-This makes properly designated City of Vancouver open datasets strong foundations for RouteLens.
+This makes properly designated City of Vancouver open datasets strong RouteLens foundations.
 
-Important limitation:
+Important boundary:
 
-> The licence covers information offered under that licence. It should not automatically be assumed to cover every externally linked or separately delivered asset.
+> **The licence applies to information actually offered under that licence. It should not automatically be assumed to cover every externally linked or separately delivered asset.**
 
-That distinction is particularly important for webcam images.
+That distinction is especially important for webcam imagery.
 
 ---
 
@@ -128,43 +137,59 @@ That distinction is particularly important for webcam images.
 
 **GREEN**
 
-The Road Ahead current-road-closures dataset explicitly lists:
+RouteLens uses:
 
-> Open Government Licence – Vancouver
+- Current Road Closures;
+- Projects Under Construction.
 
-as its licence. The current dataset also exposes hourly feeds during weekday daytime hours in addition to the portal extract.
+These datasets are part of the City of Vancouver open-data ecosystem and are used under the applicable Open Government Licence – Vancouver framework.
 
-## RouteLens Use
-
-Planned operations are well aligned with OGL-Vancouver:
+## Planned RouteLens Use
 
 ```text
 fetch
+→ validate
 → cache
 → normalize
-→ geospatially filter
-→ combine with other route evidence
-→ derive journey insight
+→ preserve geometry
+→ geospatially match against journey
+→ selectively enrich relevant events
+→ derive journey context
 → display in application
 ```
 
-Commercial use, transformation and redistribution of the licensed information are permitted subject to the licence requirements.
+This type of transformation and application use is well aligned with an open-government-data licence.
 
 ## Persistence
 
-Persistent storage of normalized Road Ahead information is reasonable under the open licence.
+Reasonable planned uses include:
 
-Raw response caching is also compatible with the planned architecture.
+- raw response caching;
+- normalized event persistence;
+- derived geospatial relevance;
+- selective cached enrichment;
+- combination with other RouteLens evidence.
+
+## Detail-Page Enrichment
+
+RouteLens may retrieve additional event detail from Road Ahead pages for geographically relevant events.
+
+Because source-detail pages are used to improve interpretation of the licensed dataset, provenance should be retained.
+
+Before a commercial release, verify whether any detail-page material relied upon is clearly covered by the same open-data licence or other applicable permission.
+
+The MVP should avoid bulk republishing entire webpages.
 
 ## Commercialization
 
-No major licence blocker is currently apparent.
+No major licensing blocker is currently apparent for the core Road Ahead datasets.
 
 Before commercial release:
 
 - preserve attribution;
 - preserve provenance;
-- recheck that the specific datasets being used remain designated OGL-Vancouver.
+- confirm the specific datasets remain OGL-Vancouver;
+- review any material dependence on separately published detail-page content.
 
 ---
 
@@ -174,24 +199,48 @@ Before commercial release:
 
 **GREEN**
 
-The City's webcam dataset contains locations and URLs for official publicly available webcams. The dataset states that the listed locations are approximate and that webcam images themselves are updated approximately every five minutes.
-
-Because this information is published through the City's open-data system, the metadata can be treated separately from the image asset itself under the City's open-data licensing framework.
-
-## Metadata Suitable for Persistence
-
-Examples:
+The City webcam dataset provides structured information such as:
 
 ```text
-camera ID
-camera location
-camera URL
-camera name/intersection
-source
-metadata timestamps
+camera/intersection ID
+name
+coordinates
+camera webpage URL
+source metadata
 ```
 
-This information may be normalized into RouteLens's `Camera` model.
+RouteLens may use this information to build an enriched local camera catalogue.
+
+## Catalogue Enrichment
+
+The current technical design visits each official camera page to discover actual directional image URLs.
+
+This creates an important distinction:
+
+```text
+open dataset metadata
+        ↓
+official camera page
+        ↓
+directional JPEG URLs
+```
+
+The metadata itself can be treated according to the applicable City open-data licence.
+
+The rights governing the linked images remain a separate question.
+
+## Persistence
+
+The following may reasonably be retained as catalogue data:
+
+- intersection ID;
+- coordinates;
+- page URL;
+- directional labels;
+- discovered image URLs;
+- catalogue refresh timestamp.
+
+The fact that a URL was discovered does not itself expand the licence governing the linked image.
 
 ---
 
@@ -201,425 +250,463 @@ This information may be normalized into RouteLens's `Camera` model.
 
 **YELLOW**
 
-The key distinction is:
+This remains the most important asset-level rights ambiguity in the active MVP.
+
+The core distinction is:
 
 ```text
 City open-data record
-├── camera location
-├── camera metadata
-└── camera URL
+├── location
+├── metadata
+└── camera webpage URL
         ↓
-     linked image
+directional image assets
+        ↓
+separate rights question
 ```
 
-An open licence covering the metadata does **not automatically prove that every linked JPEG inherits the same rights**.
+An open-data licence covering metadata does **not automatically establish unrestricted rights to every linked image**.
 
-The City dataset itself says that it contains links to public cameras and that the City does not control what is displayed by those cameras.
+RouteLens should therefore avoid assuming permission to:
 
-Therefore RouteLens should not assume, without additional confirmation, that it has unrestricted rights to:
+- create a permanent mirror;
+- build a historical image archive;
+- redistribute JPEGs as a standalone service;
+- sell image access;
+- train models on a large accumulated image corpus;
+- sublicense image collections.
 
-- create a historical camera archive;
-- redistribute camera JPEGs through a separate data product;
-- create a permanent mirror of the imagery;
-- train models on an accumulated image corpus;
-- sell access to an image archive.
+---
 
-## MVP Architectural Policy
+# 9. Locked Vancouver Camera Image Policy
 
-RouteLens should use:
+The current MVP architecture intentionally reduces the image-rights surface area.
+
+## Raw Images
+
+Treat as:
+
+> **ephemeral / cache-only**
+
+Conceptually:
 
 ```text
-camera URL
-     ↓
-fetch latest image
-     ↓
+selected camera intersection
+        ↓
+fetch current directional views
+        ↓
 temporary local cache
-     ↓
-display same frame
-     ↓
-multimodal analysis
-     ↓
+        ↓
+display same images
+        ↓
+one multimodal assessment
+        ↓
 derived CameraObservation
+        ↓
+images later overwritten/discarded
 ```
 
-Raw image policy:
+No historical archive.
+
+No repeated image time series.
+
+## Multiple Views
+
+The current MVP may temporarily hold several directional images from the same selected intersection.
+
+This does not change the retention policy:
+
+> all current views remain ephemeral.
+
+## Derived Observations
+
+Normalized AI output may be persisted where useful.
+
+Example:
 
 ```text
-latest image only
-→ overwrite on refresh
-→ no historical archive
+camera_intersection_id
+view_ids
+analysis_timestamp
+precipitation_visible
+road_surface
+visibility
+image_quality
+confidence
+notes
 ```
 
-Derived result:
-
-```text
-CameraObservation(
-    precipitation_visible=...,
-    road_surface=...,
-    visibility=...,
-    traffic_level=...,
-    confidence=...
-)
-```
-
-may be retained as RouteLens application data, subject to future review of derived-data implications.
+Preserve source provenance.
 
 ## Important Caveat
 
-Ephemeral processing **reduces the licensing surface area but does not itself prove that the processing is legally permitted**.
+Ephemeral use **reduces risk but does not prove that all processing, proxying, display, or AI analysis rights are granted**.
 
-The architecture is deliberately conservative while image rights remain unresolved.
+Before serious public/commercial deployment, image-use rights should be specifically confirmed.
 
 ---
 
-# 9. DriveBC Open511
+# 10. DriveBC Open511
 
 ## Status
 
 **GREEN**
 
-DriveBC's official Open511 documentation explicitly states that information supplied by the API is governed by the **Open Government Licence – British Columbia**.
+DriveBC Open511 information is governed by the **Open Government Licence – British Columbia** according to the source's API documentation.
 
-OGL-BC permits covered information to be used commercially and permits copying, modification, publication, adaptation and distribution subject primarily to attribution and other licence conditions.
+OGL-BC permits broad reuse of covered information, including commercial use, subject to its conditions and attribution.
 
-B.C.'s API terms separately govern how the API itself is accessed while stating that use of the information remains governed by OGL-BC.
-
-## RouteLens Use
-
-This is well suited to:
+## Planned RouteLens Use
 
 ```text
-Open511 events
-→ normalize into CityEvent
-→ route intersection/distance
-→ severity/freshness ranking
-→ journey timeline
-→ AI briefing evidence
+regional Open511 events
+        ↓
+cache
+        ↓
+normalize into CityEvent
+        ↓
+regional map
+        +
+journey-specific deterministic filtering
+        ↓
+timeline / briefing evidence
 ```
 
 ## Persistence
 
-Reasonable:
+Reasonable uses include:
 
-- API caching
-- normalized event persistence
-- derived ranking
-- combination with other licensed sources
+- regional API caching;
+- normalized event persistence;
+- geospatial matching;
+- derived relevance;
+- combination with Road Ahead and other sources.
 
-subject to OGL attribution.
+## Regional Fetching
+
+RouteLens's decision to cache a regional Open511 dataset rather than query only one route does not fundamentally alter the licensing posture.
+
+It should still:
+
+- respect API terms;
+- avoid abusive request patterns;
+- preserve attribution;
+- retain provenance.
 
 ## Commercialization
 
-Open511 is one of the strongest core RouteLens dependencies from a licensing perspective.
+DriveBC Open511 remains one of RouteLens's strongest potential commercial data foundations.
 
 ---
 
-# 10. DriveBC Camera Imagery
-
-## Status
-
-**YELLOW**
-
-DriveBC publicly provides highway-camera images for travel information.
-
-Its camera system itself uses an overwrite-oriented current-image model, and the public FAQ notes that newer images replace previous ones rather than maintaining a public historical image archive.
-
-However:
-
-> DriveBC Open511 being OGL-BC does not establish that every DriveBC camera JPEG is licensed under OGL-BC.
-
-The Open511 licence explicitly covers information delivered through that API.
-
-By contrast, the Province's general current website copyright policy states that B.C. government website material is copyrighted and may not be reproduced or redistributed without prior permission unless another applicable licence provides permission.
-
-DriveBC also includes some camera views supplied by third parties; for example, current camera pages can identify Parks Canada as the image provider.
-
-This means source-by-source rights may matter.
-
-## RouteLens Policy
-
-Treat DriveBC camera imagery the same conservatively as Vancouver imagery:
-
-```text
-fetch current image
-→ temporary/cache-only processing
-→ display current frame
-→ multimodal inference
-→ overwrite on refresh
-```
-
-Do not create:
-
-- permanent image archives;
-- image resale;
-- bulk redistribution;
-- training corpora
-
-without confirming permission.
-
-## Commercialization Requirement
-
-Explicitly establish image-use rights before making DriveBC imagery a material commercial dependency.
-
----
-
-# 11. ECCC GeoMet / SWOB Meteorological Observations
+# 11. ECCC GeoMet / SWOB
 
 ## Status
 
 **GREEN**
 
-Environment and Climate Change Canada's Meteorological Observations dataset is explicitly published under the **Open Government Licence – Canada**.
+Environment and Climate Change Canada's applicable meteorological-observation data is published under the **Open Government Licence – Canada**.
 
-OGL-Canada permits commercial use, copying, modification, publication, adaptation and distribution, subject to attribution and its stated exceptions.
+OGL-Canada permits covered information to be:
 
-## RouteLens Use
+- used commercially;
+- copied;
+- modified;
+- adapted;
+- published;
+- redistributed
 
-The planned pipeline is strongly aligned with the licence:
+subject to applicable licence conditions and attribution.
+
+## Planned RouteLens Use
 
 ```text
-weather observation
-→ normalize selected fields
-→ associate with destination
-→ combine with camera evidence
-→ produce journey insight
+recent SWOB observations
+        ↓
+validate
+        ↓
+group by station
+        ↓
+select latest useful observations
+        ↓
+normalize measurements
+        ↓
+associate with journey/destination
+        ↓
+weather evidence
 ```
 
 ## Persistence
 
-Reasonable:
+Reasonable uses include:
 
+- short-lived raw caching;
 - normalized observation storage;
-- caching;
-- correlation;
-- derived observations;
-- commercial application use.
+- correlation with journey location;
+- combination with camera/OpenWeather evidence.
 
-## Important Data-Quality Note
+## Data-Quality Consideration
 
-ECCC notes that near-real-time observations can come from multiple observing-system operators, have limited quality assurance, and should not necessarily be treated as final quality-controlled official values.
+Near-realtime environmental observations may have limitations or incomplete measurements.
 
-This is a product/provenance consideration rather than a licensing blocker.
+This is primarily a provenance/product-quality issue rather than a licensing blocker.
+
+RouteLens should preserve:
+
+- station;
+- timestamp;
+- measurement semantics;
+- missing values.
 
 ---
 
-# 12. TransLink GTFS-Realtime / Open API
+# 12. TransLink GTFS Static + GTFS-Realtime Service Alerts
 
 ## Status
 
 **YELLOW**
 
-TransLink does not offer this API under an OGL-style open-government licence.
+TransLink is not treated as OGL-style open-government data.
 
-Its current terms require users to provide information about:
+The earlier terms review found a custom TransLink licence/access model with:
 
-- who will use the data;
-- where the data will be distributed;
-- whether the use is commercial or non-commercial.
+- registration/approval requirements;
+- API-key access;
+- a limited/revocable licence;
+- request limits;
+- required attribution;
+- possible additional commercial conditions.
 
-Access is subject to TransLink approval and issuance of an API key.
+This makes TransLink usable but architecturally important to isolate.
 
-The current terms state that:
+---
 
-- TransLink retains rights in the data;
-- users receive a limited, revocable, non-exclusive licence;
-- the normal API-key limit is 1,000 requests per day;
-- TransLink may alter limits;
-- the licence/API key may be terminated on notice;
-- a specific attribution legend must be prominently displayed;
-- additional terms or compensation may be required when a commercial user charges users for access involving the data.
+# 13. TransLink MVP Scope
 
-## Architecture Consequence
+The RouteLens MVP now uses TransLink narrowly.
 
-TransLink must remain behind an independent adapter.
+## GTFS Static
 
-RouteLens should still produce useful results when TransLink is unavailable.
+Used for:
+
+- route lookup;
+- bus/SkyTrain selection;
+- route IDs;
+- direction/headsign reference.
+
+## GTFS-Realtime
+
+Used only for:
+
+> **Service Alerts**
+
+Deferred:
+
+- Trip Updates;
+- Vehicle Positions;
+- exact trip prediction;
+- realtime vehicle tracking.
+
+This narrower architecture reduces both technical complexity and the volume/type of realtime data RouteLens depends upon.
+
+---
+
+# 14. TransLink Terms Scope Caveat
+
+The previous legal research primarily examined the TransLink developer/API terms applicable to realtime API access.
+
+Before public or commercial release, RouteLens should verify:
+
+- the exact current terms governing GTFS Static distribution/use;
+- the exact current terms governing GTFS-Realtime;
+- whether the same attribution wording applies to both;
+- permitted caching/persistence;
+- commercial-use conditions;
+- request limits.
+
+Do not assume that because GTFS Static is downloadable, it necessarily has the same rights structure as OGL government data.
+
+---
+
+# 15. TransLink Architecture Consequence
+
+TransLink must remain an independently removable dependency.
 
 Correct:
 
 ```text
 TransLink unavailable
 
-Road Ahead        ✓
-Open511           ✓
-Cameras           ✓
-Weather           ✓
-Journey briefing  ✓
-Transit insight   unavailable
+Road Ahead         ✓
+Open511            ✓
+Vancouver camera   ✓
+SWOB               ✓
+OpenWeather        ✓
+Journey briefing   ✓
+
+Transit alerts     unavailable
 ```
 
 Incorrect:
 
 ```text
 TransLink unavailable
-→ RouteLens unusable
+→ entire RouteLens analysis fails
 ```
 
-## Commercialization
-
-Before offering a paid RouteLens product that materially uses TransLink data:
-
-1. contact/reconfirm TransLink-approved commercial use;
-2. confirm request limits;
-3. confirm caching/storage rules for the intended implementation;
-4. confirm required attribution;
-5. determine whether additional commercial fees or conditions apply.
-
-This should happen **before** TransLink becomes an indispensable commercial dependency.
+The product should remain useful even when Transit data is absent.
 
 ---
 
-# 13. OpenWeather
+# 16. TransLink Commercialization
+
+Before offering a paid RouteLens product materially using TransLink data:
+
+1. re-read the current developer/licensing terms;
+2. contact TransLink if required for the intended commercial model;
+3. confirm applicable request limits;
+4. confirm GTFS Static storage/use rights;
+5. confirm Service Alerts caching/storage rights;
+6. confirm the exact required attribution;
+7. determine whether charging users creates additional fees or conditions.
+
+TransLink should not become an indispensable paid-product dependency without resolving these questions.
+
+---
+
+# 17. OpenWeather
 
 ## Status
 
 **YELLOW**
 
-Unlike the government open-data sources, OpenWeather is a commercial weather-data provider operating under subscription/licensing terms.
+Unlike the Green government sources, OpenWeather is a commercial weather-data provider operating under provider-specific terms.
 
-Its current self-service documentation states that self-service API plans operate under the **Open Database License (ODbL)** and permit commercial as well as non-commercial use. Visible attribution is required.
+The prior terms review found that current self-service usage supports commercial application use subject to:
 
-The current pricing documentation also states that standard commercial use includes applications such as:
+- the applicable subscription;
+- visible attribution;
+- ODbL-related conditions;
+- usage limitations;
+- potential database share-alike implications.
 
-- websites;
-- mobile applications;
-- SaaS;
-- dashboards;
-- analytics tools;
-- internal business systems.
+## Current RouteLens Role
 
-This means RouteLens can use OpenWeather in a commercial derivative application under an appropriate self-service plan, but the licence has conditions that differ materially from OGL data.
+OpenWeather is intended to provide:
 
-## Attribution
+- coordinate-based current conditions;
+- near-term forecast information.
 
-Current OpenWeather guidance requires visible attribution.
+The exact API endpoint and fields remain subject to technical validation.
 
-Its FAQ specifies attribution requirements for applicable self-service plans, including identifying OpenWeather, linking to its website, and displaying its provided logo.
+---
 
-Current detailed pricing also recommends:
+# 18. OpenWeather Attribution
 
-> “Weather data © OpenWeather”
+Visible attribution is required under the previously reviewed self-service terms.
 
-Attribution should appear in the visible application rather than only in deeply buried documentation.
-
-## Database / Share-Alike Consideration
-
-OpenWeather's current documentation draws an important distinction between:
-
-### Normal application use
-
-Using weather results to power RouteLens.
-
-This requires attribution but does not require RouteLens application code or business logic to be open-sourced.
-
-### Creating an externally distributed derived weather database/API
-
-If OpenWeather data is substantially stored, restructured, combined or enriched into a reusable weather database and that resulting database is distributed externally, current guidance states that ODbL share-alike requirements may apply to that database.
-
-RouteLens therefore should avoid accidentally turning its OpenWeather cache into a separately redistributed weather database.
-
-## MVP Use
-
-The intended RouteLens use is narrow:
+Practical placeholder:
 
 ```text
-destination
-→ near-term API lookup
-→ temporary/cacheable forecast
-→ normalize useful values
-→ journey interpretation
+Weather data © OpenWeather
+[link to OpenWeather]
+[logo if required by active terms]
 ```
 
-That is substantially simpler than operating a derived weather-data service.
+The exact wording/display requirements should be rechecked against the subscription in use.
 
-## Commercialization
+---
+
+# 19. OpenWeather Database / Share-Alike Consideration
+
+The architecture should distinguish between:
+
+## Normal Application Use
+
+```text
+OpenWeather request
+→ temporary/application cache
+→ normalize selected fields
+→ journey analysis
+```
+
+This is the intended MVP usage.
+
+## Derived Weather Database Product
+
+A materially different architecture would be:
+
+```text
+large OpenWeather ingestion
+→ persistent reconstructed database
+→ externally distributed database/API
+```
+
+That architecture could create additional ODbL/share-alike implications.
+
+RouteLens should avoid accidentally turning a normal weather cache into a separately redistributed weather-data product.
+
+---
+
+# 20. OpenWeather Commercialization
 
 Before commercial launch:
 
-- select an appropriate OpenWeather subscription;
-- implement required visible attribution;
+- confirm the exact subscription tier;
+- confirm the endpoint is permitted under that tier;
+- implement visible attribution;
 - review expected API volume;
-- review storage/redistribution design;
-- reassess ODbL implications if RouteLens begins exposing stored weather datasets or an API;
-- consider Enterprise/custom terms if broader licensing flexibility is needed.
-
-Current self-service plans explicitly permit standard commercial use, while Enterprise is positioned for broader/custom licensing requirements.
+- review storage/caching behavior;
+- review ODbL implications of the final architecture;
+- consider custom/Enterprise terms if RouteLens requires broader rights.
 
 ---
 
-# 14. Raw Camera Image Policy
+# 21. Active MVP Camera Policy
 
-RouteLens adopts the following project-wide policy for both Vancouver and DriveBC cameras while rights remain incompletely verified.
+Because DriveBC Cameras are no longer in the MVP, the current raw-camera policy primarily applies to:
+
+> **Vancouver Traffic Webcams**
 
 ## Metadata
 
-May be retained normally where the metadata source is appropriately licensed.
+Retain normally where licensed.
 
-## Raw Camera Images
+## Current Images
 
 Treat as:
 
-> **ephemeral / cache-only**
-
-Implementation:
-
-```text
-camera
-  ↓
-fetch latest frame
-  ↓
-cache temporarily
-  ↓
-display + analyze
-  ↓
-new frame replaces old frame
-```
-
-Do not intentionally create a historical image collection.
+> ephemeral / cache-only.
 
 ## Derived AI Observations
 
-May be persisted separately:
+May be retained separately, with provenance.
 
-```text
-camera_id
-source
-image timestamp
-analysis timestamp
-precipitation_visible
-road_surface
-traffic_level
-visibility
-confidence
-```
+## Historical Images
 
-Preserve provenance connecting the derived observation to its source.
+Disabled.
 
-## Before Commercial Image Use
+## Model Training
 
-Separately establish rights before:
+Do not accumulate camera frames for model training under the current project assumptions.
 
-- long-term image retention;
-- creating historical replay;
-- republishing images at scale;
-- redistributing raw images through an API;
-- licensing image access to third parties;
-- model training using accumulated frames;
-- selling an image archive or derived image corpus.
+## Commercial Image Use
+
+Requires a fresh rights review.
 
 ---
 
-# 15. Provenance Should Survive Normalization
+# 22. Provenance Should Survive Normalization
 
-Normalization should not erase licensing information.
+Normalization should not erase licensing provenance.
 
-A useful future model pattern is:
+Conceptual:
 
 ```python
 SourceMetadata(
     source="drivebc_open511",
     provider="Province of British Columbia",
-    license_id="OGL-BC-2.0",
+    license_id="OGL-BC",
     attribution_required=True,
     raw_asset_policy="persistent_allowed",
 )
@@ -629,19 +716,21 @@ versus:
 
 ```python
 SourceMetadata(
-    source="vancouver_webcam",
-    provider="City of Vancouver",
+    source="vancouver_webcam_image",
+    provider="City of Vancouver / applicable image provider",
     metadata_license="OGL-Vancouver",
-    raw_asset_policy="ephemeral_pending_rights_review",
-    derived_data_policy="persistent",
+    raw_image_license="unconfirmed",
+    raw_asset_policy="ephemeral_only",
 )
 ```
 
-The exact schema belongs in technical design/implementation work, but the principle should remain:
+The precise runtime schema belongs in technical design/implementation.
 
-> **Every important observation should retain enough source provenance to determine where it came from and what obligations follow it.**
+The legal principle is:
 
-Useful fields might eventually include:
+> **Important evidence should remain traceable to the provider and licence/terms that governed it.**
+
+Useful provenance may include:
 
 ```text
 source
@@ -650,6 +739,7 @@ source_record_id
 source_url
 fetched_at
 observed_at
+updated_at
 license_id
 attribution
 raw_asset_policy
@@ -657,37 +747,71 @@ raw_asset_policy
 
 ---
 
-# 16. Attribution Requirements
+# 23. AI Synthesis Must Not Erase Provenance
+
+RouteLens may combine:
+
+```text
+Road Ahead
++
+Open511
++
+SWOB
++
+OpenWeather
++
+camera AI
++
+TransLink
+        ↓
+JourneyBriefing
+```
+
+but the resulting application should retain the underlying source distinctions.
+
+The LLM should not transform:
+
+> six independently governed sources
+
+into:
+
+> apparently proprietary RouteLens facts with no provenance.
+
+The output may be a RouteLens interpretation, while underlying evidence still retains source attribution.
+
+---
+
+# 24. Attribution Requirements
 
 RouteLens should eventually expose a visible:
 
-> Sources / Attribution
+> **Sources / Attribution**
 
-section.
+area.
 
-Attribution should be driven by source metadata rather than scattered hardcoded UI strings where practical.
+Attribution should ideally be driven from source metadata/configuration rather than duplicated manually across many UI components.
 
 ---
 
-## City of Vancouver Open Data
+# 25. City of Vancouver Open Data Attribution
 
-Suggested attribution:
+Suggested fallback wording:
 
 > Contains information licensed under the Open Government Licence – Vancouver.
 
-This is the fallback attribution provided by the licence where a more specific statement is not supplied.
+Applicable to qualifying Vancouver open-data datasets such as Road Ahead and webcam metadata.
+
+Do not imply that this automatically resolves raw camera-image rights.
 
 ---
 
-## DriveBC Open511 / OGL-BC
+# 26. DriveBC Open511 / OGL-BC Attribution
 
-Suggested attribution:
+Suggested fallback wording:
 
 > Contains information licensed under the Open Government Licence – British Columbia.
 
-This is the standard OGL-BC fallback attribution.
-
-Where useful, RouteLens may additionally identify:
+The UI may additionally identify:
 
 > Source: DriveBC
 
@@ -695,324 +819,394 @@ without implying endorsement.
 
 ---
 
-## ECCC / OGL-Canada
+# 27. ECCC / OGL-Canada Attribution
 
-Suggested attribution:
+Suggested fallback wording:
 
 > Contains information licensed under the Open Government Licence – Canada.
 
-This is the standard OGL-Canada fallback attribution.
-
-A product-facing source label can additionally identify:
+A product-facing label may also identify:
 
 > Environment and Climate Change Canada
 
 ---
 
-## TransLink
+# 28. TransLink Attribution
 
-TransLink's terms currently require a specific prominent attribution legend.
+TransLink's terms require provider-specific attribution.
 
-RouteLens should use the **exact current TransLink wording from the provider's terms rather than inventing a shorter paraphrase**.
+RouteLens should use the **exact current wording required by TransLink**, not an invented summary.
 
 Implementation placeholder:
 
 ```text
-[Exact TransLink required legend from current API Terms]
+[Exact current TransLink attribution legend]
 ```
 
-Recheck the wording immediately before public release.
+Recheck immediately before public release.
 
 ---
 
-## OpenWeather
+# 29. OpenWeather Attribution
 
-Current guidance requires visible OpenWeather attribution for self-service usage.
-
-Recommended implementation:
+Current working placeholder:
 
 ```text
 Weather data © OpenWeather
-[link to OpenWeather]
-[required OpenWeather logo where applicable]
+[link]
+[logo where required]
 ```
 
-Current FAQ and pricing documentation should be rechecked against the exact subscription used.
+Recheck the exact current requirements under the active account/subscription.
 
 ---
 
-## Camera Imagery
+# 30. Vancouver Camera Attribution
 
-Until image-specific rights are confirmed, display an explicit source label such as:
+Until image-specific rights are confirmed, display clear source identification such as:
 
 ```text
 Current image source: City of Vancouver
 ```
 
-or:
+where appropriate.
 
-```text
-Current image source: DriveBC
-```
-
-This attribution does **not** substitute for obtaining any permission that may actually be required.
+Source attribution does **not** substitute for any permission that may ultimately be required.
 
 ---
 
-# 17. Datathon / Portfolio MVP
+# 31. Datathon / Portfolio MVP
 
-The MVP's risk posture is deliberately conservative.
+The MVP deliberately uses a conservative risk posture.
 
-Reasonable approach:
-
-### Green sources
+## Green Structured Sources
 
 Use normally with attribution:
 
-- Road Ahead
-- Open511
-- ECCC observations
+- Vancouver Road Ahead;
+- DriveBC Open511;
+- ECCC SWOB.
 
-### TransLink
+## TransLink
 
-Use through the authorized API under the registered key and current terms.
+Use under the authorized account/key and current terms.
 
 Respect:
 
-- rate limits;
-- required attribution;
-- approved use.
+- request limits;
+- attribution;
+- approved-use requirements.
 
-### OpenWeather
+## OpenWeather
 
-Use under the active account/subscription terms.
+Use under the active plan.
 
-Provide visible attribution.
+Provide required attribution.
 
-### Camera imagery
+## Vancouver Camera Imagery
 
-Use current publicly accessible frames conservatively:
+Use conservatively:
 
 ```text
-short-lived fetch
+current images
+→ temporary cache
 → display
-→ inference
-→ overwrite
+→ multi-view multimodal inference
+→ overwrite/discard
 ```
 
-Do not create a historical archive.
+Do not create:
 
-This architecture makes the portfolio MVP substantially less dependent on unresolved long-term content rights.
+- historical archive;
+- bulk mirror;
+- training dataset.
+
+## DriveBC Cameras
+
+Not part of MVP.
+
+No rights dependency is required for MVP success.
 
 ---
 
-# 18. Public Free Application
+# 32. Public Free Application
 
-Moving from a private/local datathon project to an internet-accessible free application increases the importance of terms compliance.
+Moving RouteLens from a private/local MVP to an internet-accessible free application materially increases terms-compliance requirements.
 
 Before public launch:
 
-- implement all OGL attributions;
-- ensure TransLink's registered use accurately reflects the public application;
-- display the current required TransLink legend;
-- confirm OpenWeather plan and visible attribution;
-- confirm public image-proxy behavior is acceptable for Vancouver/DriveBC camera imagery;
-- reconsider whether RouteLens should proxy images or instead reference/display them in another permitted manner;
-- document data freshness and source limitations.
+- implement OGL-Vancouver attribution;
+- implement OGL-BC attribution;
+- implement OGL-Canada attribution;
+- confirm TransLink's approved use matches the public application;
+- use exact TransLink attribution;
+- review GTFS Static terms;
+- review GTFS-Realtime Service Alert terms;
+- confirm TransLink request limits;
+- confirm OpenWeather plan;
+- implement OpenWeather visible attribution;
+- confirm public Vancouver camera proxy/display behavior is acceptable;
+- reconsider proxying if direct/reference-based presentation has clearer rights;
+- document source freshness and limitations.
 
-A free public product should **not** be treated as legally equivalent to private prototyping simply because users are not charged.
+A free public application should not be assumed equivalent to a local portfolio prototype merely because no money is charged.
 
 ---
 
-# 19. Commercial / SaaS Product
+# 33. Commercial / SaaS Product
 
 Commercialization requires a stronger review.
 
 ## Green Government Sources
 
-Road Ahead, Open511 and ECCC remain strong building blocks because their current open licences expressly allow commercial use.
+The following remain strong foundations:
+
+- Road Ahead;
+- DriveBC Open511;
+- ECCC SWOB.
+
+Their applicable open-government licences are designed to support reuse, including commercial use when conditions are satisfied.
 
 ## TransLink
 
-Commercial charging may trigger additional terms or compensation requirements.
+Commercial charging may create additional conditions or compensation requirements.
 
-Contact TransLink before relying on its feed as a paid-product dependency.
+Do not assume current prototype approval automatically extends to a paid SaaS product.
 
 ## OpenWeather
 
-Commercial application use is supported under current self-service terms, subject to:
+Commercial application use is supported under the applicable provider terms, subject to:
 
-- appropriate subscription;
+- plan level;
 - attribution;
-- ODbL requirements;
-- usage limits;
-- share-alike implications if building/distributing a derivative weather database.
+- usage restrictions;
+- ODbL considerations;
+- possible database share-alike implications.
 
-## Camera Images
+## Vancouver Camera Images
 
-Obtain explicit clarity or permission before a commercial architecture relies on:
+Obtain clearer rights before a commercial architecture materially relies on:
 
 - republishing;
-- storing;
-- redistributing;
-- training on;
-- selling access to
+- persistent storage;
+- redistribution;
+- image API access;
+- image licensing;
+- accumulated model-training use.
 
-raw camera imagery.
-
-If satisfactory rights cannot be established, design the commercial product so cameras can be:
+If adequate rights cannot be established, redesign the commercial product so raw camera images can be:
 
 - removed;
 - replaced;
-- linked rather than proxied;
-- or used through a licensed alternative.
+- externally referenced;
+- or provided through a properly licensed alternative.
+
+## DriveBC Cameras
+
+Because they are deferred, no DriveBC image-rights resolution is required to commercialize the **current** MVP architecture.
+
+If they are later added, their rights must be reviewed before becoming a material product dependency.
 
 ---
 
-# 20. Architectural Independence
+# 34. Architectural Independence
 
-Licensing considerations support the existing RouteLens adapter architecture.
-
-Each external source should be independently removable.
+The current source architecture supports licensing resilience.
 
 Conceptually:
 
 ```text
-Road Ahead ───────┐
-Open511 ──────────┤
-ECCC ─────────────┤
-OpenWeather ──────┤
-TransLink ────────┼── normalization → journey model
-Camera sources ───┘
+Road Ahead ──────┐
+Open511 ─────────┤
+SWOB ────────────┤
+OpenWeather ─────┤
+TransLink ───────┼── normalization → journey evidence
+Vancouver camera ┘
 ```
 
-A provider changing its terms should not require rewriting the entire system.
+Every source should remain replaceable/removable.
 
-This is particularly important for Yellow dependencies.
+A future licensing or provider-policy change should not require redesigning the whole application.
+
+This matters most for Yellow dependencies.
 
 ---
 
-# 21. Avoiding Data-Licence Contamination
+# 35. Avoiding Data-Licence Contamination
 
-Combining sources into an analysis does not mean RouteLens should treat every resulting object as licence-free proprietary data.
+Combining data in one analysis does not make all underlying source data licence-free.
 
-Preserve sufficient provenance to know:
+Preserve the ability to answer:
 
 ```text
-Which source contributed this fact?
-What licence governed it?
+Which provider contributed this fact?
+
+What licence or terms applied?
+
+When was it retrieved?
+
 Was the raw asset persistent or ephemeral?
-Is attribution required?
+
+What attribution is required?
 ```
 
-For example, an AI briefing can combine:
-
-```text
-Road Ahead
-+
-ECCC
-+
-OpenWeather
-+
-camera observation
-```
-
-while the underlying evidence still retains separate provenance.
-
-Do not allow the LLM synthesis layer to erase those distinctions from the system's data model.
+The unified journey model should improve application ergonomics without erasing legal provenance.
 
 ---
 
-# 22. Previously Considered / Future Sources
+# 36. Deferred / Future Source: DriveBC Cameras
 
-## 22.1 ECCC Weather Radar
+## Status
 
-### Status
+**YELLOW**
+
+## MVP Status
+
+> **Explicitly deferred.**
+
+DriveBC camera imagery is not required for the current RouteLens MVP.
+
+## Potential Future Role
+
+Possible future uses include:
+
+- highway weather context;
+- bridge approaches;
+- regional visibility;
+- routes originating outside Vancouver;
+- coverage beyond Vancouver municipal cameras.
+
+## Rights Research
+
+The previous review did not establish that DriveBC Open511's OGL-BC licence automatically applies to DriveBC camera JPEGs.
+
+That remains an unresolved asset-specific rights question.
+
+In addition, some camera images may originate from third-party providers.
+
+## Future Policy
+
+If DriveBC cameras are later implemented, use the same conservative pattern as Vancouver imagery:
+
+```text
+fetch current image
+→ temporary/cache-only use
+→ display/analyze
+→ derived observation
+→ overwrite/discard
+```
+
+Until rights are clarified, avoid:
+
+- historical archives;
+- bulk redistribution;
+- resale;
+- training corpora.
+
+## Commercialization Requirement
+
+Explicitly review rights before DriveBC camera imagery becomes a material commercial dependency.
+
+Because this source is currently deferred, this is **not a blocker for the MVP**.
+
+---
+
+# 37. Deferred / Future Source: ECCC Weather Radar
+
+## Status
 
 **GREEN**
 
-Current ECCC radar datasets such as DPQPE are available through the Government of Canada Open Data system under OGL-Canada.
+Relevant ECCC radar datasets can be available under OGL-Canada.
 
-Some accumulation products are continually updated; for example, ECCC's 24-hour accumulation product is made available every six minutes.
-
-This could later strengthen precipitation inference:
+Potential future use:
 
 ```text
-camera
+Vancouver camera
 +
-station observation
+SWOB station
 +
-radar
+ECCC radar
+        ↓
+stronger precipitation context
 ```
 
-without introducing another problematic licence dependency.
+Radar could improve geographic precipitation awareness without introducing a proprietary weather-data dependency.
+
+Not required for MVP.
 
 ---
 
-## 22.2 Vancouver 311
+# 38. Deferred / Future Source: Vancouver 311
 
-### Status
+## Status
 
 **GREEN, with privacy-awareness requirement**
 
-Current Vancouver 311 service-request data is offered through the City Open Data Portal under OGL-Vancouver. The City also suppresses some location information for certain request types to protect privacy.
+Applicable Vancouver 311 open data is available through the City's open-data system.
 
 Possible future uses:
 
 - route-adjacent municipal issues;
 - neighborhood activity patterns;
-- contextual city-state signals.
+- additional city-state context.
 
-RouteLens should use the information as published and should not attempt to reverse-engineer suppressed or identifying information.
+RouteLens should not attempt to:
+
+- reconstruct suppressed addresses;
+- identify individuals;
+- reverse privacy protections.
+
+Not required for MVP.
 
 ---
 
-## 22.3 Metro Vancouver AirMap
+# 39. Deferred / Future Source: Metro Vancouver AirMap
 
-### Status
+## Status
 
 **YELLOW**
 
-Metro Vancouver's AirMap terms state that near-real-time data is preliminary and may be inaccurate, and that the data and information are protected under copyright and other proprietary laws.
+The previously reviewed AirMap terms differ materially from OGL-style open data.
 
-This is materially different from OGL-style government open data.
+The data is described as protected by copyright/proprietary rights.
 
-Do not assume:
+Do not assume permission for:
 
-- commercial reuse;
 - bulk storage;
-- redistribution;
-- derived-data rights
+- commercial redistribution;
+- derivative databases;
+- commercial reuse
 
-without reviewing or obtaining clarification on the applicable terms.
+without further review.
 
-AirMap should remain an optional future integration rather than a core dependency.
+Air quality therefore remains an optional future integration rather than a core RouteLens dependency.
 
 ---
 
-## 22.4 Additional Vancouver Open-Data Layers
+# 40. Deferred / Future Vancouver Open-Data Layers
 
-### Status
+## Status
 
-**Generally GREEN when the individual dataset explicitly carries OGL-Vancouver**
+**Generally GREEN where the individual dataset explicitly carries OGL-Vancouver**
 
-Potential examples:
+Possible examples:
 
 - road infrastructure;
-- construction datasets;
-- neighborhood boundaries;
+- administrative boundaries;
 - static geographic context;
-- municipal facilities.
+- facilities;
+- additional construction/context layers.
 
-Always check the licence of the specific dataset before integration.
+Always verify the individual dataset's licence.
 
-The fact that information appears on a government website alone is not enough; the OGL designation is the useful boundary.
+Government-hosted does not automatically mean openly licensed.
 
 ---
 
-# 23. Sources Not Yet Reviewed in This Document
+# 41. Sources Not Fully Reviewed Here
 
-The following RouteLens dependencies have separate contractual/usage considerations and should receive their own review before commercial release:
+The following RouteLens dependencies require separate service-provider terms review before serious commercial deployment:
 
 ```text
 MapTiler
@@ -1020,75 +1214,112 @@ openrouteservice
 OpenRouter
 ```
 
-Potential issues include:
+Potential considerations include:
 
-- API usage limits;
-- caching restrictions;
-- basemap/tile attribution;
 - commercial plan requirements;
-- model-provider terms;
-- data retention by AI providers;
+- API quotas;
+- tile attribution;
+- caching restrictions;
+- geocoding storage restrictions;
+- model-provider image/data handling;
+- AI-provider retention policies;
 - redistribution restrictions.
 
-These are infrastructure/service-provider questions rather than the public city-data licensing question addressed primarily here.
+These are service/infrastructure-contract questions rather than primarily city/open-data licensing questions.
 
 ---
 
-# 24. Before Public Release Checklist
+# 42. AI Provider and Camera Images
+
+Because RouteLens sends camera imagery to a multimodal model provider, a future commercial review should consider not only:
+
+> May RouteLens fetch/display this image?
+
+but also:
+
+> May RouteLens transmit this image to the selected AI provider for inference under both the image provider's rights and the AI provider's terms?
+
+The current ephemeral architecture reduces local retention but does not remove this question.
+
+Before commercial launch, review:
+
+- OpenRouter terms;
+- selected underlying model-provider terms where relevant;
+- image retention/training policies;
+- any provider-specific restrictions on submitted imagery.
+
+---
+
+# 43. Before Public Release Checklist
 
 Before RouteLens becomes a public application:
 
-- [ ] Verify each currently used dataset still has the recorded licence.
+- [ ] Verify every active dataset still has the recorded licence/terms.
+- [ ] Record the date of the review.
 - [ ] Add OGL-Vancouver attribution.
 - [ ] Add OGL-BC attribution.
 - [ ] Add OGL-Canada attribution.
-- [ ] Add exact current TransLink attribution legend.
-- [ ] Confirm TransLink registration accurately describes the public use.
+- [ ] Recheck TransLink GTFS Static terms.
+- [ ] Recheck TransLink GTFS-Realtime terms.
+- [ ] Add exact current TransLink attribution.
+- [ ] Confirm registered TransLink use accurately describes RouteLens.
 - [ ] Confirm current TransLink request limits.
-- [ ] Add required OpenWeather visible attribution.
-- [ ] Confirm the active OpenWeather plan supports the chosen endpoints and usage.
-- [ ] Re-evaluate Vancouver camera image rights.
-- [ ] Re-evaluate DriveBC camera image rights.
-- [ ] Ensure raw camera images remain non-historical unless rights are established.
-- [ ] Ensure source/provenance metadata survives normalization.
-- [ ] Review MapTiler/openrouteservice/OpenRouter terms separately.
+- [ ] Add required OpenWeather attribution.
+- [ ] Confirm active OpenWeather plan permits selected endpoint(s).
+- [ ] Re-evaluate Vancouver camera-image rights.
+- [ ] Confirm public proxy/display behavior for Vancouver images.
+- [ ] Ensure raw Vancouver images remain non-historical unless rights are established.
+- [ ] Ensure provenance survives normalization.
+- [ ] Review MapTiler terms.
+- [ ] Review openrouteservice terms.
+- [ ] Review OpenRouter / multimodal-provider data-use terms.
+
+DriveBC camera-image review is not required for current MVP publication because that integration is deferred.
 
 ---
 
-# 25. Before Commercialization Checklist
+# 44. Before Commercialization Checklist
 
-Before charging users, selling RouteLens, licensing its outputs, or materially commercializing the system:
+Before charging users, selling RouteLens, licensing outputs, or materially commercializing the system:
 
-- [ ] Re-read all current licences and provider terms.
-- [ ] Record the licence/version/date reviewed for every core dependency.
-- [ ] Confirm commercial use of all current City/BC/Canada datasets.
-- [ ] Contact TransLink regarding the intended commercial model.
-- [ ] Confirm whether additional TransLink commercial fees or conditions apply.
-- [ ] Confirm TransLink storage/caching expectations.
+- [ ] Re-read every active licence and provider agreement.
+- [ ] Record licence/version/date relied upon.
+- [ ] Confirm commercial use of active City/BC/Canada datasets.
+- [ ] Confirm Road Ahead detail-page usage assumptions.
+- [ ] Contact/reconfirm TransLink commercial use as appropriate.
+- [ ] Confirm GTFS Static commercial/use terms.
+- [ ] Confirm GTFS-Realtime Service Alert commercial/use terms.
+- [ ] Confirm TransLink caching/storage limits.
+- [ ] Confirm whether additional TransLink commercial fees apply.
 - [ ] Confirm OpenWeather subscription tier.
-- [ ] Review OpenWeather ODbL requirements for the final data architecture.
-- [ ] Ensure any externally distributed weather database does not accidentally violate share-alike requirements.
-- [ ] Consider OpenWeather Enterprise/custom licensing if needed.
-- [ ] Obtain explicit clarity or permission for Vancouver camera-image use.
-- [ ] Obtain explicit clarity or permission for DriveBC camera-image use.
+- [ ] Review OpenWeather ODbL implications against the final architecture.
+- [ ] Ensure RouteLens is not unintentionally redistributing a derivative weather database.
+- [ ] Consider OpenWeather custom/Enterprise terms if needed.
+- [ ] Obtain clearer rights for commercial Vancouver camera-image use.
 - [ ] Do not commercialize a raw camera archive without established rights.
-- [ ] Review AI-provider terms for sending public camera imagery to multimodal models.
-- [ ] Review MapTiler and openrouteservice commercial terms.
-- [ ] Implement a complete in-product attribution/source panel.
-- [ ] Preserve evidence of the terms/licences relied upon at the time of launch.
+- [ ] Review AI-provider terms for transmitting camera images.
+- [ ] Review MapTiler commercial terms.
+- [ ] Review openrouteservice commercial terms.
+- [ ] Implement complete in-product source/attribution UI.
+- [ ] Preserve evidence of the terms relied upon at launch.
 - [ ] Obtain professional legal review if RouteLens becomes a serious commercial product.
 
+If DriveBC cameras are later brought back into scope:
+
+- [ ] perform a separate DriveBC image-rights review before launch.
+
 ---
 
-# 26. Recommended Data-Source Record
+# 45. Recommended Data-Source Register
 
-For future maintainability, maintain a lightweight source register.
+For future maintainability, RouteLens may maintain a lightweight source register.
 
 Example:
 
 ```yaml
 source: drivebc_open511
 provider: Province of British Columbia
+mvp_status: included
 risk: green
 license: Open Government Licence - British Columbia
 commercial_use: allowed
@@ -1099,11 +1330,12 @@ external_redistribution: allowed_subject_to_license
 last_terms_review: 2026-10-07
 ```
 
-Example for imagery:
+Vancouver image example:
 
 ```yaml
 source: vancouver_webcam_image
-provider: City of Vancouver / linked camera provider
+provider: City of Vancouver / applicable linked image provider
+mvp_status: included
 risk: yellow
 metadata_license: Open Government Licence - Vancouver
 raw_image_license: unconfirmed
@@ -1114,69 +1346,111 @@ commercial_image_use: requires_review
 last_terms_review: 2026-10-07
 ```
 
-This could eventually become:
+Deferred DriveBC example:
+
+```yaml
+source: drivebc_camera_image
+provider: Province of British Columbia / possible third parties
+mvp_status: deferred
+risk: yellow
+raw_image_license: unconfirmed
+commercial_image_use: requires_review_before_integration
+```
+
+This may eventually become:
 
 ```text
 docs/data-sources.md
 ```
 
-or structured configuration if RouteLens grows.
+or structured configuration if the project grows.
 
 It is not necessary for the datathon MVP.
 
 ---
 
-# 27. Core Legal/Architecture Principle
+# 46. Core Legal / Architecture Principle
 
-The most important lesson for RouteLens is:
+The central principle remains:
 
 > **Publicly accessible does not mean public domain, and the licence attached to metadata does not necessarily extend to every linked asset.**
 
-That principle explains why:
+That distinction explains why the current source posture can look like:
 
 ```text
-Road Ahead record      → GREEN
-Open511 event           → GREEN
-ECCC observation        → GREEN
+Road Ahead structured data     → GREEN
 
-camera metadata         → potentially GREEN
-camera JPEG             → separate rights question
+Open511 structured data        → GREEN
 
-TransLink data          → custom terms
-OpenWeather data        → commercial licence / ODbL terms
+ECCC observations              → GREEN
+
+Vancouver camera metadata      → GREEN
+
+Vancouver camera JPEGs         → YELLOW
+
+TransLink data                 → YELLOW / custom terms
+
+OpenWeather data               → YELLOW / provider terms + ODbL
+
+DriveBC camera JPEGs           → YELLOW, but DEFERRED
 ```
 
-Licensing therefore influences architecture rather than being paperwork added after development.
+Licensing is therefore an architectural concern, not merely paperwork added after implementation.
 
 ---
 
-# 28. Current RouteLens Conclusion
+# 47. Why the Current MVP Scope Improves the Legal Posture
 
-The RouteLens concept remains well positioned from a data-rights perspective.
+Removing DriveBC Cameras from the MVP simplifies the rights surface.
 
-Its core structured city-state foundation relies heavily on government datasets with explicit open licences:
+The current MVP now has only one active raw-image integration:
+
+> Vancouver Traffic Webcams.
+
+This means the project can demonstrate:
+
+- geospatial camera selection;
+- directional image handling;
+- multimodal inference;
+- ephemeral image caching
+
+without simultaneously resolving the separate DriveBC image-rights question.
+
+The deferred integration can later reuse the same camera architecture if legal and product value justify it.
+
+This is preferable to adding a second Yellow image dependency merely for broader coverage.
+
+---
+
+# 48. Current RouteLens Conclusion
+
+The current RouteLens MVP remains well positioned from a data-rights perspective.
+
+Its core structured-data foundation relies heavily on clearly reusable government information:
 
 - Vancouver Road Ahead;
 - DriveBC Open511;
 - ECCC weather observations.
 
-These licences expressly permit commercial reuse when their conditions are followed.
+The principal **active MVP** licensing/commercialization issues are now:
 
-The principal areas requiring continued attention are:
+1. **Vancouver raw camera imagery**
+2. **TransLink's custom/revocable terms**
+3. **OpenWeather subscription, attribution, and ODbL obligations**
 
-1. **Vancouver and DriveBC raw camera imagery**
-2. **TransLink's custom/revocable API terms**
-3. **OpenWeather subscription, attribution and ODbL obligations**
+DriveBC camera-image rights remain a useful research note, but they are no longer an MVP blocker because the source has been explicitly deferred.
 
-The current architecture already reduces these risks by:
+The architecture further limits risk by:
 
-- isolating every provider behind an adapter;
-- allowing partial source failure;
-- keeping camera imagery ephemeral;
-- persisting derived observations rather than historical image archives;
-- keeping provenance available;
-- preventing any one Yellow source from defining the entire product.
+- isolating providers behind adapters;
+- allowing independent source failure;
+- keeping raw camera imagery ephemeral;
+- avoiding historical image archives;
+- persisting derived observations rather than image collections;
+- preserving provenance;
+- using deterministic source matching before AI;
+- preventing Yellow providers from becoming the entire product.
 
-For the datathon/portfolio MVP, this is a reasonable engineering posture.
+For the datathon/portfolio MVP, this remains a reasonable engineering posture.
 
-For a serious public commercial product, the Yellow dependencies should receive a fresh terms review and, where appropriate, direct provider clarification or professional legal advice.
+For a serious public or commercial product, the active Yellow dependencies should receive a fresh terms review and, where appropriate, direct provider clarification or professional legal advice.
