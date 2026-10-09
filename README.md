@@ -142,7 +142,7 @@ Dynamic road-event information including:
 
 This extends RouteLens beyond City of Vancouver datasets and helps provide context along approaches into Vancouver.
 
-### 4. DriveBC Cameras
+### 4. DriveBC Cameras (Deferred / future enhancement; not included in the MVP.)
 
 Public highway, bridge, and major-route camera imagery.
 
@@ -382,9 +382,7 @@ Camera imagery is treated separately from camera metadata, and source-specific u
 
 RouteLens AI is currently in active development.
 
-The data integrations described above represent the **planned core implementation** and should not be interpreted as completed integrations until reflected in the codebase.
-
-Implementation status will be updated as development progresses.
+Planning and initial SDD harness complete (v1). Phase 0 — Integration Readiness is underway. Application implementation has not yet begun.
 
 ---
 
