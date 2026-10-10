@@ -2,320 +2,508 @@
 
 ## 1. Current Phase
 
-**Phase:** 0 — Integration Readiness  
-**Status:** Planned — not yet implemented or verified by Codex  
-**Source:** `docs/implementation-plan.md`, Phase 0
+**Phase:** 1 — Application Shell + Map
+**Status:** Planned — authorized for implementation; not yet verified
+**Source:** `docs/implementation-plan.md`, Phase 1
+**Previous phase:** Phase 0 — Integration Readiness, accepted by the human developer on 2026-10-09
 
 ### Objective
 
-Resolve remaining external-service access, schema, configuration, and integration uncertainties before substantial application implementation begins.
+Create the initial runnable RouteLens AI application, establishing the frontend and backend foundations and a visually coherent desktop interface.
 
-Most core data-source research has already been completed during planning.
+Phase 1 must deliver:
 
-This phase must confirm outstanding integrations, preserve useful evidence, and identify blockers without unnecessarily repeating completed research.
+- a functioning React/Vite/TypeScript frontend;
+- a minimal FastAPI backend;
+- successful frontend-to-backend communication;
+- an interactive MapLibre map using the validated MapTiler dark basemap;
+- a desktop layout with a fixed approximately 65% map / 35% intelligence-panel split;
+- foundational styling and intentional placeholder states.
 
-**Phase 0 establishes integration readiness. It does not build application features.**
+**Phase 1 establishes the working application shell. It does not implement journey analysis or telemetry integration.**
+
+The result should be a recognizable, interactive RouteLens application that can be launched locally and visually inspected.
+
+---
 
 ## 2. Execution Scope
 
-This document defines the complete Phase 0 acceptance boundary.
+This document defines the complete Phase 1 acceptance boundary.
 
-Phase 0 may be completed through multiple smaller Codex assignments. Each assignment receives a bounded prompt from the planning agent specifying its immediate objective, expected outputs, and verification requirements.
+Phase 1 may be implemented through multiple smaller Codex assignments. Each assignment receives a bounded prompt specifying its immediate objective, expected changes, and verification requirements.
 
-- Do not interpret this document as authorization to implement every workstream in a single assignment.
-- Perform only the workstream or subset explicitly assigned by the current prompt.
-- Preserve completed work and findings between assignments through repository artifacts and `PROJECT_STATE.md`.
-- Do not begin Phase 1 until the human accepts Phase 0 and authorizes the next phase.
+- Do not interpret this document as authorization to implement every Phase 1 component in one assignment.
+- Implement only the work specifically authorized by the current assignment prompt.
+- Preserve completed functionality and verification evidence between assignments.
+- Update `PROJECT_STATE.md` with meaningful implementation progress.
+- Do not begin Phase 2 until Phase 1 has been accepted by the human developer.
 
-The requirements below describe the full phase, not a mandatory execution sequence.
+### Planned Assignments
 
-## 3. Existing Planning Research
+**Assignment 1A — Application Foundation**
 
-The following integrations have already undergone substantial planning-stage investigation.
+Establish the frontend/backend project structure, approved dependencies, minimal FastAPI health endpoint, and verified frontend-to-backend connectivity.
 
-### Vancouver Traffic Webcams
+**Assignment 1B — Interactive Vancouver Map**
 
-- Geolocated camera catalogue is available.
-- Official camera pages expose directional JPEG URLs requiring catalogue enrichment.
-- One-nearest-usable-intersection and combined multi-view assessment strategies are approved.
+Integrate MapLibre with MapTiler's validated dark style, establishing an interactive geographic map with appropriate resource handling, attribution, and initial Vancouver viewport.
 
-### Vancouver Road Ahead
+**Assignment 1C — Desktop Shell and Visual Integration**
 
-- Both Current Road Closures and Projects Under Construction were investigated.
-- Full geometry is available, including complex geometry types.
-- Short dataset fields may be incomplete.
-- Detail pages provide supplementary schedule and restriction context.
-- Validated daily caching is approved.
+Build the complete desktop application layout, integrate the map into its intended interface, implement the right-side intelligence placeholder, and perform Phase 1 visual and functional verification.
 
-### DriveBC Open511
+These assignment boundaries are organizational, not independent architectural layers.
 
-- Regional bounding-box fetching is the approved strategy.
-- Pagination is required.
-- Regional map visibility and journey-specific filtering are separate.
-- Initial regional cache interval is approximately 5–15 minutes.
+Avoid introducing elaborate abstractions merely to accommodate separate assignments.
 
-### ECCC GeoMet / SWOB
+---
 
-- Live Vancouver-area observations were successfully retrieved.
-- Station coverage is sparse and measurements may be missing.
-- Station catalogue coverage may be incomplete.
-- Initial cache interval is approximately 10–15 minutes.
+## 3. Established Phase 0 Readiness
 
-### TransLink
+Phase 0 was completed and accepted before this build plan was prepared.
 
-- API credentials were obtained and tested during planning.
-- GTFS Static was inspected.
-- GTFS-Realtime Service Alerts were decoded and investigated.
-- Deterministic route/direction matching is viable.
-- Request-header handling requires attention.
-- Trip Updates and Vehicle Positions are deferred.
+Relevant verified findings are recorded in:
 
-These findings provide the existing research baseline.
+- `docs/integration-notes/phase-0-readiness-summary.md`
+- `docs/integration-notes/geographic-services-readiness.md`
+- `PROJECT_STATE.md`
 
-Do not repeat broad discovery for these sources unless a specific assigned readiness task, missing fixture, changed source behavior, or material discrepancy justifies further validation.
+### MapTiler
 
-Prior planning results do not automatically establish that current repository fixtures, configuration, or executable checks exist. Record actual repository state separately.
+Phase 0 established:
 
-## 4. Required Phase 0 Workstreams
+- working authenticated MapTiler access;
+- accessible geocoding/autocomplete;
+- usable Metro Vancouver coordinates and administrative context;
+- an accessible `streets-v4-dark` map style;
+- successful retrieval of supporting TileJSON, vector-tile, sprite, and glyph resources.
 
-### 4.1 OpenWeather — Priority Integration Gap
+Phase 1 should use the validated dark style.
 
-OpenWeather is the largest remaining source-specific uncertainty.
+Do not repeat broad MapTiler discovery or switch basemap providers without a material implementation reason.
+
+Actual MapLibre browser rendering was not tested during Phase 0 and must now be verified.
+
+### Other Integrations
+
+Phase 0 also validated representative OpenWeather, openrouteservice, and OpenRouter capabilities.
+
+Those providers are not part of Phase 1 functionality.
+
+Do not introduce their application adapters, API calls, or UI integrations during this phase.
+
+### Configuration
+
+The root `.env.example` contains the approved credential names and provisional OpenRouter model identifiers.
+
+The root `.env` is Git-ignored and contains the locally configured MapTiler credential.
+
+The TransLink key remains a deferred configuration follow-up before Phase 10 and does not block Phase 1.
+
+Preserve existing configuration and secret-handling requirements.
+
+---
+
+## 4. Required Phase 1 Workstreams
+
+### 4.1 Backend — FastAPI Application Foundation
+
+Create the minimal Python backend consistent with the approved technical design.
+
+Required behavior:
+
+- A runnable FastAPI application.
+- A health-check endpoint:
+
+  `GET /api/health`
+
+- A small JSON success response indicating that the backend is operational.
+- Appropriate local-development startup configuration.
+- Straightforward and maintainable application structure.
+- Basic automated health-endpoint verification.
+
+The backend should remain minimal.
+
+Do not create source adapters, persistence infrastructure, orchestration services, or speculative domain abstractions.
+
+### 4.2 Frontend — React Application Foundation
+
+Create the frontend using the approved stack:
+
+- React;
+- Vite;
+- TypeScript;
+- Tailwind CSS;
+- MapLibre GL JS;
+- Framer Motion;
+- Lucide icons.
 
 Required outcomes:
 
-- Confirm the existing API key works.
-- Identify accessible current-condition and forecast endpoints.
-- Inspect actual response schemas.
-- Identify usable current-condition fields.
-- Identify available forecast fields and intervals.
-- Establish supported near-term lookahead granularity.
-- Determine a practical initial request and cache strategy.
-- Save representative sanitized response fixtures.
-- Document limitations, unavailable fields, and relevant plan restrictions.
+- A functioning local Vite development server.
+- A maintainable frontend source structure.
+- Functional React application entry point.
+- Global styles and a coherent dark visual foundation.
+- Working production frontend build.
+- Clear development instructions for starting the frontend.
 
-Do not assume endpoint access, forecast granularity, or field availability until confirmed through actual API responses.
+Use stable, compatible dependency versions.
 
-Do not implement the complete weather adapter or frontend weather presentation in Phase 0.
+Follow current dependency-specific configuration requirements rather than assuming older setup patterns remain valid.
 
-### 4.2 MapTiler — Mapping and Geocoding Readiness
+Do not introduce a component framework or state-management library without a concrete need.
 
-Confirm:
+### 4.3 Frontend-to-Backend Communication
 
-- API-key access and expected authentication behavior.
-- Autocomplete/geocoding availability.
-- Representative place-search results and coordinate information.
-- Dark basemap/style access suitable for MapLibre integration.
-
-Record relevant configuration requirements and integration limitations.
-
-A full map UI is not required; it belongs to Phase 1.
-
-### 4.3 openrouteservice — Routing Readiness
-
-Confirm:
-
-- API-key access and routing endpoint availability.
-- Successful routing for representative Metro Vancouver origins and Vancouver destinations.
-- Availability and behavior of alternative route candidates.
-- Usable returned geometry and route metadata.
-- Practical limitations affecting route-candidate selection.
-
-Do not assume three route alternatives will always be returned.
-
-Do not implement the journey route-selection UI or complete routing application layer.
-
-### 4.4 OpenRouter — AI Inference Readiness
-
-Confirm candidate inference models for two responsibilities.
-
-**Vision model:**
-
-- Valid configured model identifier.
-- Successful authenticated API request.
-- Ability to accept multiple images in one request.
-- Feasibility of returning structured output suitable for `CameraObservation`.
-
-**Text model:**
-
-- Valid configured model identifier.
-- Successful authenticated API request.
-- Feasibility of reliable structured output for journey briefing.
-
-Record model identifiers, configuration requirements, observed limitations, and relevant output-format behavior.
-
-Models are not permanently fixed by the architecture. Candidate selection may be revisited when the corresponding application phases are implemented.
-
-Do not construct the complete camera-analysis or journey-briefing pipelines during Phase 0.
-
-### 4.5 Configuration and Credential Readiness
-
-Create or update `.env.example` with the required configuration variable names and placeholders.
-
-Confirm that:
-
-- `.env` is Git-ignored.
-- Credentials are accessed through appropriate environment configuration.
-- Required credentials are present or explicitly identified as missing.
-- No secrets appear in tracked fixtures, code, logs, or reports.
-- Provider-specific configuration requirements are documented sufficiently for later integration.
-
-Do not fabricate credentials or commit secret values.
-
-### 4.6 Representative Fixtures and Evidence
-
-Preserve useful representative response fixtures for the sources needed in early implementation phases.
+Establish a working connection between the Vite frontend and FastAPI backend.
 
 Requirements:
 
-- Prefer real observed payloads or representative excerpts.
-- Preserve meaningful schema structure and relevant edge cases.
-- Remove secrets, tokens, and sensitive request information.
-- Make fixture provenance and observed behavior understandable.
-- Avoid creating extensive test infrastructure before application functionality exists.
+- The frontend can request `GET /api/health`.
+- Successful communication is visibly or otherwise directly verifiable.
+- Backend unavailability does not crash the frontend.
+- Connection failures produce a reasonable development-stage state.
+- Local development avoids unnecessary cross-origin complexity.
 
-Reuse existing valid fixtures when available.
+Prefer a Vite development proxy for `/api` requests unless there is a concrete reason to choose another approach.
 
-Do not manufacture purportedly live evidence for integrations that could not be accessed.
+Do not introduce authentication, user accounts, background polling systems, or a generic API-client abstraction.
+
+### 4.4 MapLibre — Interactive Vancouver Map
+
+Render a real interactive geographic map using:
+
+- MapLibre GL JS;
+- MapTiler;
+- the validated `streets-v4-dark` style.
+
+Requirements:
+
+- The map loads successfully in a browser.
+- The initial viewport is centered on Vancouver.
+- An appropriate initial zoom level displays useful geographic context.
+- Users can pan and zoom.
+- The map fills its intended container.
+- Map resizing and container changes do not leave the viewport broken.
+- Loading and error states are handled reasonably.
+- Required attribution remains visible.
+- Map initialization and cleanup work correctly within React lifecycle behavior.
+
+Do not implement route layers, telemetry overlays, camera markers, transit visualization, or geocoding.
+
+This phase establishes only the foundational basemap interaction.
+
+### 4.5 MapTiler Credential Handling
+
+MapTiler's browser-accessible map resources require suitable client-side configuration.
+
+The local root `.env` currently contains the validated MapTiler credential.
+
+Requirements:
+
+- Use an explicit, documented mechanism to make only the necessary MapTiler browser key available to Vite.
+- Do not expose backend-only credentials to the frontend.
+- Do not copy the entire root `.env` into the Vite frontend environment.
+- Do not embed actual credentials directly in tracked source code.
+- Do not assume that a Vite-prefixed variable is secret or hidden from browser users.
+- Preserve `.env` ignore behavior and sanitize diagnostic output.
+
+If the existing MapTiler key requires additional restrictions or is unsuitable for browser use, identify that requirement for human review.
+
+Do not implement a general secret-management platform or proxy all map tiles through FastAPI solely to conceal a browser-accessible map key.
+
+### 4.6 Desktop Layout
+
+Establish the approved RouteLens desktop interface.
+
+Primary regions:
+
+1. Top journey-controls area.
+2. Left map area.
+3. Right journey-intelligence panel.
+
+Use a **fixed approximately 65% map / 35% intelligence-panel split** for the main desktop content region.
+
+This ratio should remain visually consistent on normal desktop viewport sizes.
+
+Requirements:
+
+- The map occupies the dominant portion of the interface.
+- The intelligence panel is visibly distinct.
+- The layout avoids overlapping regions.
+- The map remains usable and correctly sized.
+- Normal browser resizing does not break the interface.
+- The panel can support future vertically scrolling information.
+- The top region clearly communicates where journey input will eventually appear.
+
+Do not implement a user-resizable panel or draggable split controls.
+
+Do not introduce persistent layout preferences.
+
+A basic fallback for narrower screens is permitted to avoid broken presentation, but mobile-specific product design is outside the MVP scope.
+
+### 4.7 Foundational Visual Design
+
+The interface should establish the approved dark city-intelligence aesthetic.
+
+Priorities:
+
+- dark, low-clutter presentation;
+- readable typography;
+- clear visual hierarchy;
+- suitable map/panel contrast;
+- cohesive spacing;
+- clean panel boundaries;
+- restrained accent colors;
+- intentional placeholders;
+- basic loading, connection, and failure states.
+
+Use Tailwind CSS for primary styling.
+
+Lucide may provide appropriate visual icons.
+
+Framer Motion is an approved dependency, but do not add decorative animation merely to demonstrate its use.
+
+Subtle transitions are acceptable where they improve comprehension.
+
+### 4.8 Placeholder Components and Future Integration
+
+The Phase 1 shell should visibly communicate the eventual RouteLens workflow without pretending later-phase features are functional.
+
+Reasonable placeholders include:
+
+- origin input area;
+- destination input area;
+- Drive / Transit mode area;
+- Analyze Journey action;
+- destination-condition panel;
+- route findings;
+- transit advisories;
+- AI briefing area.
+
+These are presentation scaffolds only.
+
+Requirements:
+
+- Future actions must be disabled, labeled as unavailable, or otherwise clearly nonfunctional.
+- Do not fabricate live weather, road events, camera interpretations, or transit alerts.
+- Do not display invented journey analysis as real application results.
+- Avoid designing permanent application data contracts from placeholder content.
+- Keep placeholders easy to replace during later vertical slices.
+
+The frontend may display real backend connectivity status because that functionality is implemented in Phase 1.
+
+---
 
 ## 5. Expected Scope and Artifacts
 
-Phase 0 may create or update:
+Phase 1 may create or update:
 
-- `.env.example`;
-- `.gitignore`, where needed;
-- source fixtures under an appropriate test-fixture location;
-- lightweight integration-check scripts or tests where useful;
-- concise integration findings or configuration notes where needed;
+- `backend/` — minimal FastAPI application, dependencies, configuration, and tests;
+- `frontend/` — React/Vite/TypeScript application and required configuration;
+- frontend styling and shell components;
+- MapLibre initialization and presentation components;
+- local development instructions;
+- relevant configuration templates or narrowly scoped environment handling;
 - `PROJECT_STATE.md`.
 
-These are anticipated areas, not a rigid filesystem allowlist.
+These paths are anticipated areas, not a strict filesystem allowlist.
 
-Additional supporting files may be created when directly necessary for the assigned work.
+A suggested structure from `docs/technical-design.md` may be used where appropriate, but do not pre-create empty source adapters, domain modules, database directories, or future feature components.
 
-The repository's eventual directory structure should remain consistent with `docs/technical-design.md`, without pre-creating unrelated application modules.
+Create only what the current bounded assignment needs.
+
+---
 
 ## 6. Non-Goals
 
-Phase 0 must not implement:
+Phase 1 must not implement:
 
-- the FastAPI application shell or production API endpoints;
-- the React frontend or MapLibre map interface;
-- journey input, autocomplete UI, or route-selection UX;
-- complete telemetry adapters and orchestration;
-- database-backed caching or persistence infrastructure;
-- production camera analysis or journey briefing;
-- speculative abstractions for later integrations;
-- deferred MVP data sources.
+- MapTiler autocomplete or geocoding application behavior;
+- origin/destination normalization;
+- City of Vancouver destination-boundary validation;
+- openrouteservice routing;
+- route alternatives or route selection;
+- Road Ahead, Open511, SWOB, OpenWeather, or TransLink integration;
+- Vancouver camera ingestion or image processing;
+- OpenRouter inference;
+- journey analysis or AI briefing;
+- persistence, SQLite models, or production caching;
+- authentication, user accounts, or personalization;
+- mobile application functionality;
+- real-time subscriptions or background workers;
+- custom route optimization;
+- deferred MVP sources.
 
-Do not redesign approved source strategies merely because an alternative appears convenient.
+Do not use mock telemetry to imply real functionality exists.
 
-Do not introduce heavyweight infrastructure or significant new runtime dependencies without approval.
+Do not introduce Docker, Kubernetes, Redis, PostgreSQL, or other infrastructure not required by the approved local MVP.
+
+Do not redesign the approved architecture merely because a different tool appears convenient.
+
+---
 
 ## 7. Verification Requirements
 
-Each assigned workstream must provide evidence appropriate to its scope.
+Each bounded assignment must perform the relevant checks for its authorized changes.
 
-### External-Service Verification
+### Backend Verification
 
-For every required unresolved integration:
+Where the backend is affected:
 
-- Attempt safe authenticated requests using available configuration.
-- Establish whether access succeeds or fails.
-- Inspect relevant real response behavior.
-- Capture representative evidence where appropriate.
-- Report unsupported assumptions, errors, and limitations.
+- Confirm the FastAPI application starts.
+- Test `GET /api/health`.
+- Verify expected status code and response structure.
+- Run pytest for relevant tests.
+- Run Ruff for affected Python files.
+- Report startup, dependency, and test failures.
 
-Successful authentication alone is insufficient when endpoint capabilities or schemas remain unresolved.
+### Frontend Verification
 
-### Repository Verification
+Where the frontend is affected:
 
-Where files, scripts, or tests are introduced:
+- Confirm the Vite application starts.
+- Run the frontend production build.
+- Verify frontend-to-backend connectivity where applicable.
+- Inspect development-server errors.
+- Check for missing dependencies or TypeScript failures.
 
-- Run relevant available tests.
-- Run Ruff for affected Python code.
-- Verify that fixtures are readable and free of credentials.
-- Verify environment-file ignore behavior.
-- Run additional checks required by the bounded assignment.
+### Map Verification
 
-Frontend builds are not required unless frontend code is explicitly authorized and modified.
+Where map functionality is affected:
 
-### Verification Reporting
+- Verify real MapTiler style/resource loading.
+- Verify MapLibre initializes successfully.
+- Verify panning and zooming.
+- Verify attribution is displayed.
+- Check map-container sizing.
+- Check loading and failure behavior.
 
-Classify each check as:
+A successful MapTiler HTTP response alone does not prove that the map renders correctly in the browser.
+
+Browser-rendering verification must be explicitly reported as Passed, Failed, or Not run.
+
+### Visual Verification
+
+For the completed shell:
+
+- Inspect the main interface at a normal desktop viewport.
+- Confirm the fixed approximate 65/35 split.
+- Confirm usable map dimensions.
+- Confirm right-panel readability.
+- Confirm placeholders do not falsely indicate working functionality.
+- Check layout behavior after browser resizing.
+- Check that frontend and backend failure states are understandable.
+
+Human visual acceptance is required for Phase 1 completion.
+
+### Reporting Standard
+
+Every check must be classified as:
 
 - **Passed** — performed successfully.
 - **Failed** — performed but did not satisfy expectations.
-- **Not run** — could not be performed, with reason.
+- **Not run** — not executed, with reason.
 
-Do not report planned or assumed verification as completed.
+Do not report a test or manual browser inspection as successful unless it actually occurred.
 
-A live-service failure must not be concealed by a locally fabricated success result.
+---
 
-## 8. Phase 0 Acceptance Criteria
+## 8. Phase 1 Acceptance Criteria
 
-Phase 0 is ready for human acceptance when:
+Phase 1 is ready for human acceptance when:
 
-- [ ] Every core MVP telemetry source has a documented access path.
-- [ ] Required credentials are available or confirmed unnecessary, with no unresolved required-access blocker.
-- [ ] OpenWeather has undergone actual authenticated endpoint and schema exploration.
-- [ ] OpenWeather current/forecast availability, practical lookahead, and initial caching approach are documented.
-- [ ] MapTiler geocoding/autocomplete and basemap access are verified.
-- [ ] openrouteservice routing and route-alternative behavior are verified.
-- [ ] OpenRouter candidate vision and text models have been called successfully and their relevant capabilities evaluated.
-- [ ] `.env.example` documents required configuration names without secrets.
-- [ ] `.env` is Git-ignored and committed/tracked artifacts contain no credentials.
-- [ ] Representative fixtures exist for sources needed in early phases.
-- [ ] Important integration limitations and unexpected behavior are recorded.
-- [ ] No major required source-access blocker remains undiscovered or unresolved.
-- [ ] `PROJECT_STATE.md` accurately reflects completed checks, findings, limitations, and outstanding work.
-- [ ] Codex has reported verification results and confirmed that it performed no Git commit or push.
+- [ ] The backend starts locally.
+- [ ] `GET /api/health` returns the expected success response.
+- [ ] Backend health-endpoint tests pass.
+- [ ] Relevant Ruff checks pass.
+- [ ] The React/Vite/TypeScript frontend starts locally.
+- [ ] The frontend can reach the FastAPI backend.
+- [ ] Backend unavailability is handled without a frontend crash.
+- [ ] MapLibre renders the validated MapTiler dark style.
+- [ ] Vancouver appears in a suitable initial viewport.
+- [ ] The map supports pan and zoom interactions.
+- [ ] MapTiler attribution is visible.
+- [ ] The layout has a recognizable top-control region.
+- [ ] The desktop content uses the approved fixed approximately 65/35 map/panel split.
+- [ ] The right-side intelligence panel is visible and readable.
+- [ ] Placeholder actions are clearly nonfunctional.
+- [ ] No fictitious telemetry is presented as real data.
+- [ ] The frontend build succeeds.
+- [ ] Local startup instructions are documented.
+- [ ] No backend-only API credentials are exposed through the frontend.
+- [ ] Relevant browser/map behavior is manually verified.
+- [ ] `PROJECT_STATE.md` reflects the implementation and verification results.
+- [ ] Codex provides the required completion report and confirms no Git commit or push was performed.
 
-Planning-stage source research may satisfy documented discovery requirements where sufficient evidence already exists. Repository artifacts and newly required live checks must be verified rather than assumed.
+Passing this checklist makes Phase 1 eligible for human review; it does not constitute automatic acceptance.
 
-Passing the checklist makes Phase 0 eligible for human review; it does not constitute automatic acceptance.
+---
 
 ## 9. Blockers and Escalation
 
 Stop affected work and report when:
 
-- required credentials are missing or rejected;
-- a required endpoint or API capability is unavailable;
-- source behavior materially contradicts the approved design;
-- a significant new dependency or provider change appears necessary;
-- expected structured output or multi-image capability is not supported;
-- acceptance criteria cannot be met within the authorized scope;
-- destructive operations or material architectural changes become necessary.
+- required MapTiler access is missing or rejected;
+- selected dependencies are materially incompatible;
+- browser map rendering cannot be established within the approved stack;
+- the existing MapTiler credential is unsuitable for browser use without a significant design decision;
+- an architectural change or new major dependency becomes necessary;
+- completion requires implementing later-phase behavior;
+- destructive operations or unrelated repository changes become necessary;
+- verification cannot be completed and the remaining uncertainty materially affects acceptance.
 
-For each blocker, report the observed problem, affected requirement, evidence, and reasonable options if apparent.
+For each blocker, report:
 
-Continue unrelated in-scope readiness work when safe.
+- observed problem;
+- affected requirement;
+- available evidence;
+- reasonable options, where apparent.
 
-Do not independently substitute a provider, redesign the integration, expand the phase, or declare a blocked requirement satisfied.
+Continue independent in-scope implementation work when safe.
 
-Blocked or partially verified work must remain visible in `PROJECT_STATE.md`.
+Routine implementation details, small compatibility corrections, and ordinary test failures may be resolved autonomously within the assignment.
 
-The human and planning agent decide whether a design adjustment, additional validation, or revised acceptance criterion is appropriate.
+Do not independently change providers, introduce substantial infrastructure, or expand application scope.
+
+---
 
 ## 10. Phase Completion and Handoff
 
-At the end of each bounded Codex assignment:
+After each bounded assignment:
 
-- Update `PROJECT_STATE.md` with factual results and outstanding work.
-- Provide the completion report required by `AGENTS.md`.
-- Distinguish completed verification from pending checks.
-- Do not claim that Phase 0 is accepted before human review.
+- Run relevant verification.
+- Update `PROJECT_STATE.md` with verified progress.
+- Preserve completed functionality.
+- Report new files and behavior.
+- Identify failures, limitations, and material decisions.
+- Provide the standard completion report required by `AGENTS.md`.
+- Do not claim the entire phase is complete until all applicable acceptance criteria have been assessed.
 
-Phase 0 is accepted only when the human reviews the accumulated readiness evidence, resolves or deliberately revises blockers, and approves the phase checkpoint.
+Phase 1 is accepted only after human review of:
 
-Git commits are created manually by the human.
+- running application behavior;
+- interactive map functionality;
+- visual layout;
+- relevant tests and builds;
+- meaningful limitations or deviations.
+
+Git checkpoints remain human-controlled.
+
+Codex must not stage, commit, push, amend, merge, rebase, or rewrite history.
+
+---
 
 ## 11. Next Phase
 
-**Phase 1 — Application Shell + Map**
+**Phase 2 — Journey Input + Geocoding**
 
-After Phase 0 acceptance, the planning agent will prepare the next `BUILD_PLAN.md`.
+After Phase 1 acceptance, Phase 2 adds:
 
-Phase 1 establishes the minimal FastAPI backend, React/Vite frontend, dark MapTiler/MapLibre map, and desktop application shell.
+- MapTiler place autocomplete;
+- origin/destination selection;
+- canonical location data;
+- deterministic City of Vancouver destination validation;
+- persistent frontend selection state.
 
-Phase 1 work is not authorized by this document.
+Phase 2 work is not authorized by this document.
