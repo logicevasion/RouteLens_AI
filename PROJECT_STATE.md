@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 0 — Integration Readiness  
-**Phase status:** In progress — Assignments 0A–0D completed; human review pending
-**Human acceptance:** Pending  
+**Phase status:** Accepted — Phase 0 Integration Readiness complete
+**Human acceptance:** Approved by human developer on 2026-10-09, with documented non-blocking follow-ups
 **Git checkpoint:** No commit or push performed; initial worktree was clean on `main` tracking `origin/main`
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. No application features are implemented.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. No application features are implemented. The consolidated assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -39,7 +39,7 @@ The Assignment 0A inventory found no backend, frontend, source code, dependency 
 
 No automated test infrastructure, API integration scripts, or build tooling was found. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
-`.gitignore` is present and includes `.env`. Assignment 0A found no local environment files; during Assignment 0B, an ignored `.env` defined `OPENWEATHER_API_KEY`. The key value was not displayed or copied, and successful current and forecast requests were made with it. `.env.example` remains absent.
+`.gitignore` is present and includes `.env`. The ignored local `.env` has MapTiler, ORS, OpenWeather, and OpenRouter credentials; `TRANSLINK_API_KEY` is absent locally, although planning research records prior testing. Secret values were not displayed or changed. Assignment 0E created `.env.example` with the five approved credential names and both tested provisional OpenRouter model identifiers.
 
 ## 4. Planning Research Baseline
 
@@ -66,14 +66,14 @@ Do not repeat completed research unless a specific readiness requirement or impl
 | MapTiler | Live access and schema validated for representative requests | Confirm active-plan quota/attribution details; MapLibre rendering remains Phase 1 |
 | openrouteservice | Live driving routes and alternatives validated for three journeys | Confirm account-specific quota/terms; fewer-than-requested route behavior was not observed |
 | OpenRouter | Preliminary synthetic readiness validated for both roles | One vision response truncated before a corrective call; one text response had an inconsistent status before correction; general reliability and real-camera accuracy remain untested. Evidence is in `docs/integration-notes/openrouter-readiness.md` and `fixtures/openrouter/` |
-| Environment configuration | Partial | `.gitignore` excludes `.env`; OpenRouter key and both selected model variables were present and used successfully; `.env.example` remains absent |
-| Fixtures and evidence | Partial | OpenWeather, MapTiler, ORS, and OpenRouter readiness evidence and fixtures now exist; provider account limits/terms remain to be reviewed |
+| Environment configuration | Ready for review with one credential follow-up | `.gitignore` excludes `.env`; `.env.example` now documents all five keys and both model variables; local TransLink key is absent and should be configured before Phase 10 |
+| Fixtures and evidence | Ready for review | OpenWeather, MapTiler, ORS, and synthetic OpenRouter evidence and fixtures exist and were audited in Assignment 0E; planning-stage sources are not represented as repository live fixtures |
 
 The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
 Workstreams may be completed through separate bounded Codex assignments.
 
-Phase 0 remains **In progress**. Assignment 0D verified OpenRouter access and preliminary structured-output feasibility for both synthetic roles; human review and other Phase 0 readiness requirements remain pending.
+Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is authorized for planning but implementation has not yet begun.
 
 ## 6. Verification Evidence
 
@@ -112,6 +112,11 @@ Phase 0 remains **In progress**. Assignment 0D verified OpenRouter access and pr
 | Assignment 0D fixtures and credential scan | Passed — synthetic inputs, actual outputs, first/failed attempts, and sanitized metadata saved under `fixtures/openrouter/`; all 9 JSON fixtures parsed, final contract checks passed, credential scan found no key value |
 | Assignment 0D `.env` ignore rule | Passed — `git check-ignore -q .env` |
 | Assignment 0D `git diff --check` | Passed — no whitespace errors |
+| Assignment 0E fixture inventory and parse/structure audit | Passed — required notes and fixtures present; JSON and GeoJSON parsed and representative expected structures checked |
+| Assignment 0E configuration and credential audit | Passed — five credential names and both provisional model variables in `.env.example`; no secret values found in the audited artifacts; `.env` remains ignored and was not modified; local TransLink key identified as missing |
+| Assignment 0E planning/live evidence distinction | Passed — public and transit source research is labeled planning-stage; live verification claims are limited to OpenWeather, MapTiler, ORS, and OpenRouter |
+| Assignment 0E no-live-call boundary | Passed — no APIs or inference providers were called |
+| Assignment 0E final diff/status checks | Passed — `git diff --check` clean; only `.env.example`, the consolidated summary, and `PROJECT_STATE.md` are changed |
 | Initial repository Git status | Passed — clean `main` tracking `origin/main` before this state update |
 | Assignment 0A final repository Git status | Passed — only `PROJECT_STATE.md` was modified for that assignment |
 
@@ -148,7 +153,7 @@ Do not silently convert observed implementation differences into changes to appr
 - ORS returned three alternatives for the three sampled trips. Fewer-than-requested behavior was not directly observed and three candidates are not guaranteed for arbitrary journeys.
 - OpenRouter accepted the provisional Gemma model for both synthetic readiness requests through DeepInfra. One successful vision response was obtained after a truncation; one text status inconsistency was corrected. These small samples do not establish production reliability, real-camera accuracy, or robustness.
 - OpenRouter and DeepInfra publish favorable retention/training claims for the tested route, but account-level privacy controls were not inspected. The real Vancouver camera-image licence and permission to transmit those images for AI inference remain unresolved.
-- `.env.example` is absent. A local ignored `.env` defines the working OpenWeather key; its value was not exposed.
+- A local ignored `.env` does not define `TRANSLINK_API_KEY`; planning research records that credentials were previously obtained and tested. Configure/confirm the key before Phase 10. Its value was not exposed.
 - No application test infrastructure or production integration code was created. Readiness notes and fixtures now exist for OpenWeather, MapTiler, ORS, and OpenRouter.
 - The `README.md` currently describes DriveBC Cameras as a planned core source, while `APP_SPEC.md` explicitly excludes DriveBC Cameras from the MVP. The README also says the project is in active development despite this inventory finding no application implementation. These README statements were not changed under Assignment 0A scope.
 
@@ -162,9 +167,9 @@ Additional blockers must be recorded when discovered, including affected workstr
 
 ## 9. Phase Acceptance and Git Handoff
 
-**Phase 0 acceptance:** Pending  
-**Human review:** Not yet performed  
-**Phase 0 Git checkpoint:** Not confirmed
+**Phase 0 acceptance:** Accepted — 2026-10-09, with documented non-blocking follow-ups
+**Human review:** Completed — Phase 0 readiness evidence and remaining limitations reviewed
+**Phase 0 Git checkpoint:** Not yet committed — pending human Git checkpoint
 
 Use the following status distinctions:
 
@@ -182,9 +187,13 @@ Codex must not stage, commit, push, merge, rebase, tag, or rewrite Git history.
 
 ## 10. Phase 0 Assignment Status and Next Expected Action
 
-Assignments 0A–0D are complete and ready for human review. OpenWeather, MapTiler, ORS, and OpenRouter access and sampled capabilities are documented with representative fixtures. Provider account plans/quotas and some account-specific terms remain unknown; live Vancouver camera-image permissions remain unresolved. Assignment 0D used four paid OpenRouter calls, with reported aggregate cost of $0.00047691. No application features or Git history operations were introduced.
+Assignments 0A–0E are **completed and accepted by the human developer as of 2026-10-09**. Phase 0 established integration readiness for OpenWeather, MapTiler, openrouteservice, and OpenRouter, supported by sanitized fixtures and readiness documentation. Planning-stage research for Vancouver Webcams, Road Ahead, Open511, SWOB, and TransLink remains distinguished from repository-based live verification.
 
-Continue remaining Phase 0 readiness work through bounded assignments consistent with `BUILD_PLAN.md`. Do not begin Phase 1 until Phase 0 has been accepted by the human developer.
+The following non-blocking follow-ups remain: configure the local TransLink key before Phase 10; resolve camera-image rights and external AI processing permissions before Phase 8; and review provider account limits and applicable terms before broader or public use.
+
+No application features were implemented during Phase 0. Phase 1 — Application Shell + Map is the next planned implementation phase.
+
+**Next action:** Prepare and authorize the Phase 1 `BUILD_PLAN.md` update, then begin Phase 1 implementation through bounded Codex assignments under the established SDD workflow.
 
 After each meaningful assignment, Codex should update this document with:
 
@@ -195,4 +204,4 @@ After each meaningful assignment, Codex should update this document with:
 - unresolved issues;
 - phase and handoff status.
 
-**Do not begin Phase 1 until Phase 0 has been accepted by the human developer.**
+**Phase 0 has been accepted. Begin Phase 1 only after its BUILD_PLAN.md update and specific Codex assignment have been authorized.**
