@@ -4,13 +4,13 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 0 — Integration Readiness  
-**Phase status:** Accepted — Phase 0 Integration Readiness complete
+**Current phase:** Phase 1 — Application Shell + Map (Assignment 1A)
+**Phase status:** Assignment 1A ready for human review
 **Human acceptance:** Approved by human developer on 2026-10-09, with documented non-blocking follow-ups
 **Git checkpoint:** No commit or push performed; initial worktree was clean on `main` tracking `origin/main`
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. No application features are implemented. The consolidated assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignment 1A now adds the minimal application foundation described below; no map or journey functionality is implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -33,11 +33,11 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: No application implementation found during the Assignment 0A inventory.**
+**Repository implementation status: Assignment 1A application foundation implemented; verification status is recorded in Section 10.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Therefore, no application features are implemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A has since added the minimal backend/frontend application foundation; no map, final desktop shell, or journey functionality is implemented.
 
-No automated test infrastructure, API integration scripts, or build tooling was found. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
+At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
 `.gitignore` is present and includes `.env`. The ignored local `.env` has MapTiler, ORS, OpenWeather, and OpenRouter credentials; `TRANSLINK_API_KEY` is absent locally, although planning research records prior testing. Secret values were not displayed or changed. Assignment 0E created `.env.example` with the five approved credential names and both tested provisional OpenRouter model identifiers.
 
@@ -185,23 +185,30 @@ Only record a Git checkpoint as completed when confirmed by the human or verifie
 
 Codex must not stage, commit, push, merge, rebase, tag, or rewrite Git history.
 
-## 10. Phase 0 Assignment Status and Next Expected Action
+## 10. Assignment 1A Status and Verification
 
 Assignments 0A–0E are **completed and accepted by the human developer as of 2026-10-09**. Phase 0 established integration readiness for OpenWeather, MapTiler, openrouteservice, and OpenRouter, supported by sanitized fixtures and readiness documentation. Planning-stage research for Vancouver Webcams, Road Ahead, Open511, SWOB, and TransLink remains distinguished from repository-based live verification.
 
 The following non-blocking follow-ups remain: configure the local TransLink key before Phase 10; resolve camera-image rights and external AI processing permissions before Phase 8; and review provider account limits and applicable terms before broader or public use.
 
-No application features were implemented during Phase 0. Phase 1 — Application Shell + Map is the next planned implementation phase.
+Assignment 1A implements a minimal FastAPI health endpoint and React/Vite/TypeScript/Tailwind scaffold. The frontend makes one `/api/health` request and shows checking, connected, or unavailable status. Vite proxies `/api` to the local backend. No external API credentials are needed. The map and final desktop shell remain future bounded assignments.
 
-**Next action:** Prepare and authorize the Phase 1 `BUILD_PLAN.md` update, then begin Phase 1 implementation through bounded Codex assignments under the established SDD workflow.
+| Check | Result |
+|---|---|
+| Backend import and startup | Passed — Uvicorn started and completed application startup on `127.0.0.1:8000` |
+| `GET /api/health` direct request | Passed — HTTP 200, `{"status":"ok"}` |
+| Backend pytest | Passed — 1 health endpoint test |
+| Ruff | Passed — `ruff check app tests` |
+| Frontend install | Passed — npm dependencies installed and lockfile generated |
+| TypeScript and production build | Passed — `npm run build` (`tsc -b && vite build`) |
+| Vite development server | Passed — started on `127.0.0.1:5173` |
+| Proxied `GET /api/health` | Passed — Vite returned the backend HTTP 200 health response |
+| Backend unavailable proxy response | Passed — Vite returned HTTP 502 while the frontend route remained available; the UI catches failed requests and sets unavailable state |
+| Tailwind build output | Passed — generated CSS contains the scaffold utility selectors |
+| Browser visual/rendered-state inspection | Not run — no browser inspection tool was available; manual visual review remains for the developer |
+| Credential requirement | Passed — no external provider credentials are used by this foundation; `.env` and `.env.example` were preserved |
+| Git history operations | None — no staging, commit, push, or history changes were performed |
 
-After each meaningful assignment, Codex should update this document with:
+**Review status:** Ready for human review. Browser-level visual verification and manual review of the unavailable indicator remain outstanding.
 
-- functionality or artifacts actually created;
-- workstream progress;
-- verification outcomes;
-- significant discoveries;
-- unresolved issues;
-- phase and handoff status.
-
-**Phase 0 has been accepted. Begin Phase 1 only after its BUILD_PLAN.md update and specific Codex assignment have been authorized.**
+Phase 0 remains accepted. Assignment 1B has not begun and requires separate authorization.

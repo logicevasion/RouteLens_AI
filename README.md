@@ -380,9 +380,55 @@ Camera imagery is treated separately from camera metadata, and source-specific u
 
 ## Current Status
 
-RouteLens AI is currently in active development.
+Planning and the initial SDD harness are complete. Phase 0 — Integration Readiness is accepted. Assignment 1A establishes the minimal FastAPI and React application foundation; the map and finished desktop shell are still pending.
 
-Planning and initial SDD harness complete (v1). Phase 0 — Integration Readiness is underway. Application implementation has not yet begun.
+## Local Development
+
+The Assignment 1A foundation runs as two local development servers. No external API credentials are needed.
+
+### Requirements
+
+- Python 3.10 or newer
+- Node.js 20.19 or newer and npm
+
+### Backend
+
+From the repository root:
+
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -e "./backend[dev]"
+backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
+```
+
+The API runs at `http://localhost:8000`; its health endpoint is `http://localhost:8000/api/health`.
+
+Run the backend checks from the repository root:
+
+```bash
+backend/.venv/bin/python -m pytest backend/tests
+backend/.venv/bin/ruff check backend/app backend/tests
+```
+
+### Frontend
+
+In a second terminal, from the repository root:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite forwards `/api` requests to the backend on port 8000.
+
+Run the TypeScript check and production build with:
+
+```bash
+npm run build
+```
+
+The page reports whether the backend health check succeeded. The map and journey tools are not implemented in this foundation.
 
 ---
 
