@@ -4,13 +4,13 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 1 — Application Shell + Map (Assignment 1B)
-**Phase status:** Assignment 1B ready for human review
-**Human acceptance:** Assignment 1A accepted by human developer on 2026-10-09; Assignment 1B awaits review
-**Git checkpoint:** Assignment 1A committed as `01ff452`; no Assignment 1B staging, commit, or push performed
+**Current phase:** Phase 1 — Application Shell + Map
+**Phase status:** Accepted — Phase 1 implementation complete
+**Human review:** Completed — Assignments 1A–1C accepted by human developer on 2026-10-10
+**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C pending human commit
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignment 1A established the minimal app foundation; Assignment 1B adds the interactive Vancouver basemap. The final desktop shell and journey functionality are not implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A and 1B established the app foundation and interactive Vancouver basemap. Assignment 1C completed the desktop shell and honest intelligence placeholders. Phase 1 was accepted by the human developer on 2026-10-10 after successful local browser verification. No journey-analysis functionality has been implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -26,16 +26,16 @@ The Codex SDD harness has been drafted and accepted as v1:
 
 - `AGENTS.md` — agent operating rules.
 - `APP_SPEC.md` — condensed application specification.
-- `BUILD_PLAN.md` — current Phase 0 scope and acceptance criteria.
+- `BUILD_PLAN.md` — current Phase 1 scope and acceptance criteria; pending transition to Phase 2.
 - `PROJECT_STATE.md` — implementation reality and progress.
 
 All four root harness files are present and readable. All five listed planning documents are present.
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A and 1B implemented; verification status is recorded in Sections 10 and 11.**
+**Repository implementation status: Assignments 1A, 1B, and 1C implemented; verification status is recorded in Sections 10–12.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, and Assignment 1B adds the interactive MapLibre map with MapTiler's dark Vancouver basemap. The final desktop shell and journey functionality are not implemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Journey functionality is not implemented.
 
 At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
@@ -73,7 +73,7 @@ The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
 Workstreams may be completed through separate bounded Codex assignments.
 
-Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is in progress: Assignment 1A is accepted and committed, Assignment 1B is ready for review, and Assignment 1C has not begun.
+Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is implemented through Assignment 1C and awaits human acceptance.
 
 ## 6. Verification Evidence
 
@@ -169,8 +169,10 @@ Additional blockers must be recorded when discovered, including affected workstr
 ## 9. Phase Acceptance and Git Handoff
 
 **Phase 0 acceptance:** Accepted — 2026-10-09, with documented non-blocking follow-ups
-**Human review:** Completed — Phase 0 readiness evidence and remaining limitations reviewed
-**Phase 0 Git checkpoint:** Not yet committed — pending human Git checkpoint
+**Phase 0 Git checkpoint:** Committed and pushed — human-confirmed
+**Phase 1 acceptance:** Accepted — 2026-10-10, following human browser and functional review
+**Phase 1 human review:** Completed — map rendering, pan/zoom, desktop layout, panel behavior, and backend connectivity verified
+**Phase 1 Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C pending human commit
 
 Use the following status distinctions:
 
@@ -212,7 +214,7 @@ Assignment 1A implements a minimal FastAPI health endpoint and React/Vite/TypeSc
 
 **Review status:** Accepted by the human developer; committed as `01ff452`.
 
-Phase 0 and Assignment 1A remain accepted. Assignment 1B verification is recorded below; Assignment 1C has not begun.
+Phase 0 and Assignment 1A remain accepted. Assignment 1B review is complete, and its map verification is recorded below.
 
 ## 11. Assignment 1B — Interactive Vancouver Map
 
@@ -237,4 +239,42 @@ Assignment 1B adds a lifecycle-safe MapLibre GL JS component using MapTiler's va
 
 The browser verification used headless Chrome with MapTiler requests succeeding. The actual map was visually inspected and interaction/resizing checks were exercised. The browser key is intentionally visible in browser requests and generated assets; review provider-supported restrictions and the active plan's logo requirement before any shared or public deployment. No automatic retry behavior is implemented.
 
-**Review status:** Ready for human review. The Assignment 1B changes remain uncommitted; human acceptance is pending.
+**Review status:** Human review completed; Assignment 1B is committed as `c2c501b`.
+
+## 12. Assignment 1C — Desktop Shell and Visual Integration
+
+Assignment 1C replaces the tall scaffold page with a viewport-filling desktop interface: branded header and one-shot backend status, visibly inactive origin/destination/mode/analyze placeholders, a fixed 65/35 map and intelligence workspace, and a vertically scrollable panel with honest empty states for conditions, road context, transit, cameras, and AI briefing. The existing `VancouverMap` implementation and its MapLibre lifecycle, MapTiler style, Vancouver viewport, controls, attribution, worker URL, resize observer, and loading/error handling were preserved. The attribution presentation was adjusted for the dark shell. No dependencies or later-phase journey behavior were added.
+
+| Check | Result |
+|---|---|
+| Frontend TypeScript and production build | Passed — `npm run build`; Vite reports the existing large MapLibre bundle warning |
+| Vite development server | Passed — started on `127.0.0.1:5173` |
+| Backend import | Passed — `app.main` imports as `RouteLens AI API` |
+| Backend pytest | Passed — 1 health endpoint test |
+| Ruff | Passed — `ruff check app tests` |
+| Backend health through Vite `/api` proxy | Passed — Chrome showed connected and FastAPI recorded successful health requests |
+| Backend unavailable frontend state | Passed by earlier Assignment 1A/1B verification; no new failure-state browser session was captured for 1C |
+| Desktop/narrow layout inspection | Passed — headless Chrome screenshots at 1440×900, 1280×800, 1024×768, and 430×900; desktop retains two columns, the panel scrolls independently at 1024×768, and the narrow view stacks without horizontal overflow |
+| Browser console | Passed with a non-fatal warning — the MapTiler style reported its optional `transportation:road_` sprite image missing; no application exception was reported in the observed Vite output |
+| Map rendering and interaction in 1C | Passed during human review — the developer verified real Vancouver basemap rendering, map interactions, attribution, and layout behavior in the configured Brave browser. Codex's separate headless Chrome test failed to render the basemap and remained on the loading overlay; this limitation is preserved as an environment-specific verification discrepancy, not a confirmed application defect. |
+| `.env` ignore rule | Passed — `git check-ignore -q .env` |
+| Backend-only secret values in production assets | Passed — checked configured backend credential values without printing them; none were present |
+| `git diff --check` | Passed — no whitespace errors |
+| Git history operations | None — no staging, commit, push, or history changes were performed for Assignment 1C |
+
+### Phase 1 acceptance assessment
+
+| Phase 1 requirement | Assessment |
+|---|---|
+| FastAPI startup, `/api/health`, pytest, and Ruff | Satisfied — Assignment 1A/1C checks passed |
+| React/Vite/TypeScript frontend startup and production build | Satisfied — 1C build and dev server passed |
+| Frontend-to-backend connection through `/api` and graceful unavailability | Satisfied — successful connection rechecked in 1C; unavailable state was verified in 1A/1B |
+| MapTiler dark map, Vancouver initial view, pan/zoom, attribution, resize | Satisfied — successful Assignment 1B verification and completed Assignment 1C human browser review; headless Chrome rendering limitation documented separately |
+| Top controls, fixed 65/35 desktop layout, readable right panel, inactive placeholders | Satisfied by 1C implementation and viewport inspection |
+| No fabricated telemetry; no later-phase behavior | Satisfied by source and visual inspection |
+| Local startup instructions, selective MapTiler key exposure, `.env` ignore | Satisfied — existing instructions/configuration retained; ignore and production asset checks passed |
+| `PROJECT_STATE.md`, browser verification, and Git boundary | Satisfied — this assessment records the remaining map-rendering verification caveat; no Git history operation occurred |
+
+**Phase status:** Accepted by the human developer on 2026-10-10. Assignments 1A–1C established a working FastAPI backend, React/Vite frontend, interactive Vancouver basemap, and desktop intelligence shell. Automated verification and human browser inspection are complete. The documented headless Chrome rendering discrepancy and other non-blocking limitations remain visible.
+
+**Next action:** Prepare and authorize the Phase 2 `BUILD_PLAN.md` update for Journey Input + Geocoding. Phase 2 implementation must not begin until its build plan and first bounded Codex assignment are approved.
