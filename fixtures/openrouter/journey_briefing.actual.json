@@ -1,0 +1,10 @@
+{
+  "status": "minor_conditions",
+  "summary": "Wet road conditions are present; a construction event is located nearby but does not overlap the route.",
+  "highlights": [
+    "Camera analysis shows rain, wet pavement, and reduced visibility.",
+    "OpenWeather reports overcast conditions with a 20% precipitation probability.",
+    "Nearby construction on Quebec Street is 180m from the corridor."
+  ],
+  "recommendation": "Exercise caution due to wet road surfaces."
+}

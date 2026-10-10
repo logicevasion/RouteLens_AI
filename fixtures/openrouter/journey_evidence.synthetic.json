@@ -1,0 +1,73 @@
+{
+  "scenario_label": "SYNTHETIC READINESS SCENARIO — not live RouteLens telemetry",
+  "trip": {
+    "origin": {
+      "label": "Metrotown, Burnaby, BC",
+      "latitude": 49.226,
+      "longitude": -123.003
+    },
+    "destination": {
+      "label": "Downtown Vancouver, BC",
+      "latitude": 49.283,
+      "longitude": -123.12
+    },
+    "mode": "drive",
+    "selected_approximate_route": {
+      "description": "Approximate selected corridor via Kingsway westbound and Main Street northbound; route context is synthetic and is not navigation guidance."
+    },
+    "departure_time": "2026-10-09T16:30:00Z"
+  },
+  "road_event": {
+    "source": "City of Vancouver Road Ahead (synthetic normalized record)",
+    "source_record_id": "SYN-RA-014",
+    "category": "construction",
+    "description": "Temporary curb-lane work on Quebec Street near East 2nd Avenue.",
+    "status": "reported_active",
+    "reported_at": "2026-10-09T14:55:00Z",
+    "schedule_end": null,
+    "route_relation": "nearby_context_only",
+    "distance_to_approximate_corridor_m": 180,
+    "direct_route_overlap": false
+  },
+  "weather": {
+    "openweather": {
+      "source_kind": "provider current observation and short-term forecast (synthetic normalized values)",
+      "destination_area": "Downtown Vancouver",
+      "observed_at": "2026-10-09T15:50:00Z",
+      "temperature_c": 14.7,
+      "condition": "overcast",
+      "precipitation_last_hour_mm": null,
+      "forecast_interval": "2026-10-09T16:00:00Z/2026-10-09T17:00:00Z",
+      "precipitation_probability_pct": 20,
+      "forecast_precipitation_mm": null
+    },
+    "eccc_supplementary": {
+      "source_kind": "ECCC station measured observation (synthetic); measured-data provenance",
+      "station": "Vancouver Harbour (synthetic station label)",
+      "station_distance_from_destination_km": 7.2,
+      "observed_at": "2026-10-09T15:10:00Z",
+      "temperature_c": 13.9,
+      "wind_speed_kmh": 9.0,
+      "limitations": "One point measurement at a nearby station; not a destination-area observation and 80 minutes old at departure."
+    }
+  },
+  "camera_observation": {
+    "source_kind": "actual model output from two synthetic illustrative road-scene images; not a real camera observation",
+    "image_count": 2,
+    "analyzed_at": "2026-10-09T16:00:00Z (synthetic timestamp)",
+    "observation": {
+      "precipitation_visible": true,
+      "precipitation_type": "rain",
+      "road_surface": "wet",
+      "visibility": "reduced",
+      "image_quality": "limited",
+      "confidence": null,
+      "notes": "Rain streaks are visible in the second view."
+    }
+  },
+  "evidence_gaps": [
+    "OpenWeather precipitation amount is unavailable for the current interval and forecast.",
+    "Road event end time is unknown.",
+    "No source-provided travel-time or delay estimate is available."
+  ]
+}

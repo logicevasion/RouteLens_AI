@@ -1,0 +1,10 @@
+{
+  "status": "clear",
+  "summary": "Overcast conditions with rain observed via camera. A construction event is reported nearby but does not overlap the route.",
+  "highlights": [
+    "OpenWeather reports overcast skies with a 20% precipitation probability; camera analysis interprets wet roads, reduced visibility, and rain.",
+    "City of Vancouver reports active curb-lane construction on Quebec Street near East 2nd Avenue (nearby context, 180m from corridor).",
+    "ECCC station (7.2 km away) measured 13.9°C and 9.0 km/h winds 80 minutes prior to departure."
+  ],
+  "recommendation": "Exercise caution due to camera-observed wet road surfaces and reduced visibility."
+}

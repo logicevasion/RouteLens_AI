@@ -1,0 +1,17 @@
+{
+  "actual_model": "google/gemma-4-31b-it",
+  "provider": "DeepInfra",
+  "modality": "two PNG image inputs + text",
+  "output_method": "response_format json_schema strict",
+  "http_status": 200,
+  "finish_reason": "length",
+  "usage": {
+    "prompt_tokens": 647,
+    "completion_tokens": 240,
+    "total_tokens": 887,
+    "cost": 0.00013983
+  },
+  "latency_seconds": 9.411,
+  "json_parse_succeeded": false,
+  "image_count": 2
+}

@@ -1,0 +1,9 @@
+{
+  "precipitation_visible": true,
+  "precipitation_type": "rain",
+  "road_surface": "wet",
+  "visibility": "reduced",
+  "image_quality": "limited",
+  "confidence": null,
+  "notes": "Rain streaks are visible in the second view."
+}

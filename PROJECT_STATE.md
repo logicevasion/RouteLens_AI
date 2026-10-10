@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 0 — Integration Readiness  
-**Phase status:** In progress — Assignments 0A, 0B, and 0C completed; human review pending
+**Phase status:** In progress — Assignments 0A–0D completed; human review pending
 **Human acceptance:** Pending  
 **Git checkpoint:** No commit or push performed; initial worktree was clean on `main` tracking `origin/main`
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignments 0B and 0C added sanitized provider response fixtures and readiness notes. No application features are implemented.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source, automated tests, API integration scripts, or response fixtures were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. No application features are implemented.
 
 ## 2. Established Planning Artifacts
 
@@ -65,19 +65,19 @@ Do not repeat completed research unless a specific readiness requirement or impl
 | OpenWeather | Validated — current and forecast endpoints | Review account-specific plan/quota and applicable terms; evidence and fixtures are in `docs/integration-notes/openweather-readiness.md` and `fixtures/openweather/` |
 | MapTiler | Live access and schema validated for representative requests | Confirm active-plan quota/attribution details; MapLibre rendering remains Phase 1 |
 | openrouteservice | Live driving routes and alternatives validated for three journeys | Confirm account-specific quota/terms; fewer-than-requested route behavior was not observed |
-| OpenRouter | Pending validation | Verify candidate vision/text models and structured-output capabilities |
-| Environment configuration | Partial | `.gitignore` excludes `.env`; working local OpenWeather variable exists; add `.env.example` and document required names |
-| Fixtures and evidence | Partial | OpenWeather, MapTiler geocoding/style, and ORS route fixtures added; OpenRouter remains outstanding |
+| OpenRouter | Preliminary synthetic readiness validated for both roles | One vision response truncated before a corrective call; one text response had an inconsistent status before correction; general reliability and real-camera accuracy remain untested. Evidence is in `docs/integration-notes/openrouter-readiness.md` and `fixtures/openrouter/` |
+| Environment configuration | Partial | `.gitignore` excludes `.env`; OpenRouter key and both selected model variables were present and used successfully; `.env.example` remains absent |
+| Fixtures and evidence | Partial | OpenWeather, MapTiler, ORS, and OpenRouter readiness evidence and fixtures now exist; provider account limits/terms remain to be reviewed |
 
 The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
 Workstreams may be completed through separate bounded Codex assignments.
 
-Phase 0 is **In progress**; Assignment 0A established the repository baseline, while provider validation and other readiness requirements remain pending.
+Phase 0 remains **In progress**. Assignment 0D verified OpenRouter access and preliminary structured-output feasibility for both synthetic roles; human review and other Phase 0 readiness requirements remain pending.
 
 ## 6. Verification Evidence
 
-**Assignments 0A–0C repository and integration verification: Recorded below.**
+**Assignments 0A–0D repository and integration verification: Recorded below.**
 
 | Verification Area | Latest Known Result |
 |---|---|
@@ -104,10 +104,18 @@ Phase 0 is **In progress**; Assignment 0A established the repository baseline, w
 | Assignment 0C fixture/schema and credential scan | Passed — 7 MapTiler JSON and 3 ORS GeoJSON fixtures parsed and checked; configured key values absent from readiness artifacts |
 | Assignment 0C `.env` ignore rule | Passed — `git check-ignore -q .env` |
 | Assignment 0C whitespace and `git diff --check` | Passed — new note has no trailing whitespace and `git diff --check` reported no issues |
+| Assignment 0D OpenRouter configuration/authentication | Passed — ignored `.env` contains the key and both role variables set to `google/gemma-4-31b-it`; four API requests returned HTTP 200; no credential value was displayed or saved |
+| Assignment 0D model/capability/pricing review | Passed — current OpenRouter model page and endpoint metadata reviewed; image/text input, text output, endpoint-specific `structured_outputs`, tested DeepInfra Turbo pricing, and provider information recorded |
+| Assignment 0D multi-image vision | Partial — two synthetic images were accepted together in one request; first output truncated at 240 tokens, corrective strict-schema response parsed and passed field checks |
+| Assignment 0D structured text briefing | Partial — both responses parsed; first had a status inconsistency, corrective response passed structural/manual grounding review; camera-to-route relevance remains unverified |
+| Assignment 0D request counts, usage, and costs | Passed — 4/4 paid API calls returned HTTP 200; one vision response was truncated/invalid JSON; one text response had a semantic status inconsistency; 3,674 total tokens; provider-reported cost $0.00047691 |
+| Assignment 0D fixtures and credential scan | Passed — synthetic inputs, actual outputs, first/failed attempts, and sanitized metadata saved under `fixtures/openrouter/`; all 9 JSON fixtures parsed, final contract checks passed, credential scan found no key value |
+| Assignment 0D `.env` ignore rule | Passed — `git check-ignore -q .env` |
+| Assignment 0D `git diff --check` | Passed — no whitespace errors |
 | Initial repository Git status | Passed — clean `main` tracking `origin/main` before this state update |
 | Assignment 0A final repository Git status | Passed — only `PROJECT_STATE.md` was modified for that assignment |
 
-Planning-stage API experiments are recorded separately from repository verification. No external APIs were called during Assignment 0A. Assignment 0B's OpenWeather findings are recorded in `docs/integration-notes/openweather-readiness.md`; Assignment 0C's live findings are recorded in `docs/integration-notes/geographic-services-readiness.md`.
+Planning-stage API experiments are recorded separately from repository verification. No external APIs were called during Assignment 0A. Assignment 0B's OpenWeather findings are recorded in `docs/integration-notes/openweather-readiness.md`; Assignment 0C's live findings are recorded in `docs/integration-notes/geographic-services-readiness.md`; Assignment 0D's OpenRouter findings are recorded in `docs/integration-notes/openrouter-readiness.md`.
 
 Future updates should include meaningful verification results, relevant environment context, and unresolved failures.
 
@@ -138,9 +146,10 @@ Do not silently convert observed implementation differences into changes to appr
 - OpenWeather current and forecast endpoints and their observed schemas are verified. The account's subscription, remaining quota, and plan-specific terms remain unknown and should be confirmed before broader use or release.
 - MapTiler geocoding, dark-style resources, and ORS driving routes/alternatives were accessible in Assignment 0C. Account-specific quotas and terms remain unverified. MapTiler search results can be ambiguous and require contextual review; POI categorization can be imperfect. Actual MapLibre rendering is deferred to Phase 1.
 - ORS returned three alternatives for the three sampled trips. Fewer-than-requested behavior was not directly observed and three candidates are not guaranteed for arbitrary journeys.
-- OpenRouter still requires Phase 0 access/capability verification.
+- OpenRouter accepted the provisional Gemma model for both synthetic readiness requests through DeepInfra. One successful vision response was obtained after a truncation; one text status inconsistency was corrected. These small samples do not establish production reliability, real-camera accuracy, or robustness.
+- OpenRouter and DeepInfra publish favorable retention/training claims for the tested route, but account-level privacy controls were not inspected. The real Vancouver camera-image licence and permission to transmit those images for AI inference remain unresolved.
 - `.env.example` is absent. A local ignored `.env` defines the working OpenWeather key; its value was not exposed.
-- No integration-check scripts or application test infrastructure were created. Actual OpenWeather, MapTiler, and ORS response fixtures and readiness notes now exist; OpenRouter evidence remains outstanding.
+- No application test infrastructure or production integration code was created. Readiness notes and fixtures now exist for OpenWeather, MapTiler, ORS, and OpenRouter.
 - The `README.md` currently describes DriveBC Cameras as a planned core source, while `APP_SPEC.md` explicitly excludes DriveBC Cameras from the MVP. The README also says the project is in active development despite this inventory finding no application implementation. These README statements were not changed under Assignment 0A scope.
 
 These are outstanding readiness requirements, not confirmed service failures.
@@ -173,7 +182,7 @@ Codex must not stage, commit, push, merge, rebase, tag, or rewrite Git history.
 
 ## 10. Phase 0 Assignment Status and Next Expected Action
 
-Assignments 0A, 0B, and 0C are complete and ready for human review. OpenWeather, MapTiler, and ORS access and sampled capabilities are documented with representative fixtures. Provider account plans, quotas, and applicable account-specific terms remain unknown. No application features or Git history operations were introduced.
+Assignments 0A–0D are complete and ready for human review. OpenWeather, MapTiler, ORS, and OpenRouter access and sampled capabilities are documented with representative fixtures. Provider account plans/quotas and some account-specific terms remain unknown; live Vancouver camera-image permissions remain unresolved. Assignment 0D used four paid OpenRouter calls, with reported aggregate cost of $0.00047691. No application features or Git history operations were introduced.
 
 Continue remaining Phase 0 readiness work through bounded assignments consistent with `BUILD_PLAN.md`. Do not begin Phase 1 until Phase 0 has been accepted by the human developer.
 

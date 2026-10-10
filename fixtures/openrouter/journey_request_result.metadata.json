@@ -1,0 +1,16 @@
+{
+  "actual_model": "google/gemma-4-31b-it",
+  "provider": "DeepInfra",
+  "modality": "text only; synthetic normalized journey evidence",
+  "output_method": "response_format json_schema strict",
+  "http_status": 200,
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 930,
+    "completion_tokens": 114,
+    "total_tokens": 1044,
+    "cost": 0.00012246
+  },
+  "latency_seconds": 3.276,
+  "json_parse_succeeded": true
+}
