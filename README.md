@@ -403,6 +403,14 @@ backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
 ```
 
 The API runs at `http://localhost:8000`; its health endpoint is `http://localhost:8000/api/health`.
+The backend reads `MAPTILER_API_KEY` from the root `.env` file or its process environment.
+
+Assignment 2A adds these location endpoints:
+
+- `GET /api/geocoding/search?q=<query>` returns up to five normalized `Location` candidates. Each candidate has `name`, `latitude`, `longitude`, optional `address`, and optional `provider_id`. The search restricts results to Canada and uses Vancouver proximity as a ranking bias; neither defines an enforceable Lower Mainland origin boundary.
+- `POST /api/locations/validate-destination` accepts one canonical `Location` object and returns `{"valid": true, "reason": null}` when its coordinates are covered by the City of Vancouver boundary, or `{"valid": false, "reason": "..."}` otherwise. Boundary points are included.
+
+Search returns `[]` when there are no usable matches. Invalid query shapes return HTTP 422, missing server credentials return HTTP 503, and upstream provider failures return a sanitized HTTP 502 response.
 
 Run the backend checks from the repository root:
 
@@ -421,7 +429,7 @@ npm ci
 npm run dev
 ```
 
-Set `MAPTILER_API_KEY` in the ignored project-root `.env` before starting Vite. Vite selectively reads that one value and makes it available to the browser map code; the key is visible in browser requests and generated frontend assets by design. Use a browser-appropriate key and review account-supported restrictions before sharing or publishing the app. If the key is missing, the rest of the page remains available and the map displays a configuration message.
+Set `MAPTILER_API_KEY` in the ignored project-root `.env` before starting the backend and Vite. The backend keeps it server-side; Vite selectively reads that one value and makes it available to the browser map code for basemap requests, where the key is visible in browser requests and generated frontend assets by design. Use a browser-appropriate key and review account-supported restrictions before sharing or publishing the app. If the browser key is missing, the rest of the page remains available and the map displays a configuration message.
 
 Open `http://localhost:5173`. Vite forwards `/api` requests to the backend on port 8000.
 

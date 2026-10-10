@@ -4,9 +4,9 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 1 — Application Shell + Map
-**Phase status:** Accepted — Phase 1 implementation complete
-**Human review:** Completed — Assignments 1A–1C accepted by human developer on 2026-10-10
+**Current phase:** Phase 2 — Journey Input + Geocoding (Assignment 2A)
+**Phase status:** Assignment 2A accepted; Phase 2 remains in progress
+**Human review:** Phase 1 complete; Assignment 2A accepted on 2026-10-10
 **Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C pending human commit
 **Repository baseline:** Inspected for Assignment 0A
 
@@ -277,4 +277,26 @@ Assignment 1C replaces the tall scaffold page with a viewport-filling desktop in
 
 **Phase status:** Accepted by the human developer on 2026-10-10. Assignments 1A–1C established a working FastAPI backend, React/Vite frontend, interactive Vancouver basemap, and desktop intelligence shell. Automated verification and human browser inspection are complete. The documented headless Chrome rendering discrepancy and other non-blocking limitations remain visible.
 
-**Next action:** Prepare and authorize the Phase 2 `BUILD_PLAN.md` update for Journey Input + Geocoding. Phase 2 implementation must not begin until its build plan and first bounded Codex assignment are approved.
+**Next action:** Assignment 2A implementation evidence is recorded in Section 13. Assignment 2B remains separately authorized work and has not begun.
+
+## 13. Assignment 2A — Geocoding and Location Validation
+
+Assignment 2A adds a server-side async MapTiler adapter and two backend endpoints. The approved `Location` fields are `name`, `latitude`, and `longitude` (required), with `address` and `provider_id` optional. A geocoding candidate requires a provider feature identifier, name, and valid Point coordinates; malformed candidates are skipped. GeoJSON `[longitude, latitude]` is normalized to the canonical `longitude` and `latitude` fields without inversion. The API returns up to five normalized matches from `GET /api/geocoding/search?q=...`; search is limited to Canada and Vancouver proximity biases ranking. Neither is an enforceable Lower Mainland origin boundary. `POST /api/locations/validate-destination` checks canonical coordinates, with no origin city-boundary rule.
+
+Destination validation uses the City of Vancouver Open Data Portal's `city-boundary` GeoJSON export, retrieved 2026-10-10. The source describes the data as the line defining the City's legal jurisdiction; its 14 MultiLineString segments polygonize into one valid polygon. Shapely `covers(point)` means a point exactly on the boundary is accepted. The City notes that some boundary features are less precise than survey accuracy. The dataset is published under the Open Government Licence – Vancouver. The local source artifact is `backend/app/data/city-boundary.geojson`; provenance is the [City boundary dataset](https://opendata.vancouver.ca/explore/dataset/city-boundary/map/) and [City open data licence](https://opendata.vancouver.ca/pages/licence/). No exact Lower Mainland origin polygon is defined by the approved design, so no such restriction was invented.
+
+| Check | Result |
+|---|---|
+| Backend import and health endpoint | Passed — FastAPI imports and `GET /api/health` remains available |
+| Backend tests | Passed — 38 tests, including normalization, mocked HTTP failures, API behavior, boundary inclusivity, nearby municipalities, and health endpoint |
+| Ruff | Passed — `ruff check backend/app backend/tests` |
+| Frontend production build | Passed — `npm run build`; existing large MapLibre chunk warning remains |
+| Targeted live MapTiler/API check | Passed — three backend endpoint searches (Downtown Vancouver, Richmond, Burnaby) each returned HTTP 200 and five normalized candidates; Downtown validated inside, Richmond and Burnaby outside; coordinate order/ranges were valid |
+| `.env` ignore and secret safety | Passed — `.env` remains ignored; no credential-bearing URLs or raw upstream errors are returned; configured key was not printed or added to tracked files |
+| MapLibre code, Vite `/api` proxy, and desktop shell | Preserved; no frontend source was changed |
+
+Known scope limit: the origin search is biased toward Vancouver and limited to Canada, but there is no deterministic Lower Mainland origin acceptance boundary. Destination validation uses the official City boundary and is independent of geocoder names and ranking. No frontend journey controls or routing behavior were added.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Manual API verification confirmed real MapTiler suggestions and deterministic geographic validation: Downtown Vancouver was accepted and Richmond was rejected. Automated verification passed with 38 backend tests, Ruff, and the frontend production build. Provider suggestions from outside the intended search area were observed and will be handled through geographic context and destination validation in later assignments.
+
+**Next action:** Human Git checkpoint, followed by Assignment 2B — Journey Input Interface. Phase 2 remains in progress.
