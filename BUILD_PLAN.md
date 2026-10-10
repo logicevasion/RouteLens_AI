@@ -2,441 +2,626 @@
 
 ## 1. Current Phase
 
-**Phase:** 1 — Application Shell + Map
+**Phase:** 2 — Journey Input + Geocoding
 **Status:** Planned — authorized for implementation; not yet verified
-**Source:** `docs/implementation-plan.md`, Phase 1
-**Previous phase:** Phase 0 — Integration Readiness, accepted by the human developer on 2026-10-09
+**Source:** `docs/implementation-plan.md`, Phase 2
+**Previous phase:** Phase 1 — Application Shell + Map, accepted by the human developer on 2026-10-10
 
 ### Objective
 
-Create the initial runnable RouteLens AI application, establishing the frontend and backend foundations and a visually coherent desktop interface.
+Enable users to search for, select, and validate real journey origin and destination locations using MapTiler geocoding/autocomplete.
 
-Phase 1 must deliver:
+Phase 2 must deliver:
 
-- a functioning React/Vite/TypeScript frontend;
-- a minimal FastAPI backend;
-- successful frontend-to-backend communication;
-- an interactive MapLibre map using the validated MapTiler dark basemap;
-- a desktop layout with a fixed approximately 65% map / 35% intelligence-panel split;
-- foundational styling and intentional placeholder states.
+- working MapTiler location search through the FastAPI backend;
+- normalized location results consistent with the approved `Location` model;
+- functional origin and destination autocomplete controls;
+- deterministic validation of City of Vancouver destinations;
+- frontend state that preserves selected canonical locations;
+- clear validation, loading, empty-result, and failure states;
+- successful end-to-end verification using real representative locations.
 
-**Phase 1 establishes the working application shell. It does not implement journey analysis or telemetry integration.**
+The application should support this interaction:
 
-The result should be a recognizable, interactive RouteLens application that can be launched locally and visually inspected.
+**Search origin → select location → search destination → select location → validate destination → retain selected journey inputs.**
+
+The origin must be within the supported Metro Vancouver / Lower Mainland geographic scope.
+
+The destination must be within the **City of Vancouver municipal boundary**.
+
+Phase 2 establishes validated journey inputs. It does not calculate routes, choose route alternatives, or analyze journey conditions.
 
 ---
 
 ## 2. Execution Scope
 
-This document defines the complete Phase 1 acceptance boundary.
+This document defines the complete Phase 2 acceptance boundary.
 
-Phase 1 may be implemented through multiple smaller Codex assignments. Each assignment receives a bounded prompt specifying its immediate objective, expected changes, and verification requirements.
+Phase 2 may be completed through smaller bounded Codex assignments. Each assignment receives a separate implementation prompt defining its immediate objective, expected artifacts, and verification.
 
-- Do not interpret this document as authorization to implement every Phase 1 component in one assignment.
-- Implement only the work specifically authorized by the current assignment prompt.
-- Preserve completed functionality and verification evidence between assignments.
-- Update `PROJECT_STATE.md` with meaningful implementation progress.
-- Do not begin Phase 2 until Phase 1 has been accepted by the human developer.
+- Do not interpret this document as authorization to implement all Phase 2 work in one assignment.
+- Implement only the work explicitly authorized by the current assignment prompt.
+- Preserve the completed Phase 1 application and its established behavior.
+- Update `PROJECT_STATE.md` with factual implementation progress.
+- Do not begin Phase 3 until Phase 2 has been accepted by the human developer.
 
 ### Planned Assignments
 
-**Assignment 1A — Application Foundation**
+**Assignment 2A — Geocoding and Location Validation**
 
-Establish the frontend/backend project structure, approved dependencies, minimal FastAPI health endpoint, and verified frontend-to-backend connectivity.
+Implement the backend MapTiler geocoding capability, approved location normalization, deterministic geographic validation, and appropriate automated tests.
 
-**Assignment 1B — Interactive Vancouver Map**
+**Assignment 2B — Journey Input Interface**
 
-Integrate MapLibre with MapTiler's validated dark style, establishing an interactive geographic map with appropriate resource handling, attribution, and initial Vancouver viewport.
+Replace the inactive origin/destination placeholders with working autocomplete components and canonical location-selection state.
 
-**Assignment 1C — Desktop Shell and Visual Integration**
+Preserve the existing application shell and inactive later-phase actions.
 
-Build the complete desktop application layout, integrate the map into its intended interface, implement the right-side intelligence placeholder, and perform Phase 1 visual and functional verification.
+**Assignment 2C — End-to-End Journey Input Integration**
 
-These assignment boundaries are organizational, not independent architectural layers.
+Complete and verify the frontend/backend interaction, destination-validation UX, selection persistence, error handling, and full Phase 2 acceptance assessment.
 
-Avoid introducing elaborate abstractions merely to accommodate separate assignments.
+Assignment boundaries are organizational, not independent architecture layers.
+
+Avoid creating unnecessary abstraction solely to accommodate separate assignments.
+
+Each assignment should produce directly verifiable behavior appropriate to its scope.
 
 ---
 
-## 3. Established Phase 0 Readiness
+## 3. Established Implementation and Integration Baseline
 
-Phase 0 was completed and accepted before this build plan was prepared.
+### 3.1 Accepted Phase 1 Foundation
 
-Relevant verified findings are recorded in:
+Phase 1 established:
 
-- `docs/integration-notes/phase-0-readiness-summary.md`
+- minimal FastAPI backend;
+- working `GET /api/health`;
+- React/Vite/TypeScript frontend;
+- Tailwind-based dark desktop shell;
+- functional frontend/backend communication through Vite's `/api` proxy;
+- interactive MapLibre map using MapTiler's `streets-v4-dark` style;
+- fixed approximately 65/35 map-to-intelligence-panel desktop layout;
+- top journey-controls region;
+- right-side intelligence placeholders;
+- frontend loading and failure-state conventions;
+- basic backend tests, Ruff checks, and frontend build verification.
+
+Phase 2 must extend this foundation, not rebuild it.
+
+Preserve existing map initialization, worker configuration, resizing, attribution, and browser-visible MapTiler configuration.
+
+The local VMware/Chromium WebGL compatibility issue was resolved through development-environment configuration and is documented in `PROJECT_STATE.md`.
+
+Do not redesign the mapping stack or graphics configuration.
+
+### 3.2 Phase 0 MapTiler Readiness
+
+Phase 0C established:
+
+- authenticated MapTiler geocoding/autocomplete access;
+- representative Metro Vancouver search results;
+- GeoJSON response structure;
+- longitude/latitude coordinate ordering;
+- useful administrative and contextual metadata;
+- potentially ambiguous broad search results.
+
+The existing evidence is recorded in:
+
 - `docs/integration-notes/geographic-services-readiness.md`
+- `fixtures/maptiler/`
 - `PROJECT_STATE.md`
 
-### MapTiler
+Review representative fixtures and documented findings before implementing the geocoding adapter.
 
-Phase 0 established:
+Do not repeat broad provider discovery.
 
-- working authenticated MapTiler access;
-- accessible geocoding/autocomplete;
-- usable Metro Vancouver coordinates and administrative context;
-- an accessible `streets-v4-dark` map style;
-- successful retrieval of supporting TileJSON, vector-tile, sprite, and glyph resources.
+Targeted live testing of the actual new backend integration is authorized and required where appropriate.
 
-Phase 1 should use the validated dark style.
+### 3.3 Existing Configuration
 
-Do not repeat broad MapTiler discovery or switch basemap providers without a material implementation reason.
+The ignored project-root `.env` contains the configured MapTiler API key.
 
-Actual MapLibre browser rendering was not tested during Phase 0 and must now be verified.
+Phase 1 selectively exposed a browser-usable MapTiler key for basemap rendering.
 
-### Other Integrations
+For Phase 2:
 
-Phase 0 also validated representative OpenWeather, openrouteservice, and OpenRouter capabilities.
+- Preserve the existing basemap configuration.
+- Access backend geocoding credentials through server-side configuration.
+- Do not expose unrelated backend-only provider credentials.
+- Do not duplicate actual credential values in tracked source files.
+- Preserve `.env.example` and `.gitignore` behavior.
 
-Those providers are not part of Phase 1 functionality.
-
-Do not introduce their application adapters, API calls, or UI integrations during this phase.
-
-### Configuration
-
-The root `.env.example` contains the approved credential names and provisional OpenRouter model identifiers.
-
-The root `.env` is Git-ignored and contains the locally configured MapTiler credential.
-
-The TransLink key remains a deferred configuration follow-up before Phase 10 and does not block Phase 1.
-
-Preserve existing configuration and secret-handling requirements.
+Do not introduce a general secrets-management system.
 
 ---
 
-## 4. Required Phase 1 Workstreams
+## 4. Required Phase 2 Workstreams
 
-### 4.1 Backend — FastAPI Application Foundation
+### 4.1 Backend — MapTiler Geocoding Integration
 
-Create the minimal Python backend consistent with the approved technical design.
+Implement a narrow backend integration with MapTiler's approved geocoding/autocomplete service.
 
 Required behavior:
 
-- A runnable FastAPI application.
-- A health-check endpoint:
+- Accept a user-provided search query.
+- Call the appropriate MapTiler endpoint using configured credentials.
+- Receive and validate the provider response.
+- Extract relevant location candidates.
+- Normalize candidates into the approved application location representation.
+- Return structured results to the frontend.
+- Handle empty results and upstream failures without crashing.
+- Avoid exposing MapTiler credentials in responses or error messages.
 
-  `GET /api/health`
+Use asynchronous HTTP where consistent with the approved FastAPI/httpx architecture.
 
-- A small JSON success response indicating that the backend is operational.
-- Appropriate local-development startup configuration.
-- Straightforward and maintainable application structure.
-- Basic automated health-endpoint verification.
+The backend should own location normalization and geographic validity rules.
 
-The backend should remain minimal.
+### Search behavior
 
-Do not create source adapters, persistence infrastructure, orchestration services, or speculative domain abstractions.
+Implement practical search behavior suitable for:
 
-### 4.2 Frontend — React Application Foundation
+- Metro Vancouver / Lower Mainland origins;
+- City of Vancouver destinations.
 
-Create the frontend using the approved stack:
+Use relevant MapTiler query parameters and geographic context where helpful.
 
-- React;
-- Vite;
-- TypeScript;
-- Tailwind CSS;
-- MapLibre GL JS;
-- Framer Motion;
-- Lucide icons.
+However:
 
-Required outcomes:
+- Do not assume bounding-box relevance means a result is geographically valid.
+- Do not assume every returned result belongs to the City of Vancouver.
+- Do not silently transform ambiguous provider results into certain locations.
+- Do not fabricate autocomplete suggestions.
 
-- A functioning local Vite development server.
-- A maintainable frontend source structure.
-- Functional React application entry point.
-- Global styles and a coherent dark visual foundation.
-- Working production frontend build.
-- Clear development instructions for starting the frontend.
+Define search limits and reasonable timeout behavior.
 
-Use stable, compatible dependency versions.
+Avoid premature provider-independent geocoding frameworks or multi-provider fallback systems.
 
-Follow current dependency-specific configuration requirements rather than assuming older setup patterns remain valid.
+### Backend API
 
-Do not introduce a component framework or state-management library without a concrete need.
+Expose a small, predictable application API for location search.
 
-### 4.3 Frontend-to-Backend Communication
+Use the API organization established in the approved technical design, where specified.
 
-Establish a working connection between the Vite frontend and FastAPI backend.
+The bounded implementation prompt may establish exact endpoint paths and request/response details consistent with that design.
 
-Requirements:
+Prefer a simple query-oriented contract over multiple speculative APIs.
 
-- The frontend can request `GET /api/health`.
-- Successful communication is visibly or otherwise directly verifiable.
-- Backend unavailability does not crash the frontend.
-- Connection failures produce a reasonable development-stage state.
-- Local development avoids unnecessary cross-origin complexity.
+Do not expose raw MapTiler response bodies as the application's permanent public contract.
 
-Prefer a Vite development proxy for `/api` requests unless there is a concrete reason to choose another approach.
+---
 
-Do not introduce authentication, user accounts, background polling systems, or a generic API-client abstraction.
+### 4.2 Location Normalization
 
-### 4.4 MapLibre — Interactive Vancouver Map
+Normalize geocoding results into the approved `Location` representation from `APP_SPEC.md` and `docs/technical-design.md`.
 
-Render a real interactive geographic map using:
+Preserve the location attributes actually required by the approved model.
 
-- MapLibre GL JS;
-- MapTiler;
-- the validated `streets-v4-dark` style.
+These may include, as defined by the authoritative contract:
 
-Requirements:
+- canonical provider identifier;
+- human-readable place label;
+- geographic coordinates;
+- relevant administrative or place context;
+- source/provider identification.
 
-- The map loads successfully in a browser.
-- The initial viewport is centered on Vancouver.
-- An appropriate initial zoom level displays useful geographic context.
-- Users can pan and zoom.
-- The map fills its intended container.
-- Map resizing and container changes do not leave the viewport broken.
-- Loading and error states are handled reasonably.
-- Required attribution remains visible.
-- Map initialization and cleanup work correctly within React lifecycle behavior.
+Do not invent required fields without consulting the approved location model.
 
-Do not implement route layers, telemetry overlays, camera markers, transit visualization, or geocoding.
+### Coordinate handling
 
-This phase establishes only the foundational basemap interaction.
+MapTiler GeoJSON coordinates use:
 
-### 4.5 MapTiler Credential Handling
+`[longitude, latitude]`
 
-MapTiler's browser-accessible map resources require suitable client-side configuration.
+Preserve correct coordinate ordering throughout backend responses and frontend state.
 
-The local root `.env` currently contains the validated MapTiler credential.
+Ensure coordinates are numerically valid.
 
-Requirements:
+Do not silently reverse latitude and longitude.
 
-- Use an explicit, documented mechanism to make only the necessary MapTiler browser key available to Vite.
-- Do not expose backend-only credentials to the frontend.
-- Do not copy the entire root `.env` into the Vite frontend environment.
-- Do not embed actual credentials directly in tracked source code.
-- Do not assume that a Vite-prefixed variable is secret or hidden from browser users.
-- Preserve `.env` ignore behavior and sanitize diagnostic output.
+### Data integrity
 
-If the existing MapTiler key requires additional restrictions or is unsuitable for browser use, identify that requirement for human review.
+- Preserve meaningful source information.
+- Distinguish absent provider fields from known values.
+- Do not invent place details.
+- Do not classify a location as valid solely because a display string appears plausible.
+- Avoid committing unnecessary raw provider fields to long-lived application contracts.
 
-Do not implement a general secret-management platform or proxy all map tiles through FastAPI solely to conceal a browser-accessible map key.
+Implement normalization tests using representative sanitized fixtures.
 
-### 4.6 Desktop Layout
+---
 
-Establish the approved RouteLens desktop interface.
+### 4.3 Destination Validation — City of Vancouver
 
-Primary regions:
+Implement deterministic validation that selected destinations are inside the **City of Vancouver municipal boundary**.
 
-1. Top journey-controls area.
-2. Left map area.
-3. Right journey-intelligence panel.
+This requirement is fundamental to the RouteLens MVP scope.
 
-Use a **fixed approximately 65% map / 35% intelligence-panel split** for the main desktop content region.
+### Requirements
 
-This ratio should remain visually consistent on normal desktop viewport sizes.
+- Validate selected destinations using their canonical geographic coordinates.
+- Follow the geographic validation approach defined in the authoritative technical design.
+- Use an authoritative municipal boundary representation where that design requires one.
+- Distinguish the City of Vancouver from Metro Vancouver and neighboring municipalities.
+- Reject destinations outside the supported city boundary.
+- Return a clear, machine-readable validation outcome.
+- Provide an understandable rejection reason for frontend presentation.
 
-Requirements:
+Do not rely exclusively on:
 
-- The map occupies the dominant portion of the interface.
-- The intelligence panel is visibly distinct.
-- The layout avoids overlapping regions.
-- The map remains usable and correctly sized.
-- Normal browser resizing does not break the interface.
-- The panel can support future vertically scrolling information.
-- The top region clearly communicates where journey input will eventually appear.
+- the word "Vancouver" in a place label;
+- postal address formatting;
+- broad administrative search hints;
+- MapTiler search ranking;
+- a generic rectangular approximation of the city.
 
-Do not implement a user-resizable panel or draggable split controls.
+### Boundary behavior
 
-Do not introduce persistent layout preferences.
+Handle boundary cases deterministically.
 
-A basic fallback for narrower screens is permitted to avoid broken presentation, but mobile-specific product design is outside the MVP scope.
+Tests should include representative locations inside Vancouver and outside Vancouver, including nearby municipalities.
 
-### 4.7 Foundational Visual Design
+Examples of relevant comparisons include:
 
-The interface should establish the approved dark city-intelligence aesthetic.
+- Downtown Vancouver — expected valid.
+- Richmond — expected invalid.
+- Burnaby — expected invalid.
+- North Vancouver — expected invalid.
 
-Priorities:
+Use actual coordinates and the approved boundary model in tests.
 
-- dark, low-clutter presentation;
-- readable typography;
-- clear visual hierarchy;
-- suitable map/panel contrast;
-- cohesive spacing;
-- clean panel boundaries;
-- restrained accent colors;
-- intentional placeholders;
-- basic loading, connection, and failure states.
+Boundary-edge behavior should be explicitly defined rather than left to accidental implementation details.
 
-Use Tailwind CSS for primary styling.
+If the necessary authoritative boundary dataset or exact inclusion rule is not established by the existing design, raise that material dependency for human review rather than silently inventing a replacement.
 
-Lucide may provide appropriate visual icons.
+No LLM should participate in destination validation.
 
-Framer Motion is an approved dependency, but do not add decorative animation merely to demonstrate its use.
+---
 
-Subtle transitions are acceptable where they improve comprehension.
+### 4.4 Origin Geographic Scope
 
-### 4.8 Placeholder Components and Future Integration
+Support origin selection within the approved Metro Vancouver / Lower Mainland geographic scope.
 
-The Phase 1 shell should visibly communicate the eventual RouteLens workflow without pretending later-phase features are functional.
-
-Reasonable placeholders include:
-
-- origin input area;
-- destination input area;
-- Drive / Transit mode area;
-- Analyze Journey action;
-- destination-condition panel;
-- route findings;
-- transit advisories;
-- AI briefing area.
-
-These are presentation scaffolds only.
+The origin does not need to be inside the City of Vancouver.
 
 Requirements:
 
-- Future actions must be disabled, labeled as unavailable, or otherwise clearly nonfunctional.
-- Do not fabricate live weather, road events, camera interpretations, or transit alerts.
-- Do not display invented journey analysis as real application results.
-- Avoid designing permanent application data contracts from placeholder content.
-- Keep placeholders easy to replace during later vertical slices.
+- Search should return useful candidate locations from the supported origin region.
+- Origin and destination must remain distinct application concepts.
+- Do not incorrectly apply the destination-only city boundary rule to origins.
+- Follow any explicit origin-scope validation rules already defined in `APP_SPEC.md` or `docs/technical-design.md`.
+- Avoid making the search globally unrestricted merely because MapTiler can return worldwide locations.
 
-The frontend may display real backend connectivity status because that functionality is implemented in Phase 1.
+If the approved geographic scope does not provide an exact enforceable origin boundary, preserve its documented interpretation and avoid inventing a new municipal or regional polygon requirement.
+
+Clearly distinguish search-context biasing from deterministic acceptance validation.
+
+---
+
+### 4.5 Frontend — Location Autocomplete
+
+Turn the existing origin and destination placeholders into actual search controls.
+
+Required behavior:
+
+- User can type an origin query.
+- Matching real location suggestions appear.
+- User can select a suggestion.
+- User can type a destination query.
+- Matching real location suggestions appear.
+- User can select a suggestion.
+- Selected places are retained as canonical location objects.
+- Appropriate status is displayed while requests are in progress.
+- Empty results are handled clearly.
+- Upstream errors are understandable and nonfatal.
+
+### Interaction requirements
+
+- Debounce input to avoid excessive provider requests.
+- Avoid issuing meaningful search requests for empty or trivially short input.
+- Prevent stale or out-of-order responses from replacing newer search results.
+- Permit keyboard interaction appropriate for a basic accessible autocomplete.
+- Clearly identify the active suggestion and selected result.
+- Maintain reasonable focus and selection behavior.
+- Distinguish free-typed text from a confirmed location selection.
+
+Typing a place name is not equivalent to selecting a canonical location.
+
+If the user changes the text after selecting a location, invalidate the stale selection appropriately.
+
+Do not silently retain coordinates that no longer correspond to the visible input.
+
+### Component scope
+
+Prefer focused reusable components where justified, such as an `AddressAutocomplete` component.
+
+Avoid introducing large form libraries, UI frameworks, global state managers, or generalized search infrastructure.
+
+Use the existing React/TypeScript/Tailwind patterns.
+
+---
+
+### 4.6 Frontend — Journey Input State
+
+Maintain selected origin and destination locations in appropriate React application state.
+
+Required behavior:
+
+- Origin selection persists during normal component interaction.
+- Destination selection persists during normal component interaction.
+- Changing one field does not unintentionally erase the other.
+- Editing a previously selected location invalidates only the affected selection when appropriate.
+- Selected locations remain available for eventual Phase 3 route requests.
+- Validation status is represented separately from display labels.
+
+For this phase, **persistence means frontend application state across normal UI interactions**, not database persistence or automatic survival across browser reloads.
+
+Do not introduce browser storage, database storage, user accounts, or saved journeys.
+
+Do not implement the complete `Trip`, `RouteCandidate`, or `SelectedRoute` workflow yet.
+
+---
+
+### 4.7 Travel Mode Controls
+
+Preserve the approved Drive / Transit product direction.
+
+For Phase 2:
+
+- Drive is the primary active mode.
+- Transit may remain visible but does not require service or direction selection.
+- Do not implement TransLink integration.
+- Do not imply that functional transit journey planning is available.
+
+Use honest UI state and labels.
+
+If the approved technical design specifies a more precise initial mode-control behavior, follow it rather than inventing new product functionality.
+
+Avoid implementing mode-specific route calculation.
+
+---
+
+### 4.8 Destination Validation UX
+
+A destination outside the City of Vancouver must produce a clear user-facing rejection.
+
+Requirements:
+
+- Explain that destinations must be within the City of Vancouver.
+- Keep the error close to the destination control.
+- Do not misrepresent an invalid location as accepted.
+- Preserve the user's ability to search again.
+- Distinguish geographic rejection from network failure.
+- Avoid confusing an empty search result with an invalid selected location.
+
+A geographically invalid destination must not become the application's accepted destination selection.
+
+The frontend should consume backend validation outcomes rather than independently creating contradictory validation rules.
+
+---
+
+### 4.9 Journey Action and Phase 3 Handoff
+
+Phase 2 prepares the location inputs for later route calculation.
+
+Do not implement route calculation yet.
+
+The user should be able to see when valid location selections have been established.
+
+The Analyze Journey action may remain inactive or explicitly indicate that routing/analysis is forthcoming.
+
+Do not:
+
+- call openrouteservice;
+- draw driving-route candidates;
+- select routes;
+- submit a journey for analysis;
+- show fabricated results.
+
+Keep the selected location state suitable for later Phase 3 use.
+
+Do not prematurely introduce a complete journey orchestration layer.
+
+---
+
+### 4.10 Existing Map and Intelligence Panel
+
+Preserve the Phase 1 visual foundation.
+
+Requirements:
+
+- Keep the MapLibre Vancouver basemap functional.
+- Preserve navigation, zoom, attribution, lifecycle cleanup, and responsive sizing.
+- Preserve the fixed approximately 65/35 desktop layout.
+- Preserve the right-side intelligence panel and its honest empty states.
+- Preserve backend connectivity status.
+- Integrate real location controls without materially degrading the interface.
+
+Do not redesign the entire application shell to accommodate autocomplete.
+
+Small layout adjustments are permitted where required for usable suggestions and validation messages.
+
+Do not implement route drawing, real telemetry markers, or intelligence summaries.
 
 ---
 
 ## 5. Expected Scope and Artifacts
 
-Phase 1 may create or update:
+Phase 2 may create or modify:
 
-- `backend/` — minimal FastAPI application, dependencies, configuration, and tests;
-- `frontend/` — React/Vite/TypeScript application and required configuration;
-- frontend styling and shell components;
-- MapLibre initialization and presentation components;
-- local development instructions;
-- relevant configuration templates or narrowly scoped environment handling;
+- `backend/` — MapTiler geocoding adapter, location normalization, validation, API routes, and relevant tests;
+- `frontend/src/` — autocomplete components, journey-input state, API interaction, and limited layout integration;
+- appropriate geographic boundary data or validation helpers where required by the approved design;
+- sanitized test fixtures where needed;
+- dependency specifications and lockfiles for justified additions;
+- `README.md`, if local setup or configuration instructions change;
 - `PROJECT_STATE.md`.
 
-These paths are anticipated areas, not a strict filesystem allowlist.
+The expected structure should remain consistent with `docs/technical-design.md`.
 
-A suggested structure from `docs/technical-design.md` may be used where appropriate, but do not pre-create empty source adapters, domain modules, database directories, or future feature components.
+These are anticipated areas, not a strict filesystem allowlist.
 
-Create only what the current bounded assignment needs.
+Create only the modules necessary for Phase 2 functionality.
+
+Do not pre-create Phase 3 routing services, telemetry models, database infrastructure, or future feature directories.
 
 ---
 
 ## 6. Non-Goals
 
-Phase 1 must not implement:
+Phase 2 must not implement:
 
-- MapTiler autocomplete or geocoding application behavior;
-- origin/destination normalization;
-- City of Vancouver destination-boundary validation;
 - openrouteservice routing;
 - route alternatives or route selection;
-- Road Ahead, Open511, SWOB, OpenWeather, or TransLink integration;
-- Vancouver camera ingestion or image processing;
-- OpenRouter inference;
-- journey analysis or AI briefing;
-- persistence, SQLite models, or production caching;
-- authentication, user accounts, or personalization;
-- mobile application functionality;
-- real-time subscriptions or background workers;
-- custom route optimization;
-- deferred MVP sources.
+- route overlays or route optimization;
+- journey condition analysis;
+- Road Ahead or DriveBC Open511 adapters;
+- weather integration;
+- camera ingestion or inference;
+- OpenRouter briefing generation;
+- TransLink data ingestion or transit-service matching;
+- route timeline calculations;
+- database persistence or saved journeys;
+- browser location permissions or automatic current-location selection;
+- authentication or user accounts;
+- realtime monitoring or push notifications;
+- new basemap providers;
+- redesign of the established desktop shell;
+- full mobile-specific product functionality;
+- speculative generic location-provider frameworks.
 
-Do not use mock telemetry to imply real functionality exists.
+Do not generate fabricated suggestions or locations to conceal provider failures.
 
-Do not introduce Docker, Kubernetes, Redis, PostgreSQL, or other infrastructure not required by the approved local MVP.
+Do not replace deterministic geographic validation with AI inference.
 
-Do not redesign the approved architecture merely because a different tool appears convenient.
+Do not introduce infrastructure or additional runtime services without a demonstrated Phase 2 need.
 
 ---
 
 ## 7. Verification Requirements
 
-Each bounded assignment must perform the relevant checks for its authorized changes.
+Each bounded assignment must perform the checks relevant to its scope.
 
 ### Backend Verification
 
-Where the backend is affected:
+Verify:
 
-- Confirm the FastAPI application starts.
-- Test `GET /api/health`.
-- Verify expected status code and response structure.
-- Run pytest for relevant tests.
-- Run Ruff for affected Python files.
-- Report startup, dependency, and test failures.
+- FastAPI imports and starts.
+- Existing `/api/health` behavior remains functional.
+- Geocoding API returns normalized results for representative searches.
+- Location normalization preserves expected fields and coordinate ordering.
+- Invalid or incomplete upstream responses are handled safely.
+- Missing credentials and provider errors produce appropriate failures.
+- City of Vancouver destination validation behaves deterministically.
+- Valid and invalid representative destinations are covered by tests.
+- Ruff and relevant pytest checks pass.
+
+Prefer deterministic unit tests and mocked external HTTP requests for normal regression testing.
+
+Targeted authenticated live requests may be used to validate new integration behavior, but the automated test suite should not require live network access or consume provider quotas.
 
 ### Frontend Verification
 
-Where the frontend is affected:
+Verify:
 
-- Confirm the Vite application starts.
-- Run the frontend production build.
-- Verify frontend-to-backend connectivity where applicable.
-- Inspect development-server errors.
-- Check for missing dependencies or TypeScript failures.
+- TypeScript checks pass.
+- Production frontend build succeeds.
+- Vite starts.
+- Real suggestions appear for representative user queries.
+- Selection creates canonical frontend location state.
+- Edits after selection invalidate outdated state.
+- Loading, empty-result, and network-failure states work.
+- Stale autocomplete responses do not overwrite newer searches.
+- Keyboard selection and basic accessibility behavior are usable.
+- Invalid destinations display understandable validation feedback.
 
-### Map Verification
+### End-to-End Verification
 
-Where map functionality is affected:
+Test representative real user flows.
 
-- Verify real MapTiler style/resource loading.
-- Verify MapLibre initializes successfully.
-- Verify panning and zooming.
-- Verify attribution is displayed.
-- Check map-container sizing.
-- Check loading and failure behavior.
+Examples:
 
-A successful MapTiler HTTP response alone does not prove that the map renders correctly in the browser.
+1. Richmond origin → Downtown Vancouver destination: accepted location selections.
+2. Burnaby origin → Vancouver destination: accepted location selections.
+3. Vancouver origin → Richmond destination: destination rejected.
+4. Vancouver origin → Burnaby destination: destination rejected.
+5. Selected origin edited afterward: stale origin selection invalidated.
+6. Geocoding unavailable: clear error without application crash.
 
-Browser-rendering verification must be explicitly reported as Passed, Failed, or Not run.
+Use actual geocoding results for live user-flow verification.
 
-### Visual Verification
+Do not manufacture successful external-service behavior.
 
-For the completed shell:
+### Regression Verification
 
-- Inspect the main interface at a normal desktop viewport.
-- Confirm the fixed approximate 65/35 split.
-- Confirm usable map dimensions.
-- Confirm right-panel readability.
-- Confirm placeholders do not falsely indicate working functionality.
-- Check layout behavior after browser resizing.
-- Check that frontend and backend failure states are understandable.
+Confirm:
 
-Human visual acceptance is required for Phase 1 completion.
+- MapLibre basemap still renders.
+- Pan and zoom still work.
+- Attribution remains visible.
+- Fixed desktop layout remains usable.
+- Right-side intelligence placeholders remain honest.
+- Backend health indicator still works.
+- No unrelated telemetry or AI calls were introduced.
+
+### Repository Verification
+
+- Check `.env` remains ignored.
+- Ensure real credentials are absent from tracked fixtures and source.
+- Confirm backend-only secrets are not leaked into browser assets.
+- Run `git diff --check`.
+- Inspect final Git status.
+- Confirm expected dependency changes only.
 
 ### Reporting Standard
 
-Every check must be classified as:
+Classify checks as:
 
 - **Passed** — performed successfully.
 - **Failed** — performed but did not satisfy expectations.
-- **Not run** — not executed, with reason.
+- **Not run** — not performed, with a reason.
 
-Do not report a test or manual browser inspection as successful unless it actually occurred.
+Do not report browser or live API validation as passed unless actually performed.
 
 ---
 
-## 8. Phase 1 Acceptance Criteria
+## 8. Phase 2 Acceptance Criteria
 
-Phase 1 is ready for human acceptance when:
+Phase 2 is ready for human acceptance when:
 
-- [ ] The backend starts locally.
-- [ ] `GET /api/health` returns the expected success response.
-- [ ] Backend health-endpoint tests pass.
-- [ ] Relevant Ruff checks pass.
-- [ ] The React/Vite/TypeScript frontend starts locally.
-- [ ] The frontend can reach the FastAPI backend.
-- [ ] Backend unavailability is handled without a frontend crash.
-- [ ] MapLibre renders the validated MapTiler dark style.
-- [ ] Vancouver appears in a suitable initial viewport.
-- [ ] The map supports pan and zoom interactions.
-- [ ] MapTiler attribution is visible.
-- [ ] The layout has a recognizable top-control region.
-- [ ] The desktop content uses the approved fixed approximately 65/35 map/panel split.
-- [ ] The right-side intelligence panel is visible and readable.
-- [ ] Placeholder actions are clearly nonfunctional.
-- [ ] No fictitious telemetry is presented as real data.
-- [ ] The frontend build succeeds.
-- [ ] Local startup instructions are documented.
-- [ ] No backend-only API credentials are exposed through the frontend.
-- [ ] Relevant browser/map behavior is manually verified.
-- [ ] `PROJECT_STATE.md` reflects the implementation and verification results.
-- [ ] Codex provides the required completion report and confirms no Git commit or push was performed.
+- [ ] A backend MapTiler geocoding integration exists.
+- [ ] Real authenticated location search works.
+- [ ] Search results are normalized into the approved `Location` contract.
+- [ ] Canonical coordinates preserve longitude/latitude ordering.
+- [ ] Geocoding errors, missing fields, and empty results are handled.
+- [ ] Destination geographic validation is deterministic.
+- [ ] Valid City of Vancouver destinations are accepted.
+- [ ] Nearby non-Vancouver destinations are rejected.
+- [ ] Destination boundary tests pass.
+- [ ] Origin locations within the approved region can be selected.
+- [ ] Origin and destination autocomplete work in the frontend.
+- [ ] Users can select actual geocoding suggestions.
+- [ ] Selected locations persist in frontend state during normal interaction.
+- [ ] Editing a selected field invalidates its outdated selection.
+- [ ] Destination validation feedback is clear.
+- [ ] Loading, empty-result, and provider-failure states are understandable.
+- [ ] Stale autocomplete responses do not overwrite newer results.
+- [ ] Basic keyboard interaction works.
+- [ ] Drive remains the primary active mode without premature transit functionality.
+- [ ] The app does not calculate or display routes.
+- [ ] Existing MapLibre and FastAPI functionality remains working.
+- [ ] The fixed 65/35 desktop layout remains usable.
+- [ ] No fabricated telemetry or analysis appears.
+- [ ] Relevant backend pytest and Ruff checks pass.
+- [ ] TypeScript checks and frontend production build pass.
+- [ ] Representative end-to-end searches are manually verified.
+- [ ] No backend-only credentials are exposed in the frontend.
+- [ ] `PROJECT_STATE.md` accurately records results, limitations, and outstanding work.
+- [ ] Codex provides the required completion report and confirms no Git staging, commit, or push was performed.
 
-Passing this checklist makes Phase 1 eligible for human review; it does not constitute automatic acceptance.
+Passing these checks makes Phase 2 eligible for human review.
+
+It does not constitute automatic acceptance.
 
 ---
 
@@ -444,27 +629,30 @@ Passing this checklist makes Phase 1 eligible for human review; it does not cons
 
 Stop affected work and report when:
 
-- required MapTiler access is missing or rejected;
-- selected dependencies are materially incompatible;
-- browser map rendering cannot be established within the approved stack;
-- the existing MapTiler credential is unsuitable for browser use without a significant design decision;
-- an architectural change or new major dependency becomes necessary;
-- completion requires implementing later-phase behavior;
-- destructive operations or unrelated repository changes become necessary;
-- verification cannot be completed and the remaining uncertainty materially affects acceptance.
+- MapTiler geocoding credentials are unavailable or rejected;
+- the approved location contract cannot represent actual provider results without material changes;
+- provider behavior materially contradicts Phase 0 findings;
+- the authoritative City of Vancouver boundary or agreed validation approach cannot be established;
+- an exact geographic scope decision must be made that is not supported by the approved planning documents;
+- reliable destination validation requires an unapproved approximation;
+- a material backend API or architectural change becomes necessary;
+- new infrastructure or major dependencies beyond the approved stack are required;
+- existing map or shell functionality cannot be preserved;
+- completion requires unauthorized Phase 3 behavior;
+- destructive or unrelated repository operations appear necessary.
 
 For each blocker, report:
 
-- observed problem;
+- observed issue;
 - affected requirement;
 - available evidence;
 - reasonable options, where apparent.
 
-Continue independent in-scope implementation work when safe.
+Continue independent in-scope work where safe.
 
-Routine implementation details, small compatibility corrections, and ordinary test failures may be resolved autonomously within the assignment.
+Routine parser adjustments, component organization, HTTP error handling, and small test corrections may be resolved autonomously within the assignment.
 
-Do not independently change providers, introduce substantial infrastructure, or expand application scope.
+Do not silently redesign the location model, geographic scope, or product workflow.
 
 ---
 
@@ -472,38 +660,44 @@ Do not independently change providers, introduce substantial infrastructure, or 
 
 After each bounded assignment:
 
-- Run relevant verification.
-- Update `PROJECT_STATE.md` with verified progress.
+- Run applicable verification.
+- Update `PROJECT_STATE.md` with factual implementation progress.
+- Record actual service behavior and meaningful discoveries.
 - Preserve completed functionality.
-- Report new files and behavior.
-- Identify failures, limitations, and material decisions.
+- Report relevant files and dependency changes.
+- Identify failures, limitations, and deviations.
 - Provide the standard completion report required by `AGENTS.md`.
-- Do not claim the entire phase is complete until all applicable acceptance criteria have been assessed.
+- Do not claim the complete phase has been accepted before human review.
 
-Phase 1 is accepted only after human review of:
+Phase 2 is accepted only after human review of:
 
-- running application behavior;
-- interactive map functionality;
-- visual layout;
-- relevant tests and builds;
-- meaningful limitations or deviations.
+- actual origin/destination autocomplete;
+- valid location selection;
+- City of Vancouver boundary enforcement;
+- representative accepted and rejected destinations;
+- state management after editing selections;
+- provider failure behavior;
+- existing map functionality and desktop layout;
+- relevant tests and build results.
 
 Git checkpoints remain human-controlled.
 
-Codex must not stage, commit, push, amend, merge, rebase, or rewrite history.
+Codex must not stage, commit, push, amend, merge, rebase, tag, or rewrite Git history.
 
 ---
 
 ## 11. Next Phase
 
-**Phase 2 — Journey Input + Geocoding**
+**Phase 3 — Drive Route Candidates + Selection**
 
-After Phase 1 acceptance, Phase 2 adds:
+After Phase 2 acceptance, Phase 3 will use valid selected locations to:
 
-- MapTiler place autocomplete;
-- origin/destination selection;
-- canonical location data;
-- deterministic City of Vancouver destination validation;
-- persistent frontend selection state.
+- request driving routes from openrouteservice;
+- normalize route candidates;
+- display route alternatives on the map;
+- allow the user to select the route most closely matching their intended journey;
+- preserve selected-route state for later journey intelligence.
 
-Phase 2 work is not authorized by this document.
+The route-selection workflow will not imply that RouteLens replaces Google Maps or independently determines the optimal route.
+
+Phase 3 work is not authorized by this document.
