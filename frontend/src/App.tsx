@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import VancouverMap from './VancouverMap';
+import LocationAutocomplete from './LocationAutocomplete';
+import type { DestinationValidation, Location } from './locationTypes';
 
 type BackendStatus = 'checking' | 'connected' | 'unavailable';
 
@@ -64,7 +66,74 @@ function SectionIcon({ name }: { name: (typeof intelligenceSections)[number]['ic
   }
 }
 
+type DestinationFeedback = {
+  kind: 'pending' | 'error' | 'rejected';
+  message: string;
+};
+
 function JourneyControls() {
+  const [origin, setOrigin] = useState<Location | null>(null);
+  const [destination, setDestination] = useState<Location | null>(null);
+  const [destinationFeedback, setDestinationFeedback] = useState<DestinationFeedback | null>(null);
+  const validationSequence = useRef(0);
+  const validationController = useRef<AbortController | null>(null);
+
+  useEffect(() => () => validationController.current?.abort(), []);
+
+  function invalidateDestination() {
+    validationSequence.current += 1;
+    validationController.current?.abort();
+    validationController.current = null;
+    setDestination(null);
+    setDestinationFeedback(null);
+  }
+
+  async function validateDestination(candidate: Location) {
+    validationSequence.current += 1;
+    const requestId = validationSequence.current;
+    validationController.current?.abort();
+    const controller = new AbortController();
+    validationController.current = controller;
+    setDestination(null);
+    setDestinationFeedback({ kind: 'pending', message: 'Checking City of Vancouver boundary…' });
+
+    try {
+      const response = await fetch('/api/locations/validate-destination', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(candidate),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('Validation unavailable');
+      const result: unknown = await response.json();
+      if (
+        typeof result !== 'object' || result === null ||
+        !('valid' in result) || typeof result.valid !== 'boolean' ||
+        !('reason' in result) || (result.reason !== null && typeof result.reason !== 'string')
+      ) throw new Error('Validation unavailable');
+      const validation = result as DestinationValidation;
+      if (validationSequence.current !== requestId) return;
+
+      if (validation.valid) {
+        setDestination(candidate);
+        setDestinationFeedback(null);
+      } else {
+        setDestination(null);
+        setDestinationFeedback({
+          kind: 'rejected',
+          message: validation.reason ?? 'Choose a destination inside the City of Vancouver.',
+        });
+      }
+    } catch {
+      if (controller.signal.aborted || validationSequence.current !== requestId) return;
+      setDestination(null);
+      setDestinationFeedback({
+        kind: 'error',
+        message: 'Destination could not be verified. Please try again.',
+      });
+    }
+  }
+
   return (
     <section className="journey-controls" aria-labelledby="journey-title">
       <div className="journey-heading">
@@ -72,31 +141,35 @@ function JourneyControls() {
           <p className="eyebrow">VANCOUVER · BRITISH COLUMBIA</p>
           <h1 id="journey-title">Your city, in context.</h1>
         </div>
-        <span className="coming-badge">Journey tools coming soon</span>
+        <span className="coming-badge">Route planning coming next</span>
       </div>
 
-      <div className="journey-form" aria-label="Journey controls, coming soon">
-        <label className="journey-field">
-          <span className="field-marker origin-marker" aria-hidden="true" />
-          <span className="field-copy">
-            <span className="field-label">ORIGIN</span>
-            <span className="field-placeholder">Metro Vancouver</span>
-          </span>
-          <span className="field-hint">Coming soon</span>
-        </label>
+      <div className="journey-form" aria-label="Journey location inputs">
+        <LocationAutocomplete
+          id="journey-origin"
+          label="ORIGIN"
+          placeholder="Search Metro Vancouver"
+          marker="origin-marker"
+          selectedLocation={origin}
+          onQueryEdit={() => setOrigin(null)}
+          onSelect={setOrigin}
+        />
         <span className="journey-arrow" aria-hidden="true">→</span>
-        <label className="journey-field">
-          <span className="field-marker destination-marker" aria-hidden="true" />
-          <span className="field-copy">
-            <span className="field-label">DESTINATION</span>
-            <span className="field-placeholder">City of Vancouver</span>
-          </span>
-          <span className="field-hint">Coming soon</span>
-        </label>
-        <div className="mode-control" aria-label="Travel mode, coming soon">
+        <LocationAutocomplete
+          id="journey-destination"
+          label="DESTINATION"
+          placeholder="Search City of Vancouver"
+          marker="destination-marker"
+          selectedLocation={destination}
+          statusKind={destinationFeedback?.kind}
+          statusMessage={destinationFeedback?.message}
+          onQueryEdit={invalidateDestination}
+          onSelect={(candidate) => void validateDestination(candidate)}
+        />
+        <div className="mode-control" aria-label="Travel mode">
           <span className="field-label">MODE</span>
           <div className="mode-options">
-            <button type="button" disabled aria-pressed="false">Drive</button>
+            <button className="mode-active" type="button" disabled aria-pressed="true">Drive</button>
             <button type="button" disabled aria-pressed="false">Transit</button>
           </div>
         </div>
@@ -105,6 +178,11 @@ function JourneyControls() {
           Analyze journey
         </button>
       </div>
+      {origin && destination && (
+        <p className="selection-readiness" role="status">
+          Origin and destination selected — route planning coming next.
+        </p>
+      )}
     </section>
   );
 }

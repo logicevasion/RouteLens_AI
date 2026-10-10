@@ -4,13 +4,13 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 2 — Journey Input + Geocoding (Assignment 2A)
-**Phase status:** Assignment 2A accepted; Phase 2 remains in progress
-**Human review:** Phase 1 complete; Assignment 2A accepted on 2026-10-10
-**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C pending human commit
+**Current phase:** Phase 2 — Journey Input + Geocoding (Assignment 2B)
+**Phase status:** Assignments 2A and 2B accepted; Phase 2 remains in progress pending Assignment 2C
+**Human review:** Phase 1 and Assignments 2A–2B accepted; Assignment 2B accepted on 2026-10-10
+**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`; Assignment 2A `d46e12a`; Assignment 2B pending human commit
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A and 1B established the app foundation and interactive Vancouver basemap. Assignment 1C completed the desktop shell and honest intelligence placeholders. Phase 1 was accepted by the human developer on 2026-10-10 after successful local browser verification. No journey-analysis functionality has been implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted by the human developer on 2026-10-10. Assignment 2A added accepted backend geocoding and destination validation. Assignment 2B adds frontend location selection; Phase 2 remains incomplete pending Assignment 2C and human acceptance. No routing, telemetry, or AI journey analysis has been implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -26,18 +26,18 @@ The Codex SDD harness has been drafted and accepted as v1:
 
 - `AGENTS.md` — agent operating rules.
 - `APP_SPEC.md` — condensed application specification.
-- `BUILD_PLAN.md` — current Phase 1 scope and acceptance criteria; pending transition to Phase 2.
+- `BUILD_PLAN.md` — current Phase 2 scope and acceptance criteria.
 - `PROJECT_STATE.md` — implementation reality and progress.
 
 All four root harness files are present and readable. All five listed planning documents are present.
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A, 1B, and 1C implemented; verification status is recorded in Sections 10–12.**
+**Repository implementation status: Assignments 1A–1C, 2A, and 2B implemented; verification status is recorded in Sections 10–14.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Journey functionality is not implemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2B implement backend geocoding/validation and frontend location selection; route calculation and journey analysis are not implemented.
 
-At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
+At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 2B adds a shared React location autocomplete and parent-owned canonical origin/destination state. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
 `.gitignore` is present and includes `.env`. The ignored local `.env` has MapTiler, ORS, OpenWeather, and OpenRouter credentials; `TRANSLINK_API_KEY` is absent locally, although planning research records prior testing. Secret values were not displayed or changed. Assignment 0E created `.env.example` with the five approved credential names and both tested provisional OpenRouter model identifiers.
 
@@ -73,7 +73,7 @@ The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
 Workstreams may be completed through separate bounded Codex assignments.
 
-Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is implemented through Assignment 1C and awaits human acceptance.
+Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 was accepted on 2026-10-10. Phase 2 is in progress; Assignments 2A and 2B have been accepted, and Assignment 2C remains.
 
 ## 6. Verification Evidence
 
@@ -172,7 +172,9 @@ Additional blockers must be recorded when discovered, including affected workstr
 **Phase 0 Git checkpoint:** Committed and pushed — human-confirmed
 **Phase 1 acceptance:** Accepted — 2026-10-10, following human browser and functional review
 **Phase 1 human review:** Completed — map rendering, pan/zoom, desktop layout, panel behavior, and backend connectivity verified
-**Phase 1 Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C pending human commit
+**Phase 1 Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`
+**Phase 2 progress:** Assignment 2A accepted and committed as `d46e12a`; Assignment 2B accepted on 2026-10-10, Git checkpoint pending
+**Phase 2 acceptance:** Pending Assignment 2C and final human review
 
 Use the following status distinctions:
 
@@ -277,7 +279,7 @@ Assignment 1C replaces the tall scaffold page with a viewport-filling desktop in
 
 **Phase status:** Accepted by the human developer on 2026-10-10. Assignments 1A–1C established a working FastAPI backend, React/Vite frontend, interactive Vancouver basemap, and desktop intelligence shell. Automated verification and human browser inspection are complete. The documented headless Chrome rendering discrepancy and other non-blocking limitations remain visible.
 
-**Next action:** Assignment 2A implementation evidence is recorded in Section 13. Assignment 2B remains separately authorized work and has not begun.
+**Next action:** Assignment 2B implementation and verification are recorded in Section 14. Phase 2 remains in progress.
 
 ## 13. Assignment 2A — Geocoding and Location Validation
 
@@ -299,4 +301,34 @@ Known scope limit: the origin search is biased toward Vancouver and limited to C
 
 **Review status:** Accepted by the human developer on 2026-10-10. Manual API verification confirmed real MapTiler suggestions and deterministic geographic validation: Downtown Vancouver was accepted and Richmond was rejected. Automated verification passed with 38 backend tests, Ruff, and the frontend production build. Provider suggestions from outside the intended search area were observed and will be handled through geographic context and destination validation in later assignments.
 
-**Next action:** Human Git checkpoint, followed by Assignment 2B — Journey Input Interface. Phase 2 remains in progress.
+**Next action:** Assignment 2B implementation and verification are recorded in Section 14. Assignment 2C remains required before Phase 2 acceptance.
+
+## 14. Assignment 2B — Journey Input Interface
+
+Assignment 2B replaces the origin and destination placeholders with a shared `LocationAutocomplete` component. It uses the relative FastAPI endpoints `/api/geocoding/search` and `/api/locations/validate-destination`, keeps separate canonical `Location | null` values in `JourneyControls`, and only accepts a destination after backend validation. Origin edits clear only origin state. Destination validation has pending, geographic rejection, and request-failure feedback; rejected or unverified candidates are not retained as accepted destinations. Search is normalized, debounced by 300 ms, skipped below two characters, and protected from stale responses with abort signals and request identity checks. Inputs support Arrow Up/Down, Enter, Escape, pointer selection, and combobox/listbox semantics. Drive remains the active presentation, Transit and Analyze Journey remain disabled, and no routing or analysis behavior was added. `VancouverMap` was not changed.
+
+| Check | Result |
+|---|---|
+| Frontend TypeScript and production build | Passed — `npm run build` (`tsc -b && vite build`); the existing large MapLibre bundle warning remains |
+| Backend regression tests | Passed — 38 tests |
+| Ruff | Passed — `ruff check app tests` |
+| Vite development server | Passed — started on localhost after sandbox approval |
+| FastAPI through Vite `/api` proxy | Passed — `/api/health` returned HTTP 200 and `{"status":"ok"}` |
+| Live backend geocoding | Passed — `Downtown Vancouver` returned five real candidates with Vancouver, Victoria, and New Westminster context; `Richmond` returned a canonical candidate |
+| Live destination validation | Passed — a Downtown Vancouver point was accepted; Richmond was rejected with the backend's City of Vancouver reason |
+| Browser autocomplete flow | Passed — headless Chrome selected an origin by pointer and a destination by keyboard, accepted a valid destination, rejected Richmond, replaced it with a valid location, and confirmed editing origin preserves the valid destination |
+| Browser asynchronous and keyboard behavior | Passed — rapid query replacement showed latest results; Escape closed suggestions |
+| Browser layout and map observation | Passed in observed desktop viewport — no horizontal overflow, Analyze Journey remained disabled, and MapLibre canvas and attribution were present. Map pan/zoom was not re-tested in this assignment; `VancouverMap` is unchanged |
+| Empty and search-failure browser states | Passed with mocked fetch responses — empty results and unavailable search show distinct user-facing feedback |
+| Narrow-screen dropdown clipping | Passed at 390×844 — no horizontal overflow and the suggestion list fit within the viewport |
+| `.env` ignore and backend-only provider scan | Passed — `.env` remains ignored; no backend-only provider references were added to frontend source or build output |
+| `git diff --check` | Passed — no whitespace errors |
+| Git history operations | None — no staging, commit, push, or history changes were performed |
+
+Known limitation: origin search uses the backend's Canada-limited, Vancouver-biased MapTiler search and does not enforce a Lower Mainland polygon. Empty-result and search-failure UI states were verified with mocked browser responses; a real provider outage and destination-validation network failure were not induced. Map pan/zoom was not re-tested in this assignment. Assignment 2C remains responsible for comprehensive end-to-end verification and Phase 2 acceptance. No dependency or API contract changes were introduced.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Manual browser testing confirmed functional origin/destination autocomplete, real suggestion selection, successful City of Vancouver destination validation, Richmond destination rejection, recovery after rejection, selection invalidation, and preservation of independent location state. The frontend layout, MapLibre interaction, and inactive later-phase controls behaved as expected. Automated verification passed with 38 backend tests, Ruff, and the frontend production build.
+
+**Remaining verification:** A real provider outage and destination-validation network failure were not induced. The lack of a strict Lower Mainland origin boundary remains documented. Assignment 2C will perform final integration, regression, and Phase 2 acceptance checks.
+
+**Next action:** Human Git checkpoint, followed by separately authorized Assignment 2C — End-to-End Journey Input Integration.

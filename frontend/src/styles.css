@@ -111,6 +111,8 @@ button, input { font: inherit; }
 .status-unavailable .backend-dot { background: #df7979; }
 
 .journey-controls {
+  position: relative;
+  z-index: 5;
   flex: 0 0 auto;
   padding: 19px 30px 20px;
   border-bottom: 1px solid var(--border);
@@ -122,7 +124,8 @@ button, input { font: inherit; }
 .journey-heading h1 { margin: 0; color: #edf2f6; font-size: 19px; font-weight: 560; letter-spacing: -.035em; }
 .coming-badge { padding: 5px 9px; border: 1px solid rgb(86 200 194 / 19%); border-radius: 999px; background: rgb(86 200 194 / 6%); color: #83c9c5; font-size: 9px; letter-spacing: .03em; }
 
-.journey-form { display: grid; grid-template-columns: minmax(170px, 1fr) 16px minmax(190px, 1.12fr) 176px 178px; align-items: center; gap: 12px; }
+.journey-form { position: relative; z-index: 6; display: grid; grid-template-columns: minmax(170px, 1fr) 16px minmax(190px, 1.12fr) 176px 178px; align-items: center; gap: 12px; }
+.location-autocomplete { position: relative; z-index: 8; min-width: 0; }
 .journey-field, .mode-control {
   display: flex;
   height: 52px;
@@ -135,6 +138,26 @@ button, input { font: inherit; }
   background: rgb(7 12 17 / 29%);
 }
 .journey-field { position: relative; }
+.journey-field:focus-within { border-color: rgb(86 200 194 / 56%); box-shadow: 0 0 0 2px rgb(86 200 194 / 9%); }
+.journey-field.field-rejected { border-color: rgb(219 122 105 / 48%); }
+.journey-field.field-error { border-color: rgb(213 174 103 / 48%); }
+.field-copy { flex: 1 1 auto; }
+.location-input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: #dce5eb; font-size: 11px; line-height: 16px; }
+.location-input::placeholder { color: #758491; opacity: 1; }
+.location-input:focus-visible { outline: none; }
+.selected-hint { color: #78c6a2; }
+.suggestion-list { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; left: 0; max-height: min(280px, 45vh); overflow-y: auto; margin: 0; padding: 5px; border: 1px solid rgb(191 211 232 / 16%); border-radius: 8px; background: #111a23; box-shadow: 0 14px 32px rgb(0 0 0 / 46%); list-style: none; }
+.suggestion-option { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 9px 10px; border-radius: 5px; cursor: pointer; }
+.suggestion-option:hover, .suggestion-option.suggestion-active { background: rgb(86 200 194 / 10%); }
+.suggestion-name { overflow: hidden; color: #e3ebf0; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-address { overflow: hidden; color: #91a0ad; font-size: 9px; line-height: 1.4; text-overflow: ellipsis; }
+.suggestion-message { padding: 10px; color: #99a7b3; font-size: 10px; line-height: 1.5; }
+.suggestion-error { color: #e1a18f; }
+.location-feedback { margin: 6px 2px 0; font-size: 9px; line-height: 1.4; }
+.feedback-pending { color: #d0b779; }
+.feedback-rejected { color: #e49b87; }
+.feedback-error { color: #d0b779; }
+.selection-readiness { margin: 9px 0 0; color: #78c6a2; font-size: 10px; }
 .field-marker { width: 9px; height: 9px; flex: 0 0 auto; border: 2px solid #91a7b8; border-radius: 50%; }
 .destination-marker { border-color: var(--accent); border-radius: 2px; transform: rotate(45deg); }
 .field-copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
@@ -146,6 +169,7 @@ button, input { font: inherit; }
 .mode-options { display: flex; gap: 5px; margin-top: 3px; }
 .mode-options button { min-width: 61px; padding: 4px 7px; border: 0; border-radius: 5px; background: transparent; color: #7d8b98; font-size: 10px; }
 .mode-options button:disabled { cursor: not-allowed; opacity: .8; }
+.mode-options button.mode-active { background: rgb(86 200 194 / 13%); color: #8bd3ce; }
 .analyze-button { display: inline-flex; height: 52px; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgb(86 200 194 / 14%); border-radius: 8px; background: rgb(86 200 194 / 8%); color: #7cb7b4; font-size: 11px; font-weight: 600; }
 .analyze-button span { font-size: 13px; }
 .analyze-button:disabled { cursor: not-allowed; }
@@ -215,7 +239,7 @@ button, input { font: inherit; }
   .journey-heading { align-items: flex-start; gap: 10px; }
   .journey-heading h1 { font-size: 17px; }
   .coming-badge { margin-top: 3px; font-size: 8px; }
-  .journey-form { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .journey-form { grid-template-columns: 1fr 1fr; align-items: start; gap: 8px; }
   .journey-field { min-width: 0; }
   .journey-arrow { display: none; }
   .mode-control, .analyze-button { min-height: 49px; }
