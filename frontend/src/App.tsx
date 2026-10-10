@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import VancouverMap from './VancouverMap';
 
 type BackendStatus = 'checking' | 'connected' | 'unavailable';
 
@@ -41,9 +42,9 @@ export default function App() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#090d12] px-6 py-10 text-slate-100 sm:px-10">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 pb-5">
+    <main className="min-h-screen bg-[#090d12] px-4 py-6 text-slate-100 sm:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[1440px] flex-col">
+        <header className="flex items-center justify-between border-b border-white/10 pb-4">
           <a className="text-lg font-semibold tracking-tight text-white" href="/">
             RouteLens <span className="text-cyan-300">AI</span>
           </a>
@@ -66,21 +67,19 @@ export default function App() {
           </div>
         </header>
 
-        <section className="flex flex-1 flex-col justify-center py-20">
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
-            Application foundation
-          </p>
-          <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
-            A clearer picture of the city is taking shape.
-          </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-slate-400">
-            RouteLens AI brings public city information into one place. The application shell is
-            running; journey tools and the interactive map are not part of this foundation yet.
-          </p>
-          <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
-            <span className="h-px w-10 bg-cyan-300/60" />
-            Local development environment
+        <section className="flex flex-col gap-5 py-6">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+              Vancouver · British Columbia
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              See the city around your journey.
+            </h1>
           </div>
+          <VancouverMap />
+          <p className="text-sm text-slate-500">
+            Explore Vancouver on the map. Journey tools are coming in a later phase.
+          </p>
         </section>
 
         <footer className="border-t border-white/10 pt-4 text-xs text-slate-600">

@@ -380,16 +380,17 @@ Camera imagery is treated separately from camera metadata, and source-specific u
 
 ## Current Status
 
-Planning and the initial SDD harness are complete. Phase 0 — Integration Readiness is accepted. Assignment 1A establishes the minimal FastAPI and React application foundation; the map and finished desktop shell are still pending.
+Planning and the initial SDD harness are complete. Phase 0 — Integration Readiness and Assignment 1A are accepted. Assignment 1B adds the interactive Vancouver basemap and is ready for human review; the final desktop shell and journey tools remain future work.
 
 ## Local Development
 
-The Assignment 1A foundation runs as two local development servers. No external API credentials are needed.
+The application runs as two local development servers. The Vancouver basemap requires a MapTiler key; backend-only credentials are not exposed to the frontend.
 
 ### Requirements
 
 - Python 3.10 or newer
 - Node.js 20.19 or newer and npm
+- A MapTiler API key for the interactive basemap
 
 ### Backend
 
@@ -420,6 +421,8 @@ npm ci
 npm run dev
 ```
 
+Set `MAPTILER_API_KEY` in the ignored project-root `.env` before starting Vite. Vite selectively reads that one value and makes it available to the browser map code; the key is visible in browser requests and generated frontend assets by design. Use a browser-appropriate key and review account-supported restrictions before sharing or publishing the app. If the key is missing, the rest of the page remains available and the map displays a configuration message.
+
 Open `http://localhost:5173`. Vite forwards `/api` requests to the backend on port 8000.
 
 Run the TypeScript check and production build with:
@@ -428,7 +431,7 @@ Run the TypeScript check and production build with:
 npm run build
 ```
 
-The page reports whether the backend health check succeeded. The map and journey tools are not implemented in this foundation.
+The page reports whether the backend health check succeeded and displays the interactive MapTiler `streets-v4-dark` map centered on Vancouver. Journey tools and the final desktop layout are not implemented yet.
 
 ---
 

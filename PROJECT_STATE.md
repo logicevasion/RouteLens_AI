@@ -4,13 +4,13 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 1 — Application Shell + Map (Assignment 1A)
-**Phase status:** Assignment 1A ready for human review
-**Human acceptance:** Approved by human developer on 2026-10-09, with documented non-blocking follow-ups
-**Git checkpoint:** No commit or push performed; initial worktree was clean on `main` tracking `origin/main`
+**Current phase:** Phase 1 — Application Shell + Map (Assignment 1B)
+**Phase status:** Assignment 1B ready for human review
+**Human acceptance:** Assignment 1A accepted by human developer on 2026-10-09; Assignment 1B awaits review
+**Git checkpoint:** Assignment 1A committed as `01ff452`; no Assignment 1B staging, commit, or push performed
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignment 1A now adds the minimal application foundation described below; no map or journey functionality is implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignment 1A established the minimal app foundation; Assignment 1B adds the interactive Vancouver basemap. The final desktop shell and journey functionality are not implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -33,9 +33,9 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignment 1A application foundation implemented; verification status is recorded in Section 10.**
+**Repository implementation status: Assignments 1A and 1B implemented; verification status is recorded in Sections 10 and 11.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A has since added the minimal backend/frontend application foundation; no map, final desktop shell, or journey functionality is implemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, and Assignment 1B adds the interactive MapLibre map with MapTiler's dark Vancouver basemap. The final desktop shell and journey functionality are not implemented.
 
 At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
@@ -73,7 +73,7 @@ The complete acceptance boundary is defined in `BUILD_PLAN.md`.
 
 Workstreams may be completed through separate bounded Codex assignments.
 
-Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is authorized for planning but implementation has not yet begun.
+Phase 0 is **Accepted by the human developer as of 2026-10-09**, with documented non-blocking follow-ups. Assignment 0E consolidated Assignments 0A–0D and verified the configuration template and existing artifacts. The accepted follow-ups are: configure the local TransLink key before Phase 10; resolve Vancouver camera-image rights and external AI processing permissions before Phase 8; and review provider plans, quotas, and applicable terms before broader or public use. Phase 1 is in progress: Assignment 1A is accepted and committed, Assignment 1B is ready for review, and Assignment 1C has not begun.
 
 ## 6. Verification Evidence
 
@@ -149,13 +149,14 @@ Do not silently convert observed implementation differences into changes to appr
 ### Known Readiness Gaps
 
 - OpenWeather current and forecast endpoints and their observed schemas are verified. The account's subscription, remaining quota, and plan-specific terms remain unknown and should be confirmed before broader use or release.
-- MapTiler geocoding, dark-style resources, and ORS driving routes/alternatives were accessible in Assignment 0C. Account-specific quotas and terms remain unverified. MapTiler search results can be ambiguous and require contextual review; POI categorization can be imperfect. Actual MapLibre rendering is deferred to Phase 1.
+- MapTiler geocoding, dark-style resources, and ORS driving routes/alternatives were accessible in Assignment 0C. Assignment 1B confirmed browser rendering of the MapTiler dark style. Account-specific quotas, terms, and whether the active MapTiler plan requires its logo remain unverified. MapTiler search results can be ambiguous and require contextual review; POI categorization can be imperfect.
 - ORS returned three alternatives for the three sampled trips. Fewer-than-requested behavior was not directly observed and three candidates are not guaranteed for arbitrary journeys.
 - OpenRouter accepted the provisional Gemma model for both synthetic readiness requests through DeepInfra. One successful vision response was obtained after a truncation; one text status inconsistency was corrected. These small samples do not establish production reliability, real-camera accuracy, or robustness.
 - OpenRouter and DeepInfra publish favorable retention/training claims for the tested route, but account-level privacy controls were not inspected. The real Vancouver camera-image licence and permission to transmit those images for AI inference remain unresolved.
 - A local ignored `.env` does not define `TRANSLINK_API_KEY`; planning research records that credentials were previously obtained and tested. Configure/confirm the key before Phase 10. Its value was not exposed.
 - No application test infrastructure or production integration code was created. Readiness notes and fixtures now exist for OpenWeather, MapTiler, ORS, and OpenRouter.
-- The `README.md` currently describes DriveBC Cameras as a planned core source, while `APP_SPEC.md` explicitly excludes DriveBC Cameras from the MVP. The README also says the project is in active development despite this inventory finding no application implementation. These README statements were not changed under Assignment 0A scope.
+- The `README.md` describes DriveBC Cameras as a planned core source, while `APP_SPEC.md` explicitly excludes DriveBC Cameras from the MVP. This pre-existing scope discrepancy is outside Assignment 1B.
+- **Local VMware/Chromium WebGL compatibility (Assignment 1B):** The Debian 13 VMware Workstation development VM uses the VMware SVGA3D renderer (`vmwgfx`, Mesa OpenGL 4.3). Brave and Chrome initially blocklisted WebGL, preventing MapLibre from initializing. Enabling VMware 3D acceleration and Brave's `Override software rendering list` flag (`brave://flags/#ignore-gpu-blocklist`) restored map rendering in Brave. Firefox rendered the map without this override. This is a local browser/VM graphics compatibility issue, not a confirmed RouteLens application defect. The Chromium override is intended for local development only.
 
 These are outstanding readiness requirements, not confirmed service failures.
 
@@ -191,7 +192,7 @@ Assignments 0A–0E are **completed and accepted by the human developer as of 20
 
 The following non-blocking follow-ups remain: configure the local TransLink key before Phase 10; resolve camera-image rights and external AI processing permissions before Phase 8; and review provider account limits and applicable terms before broader or public use.
 
-Assignment 1A implements a minimal FastAPI health endpoint and React/Vite/TypeScript/Tailwind scaffold. The frontend makes one `/api/health` request and shows checking, connected, or unavailable status. Vite proxies `/api` to the local backend. No external API credentials are needed. The map and final desktop shell remain future bounded assignments.
+Assignment 1A implements a minimal FastAPI health endpoint and React/Vite/TypeScript/Tailwind scaffold. The frontend makes one `/api/health` request and shows checking, connected, or unavailable status. Vite proxies `/api` to the local backend. Assignment 1A was accepted and committed as `01ff452`.
 
 | Check | Result |
 |---|---|
@@ -205,10 +206,35 @@ Assignment 1A implements a minimal FastAPI health endpoint and React/Vite/TypeSc
 | Proxied `GET /api/health` | Passed — Vite returned the backend HTTP 200 health response |
 | Backend unavailable proxy response | Passed — Vite returned HTTP 502 while the frontend route remained available; the UI catches failed requests and sets unavailable state |
 | Tailwind build output | Passed — generated CSS contains the scaffold utility selectors |
-| Browser visual/rendered-state inspection | Not run — no browser inspection tool was available; manual visual review remains for the developer |
+| Browser visual/rendered-state inspection | Not run for Assignment 1A; Assignment 1B browser checks are recorded in Section 11 |
 | Credential requirement | Passed — no external provider credentials are used by this foundation; `.env` and `.env.example` were preserved |
 | Git history operations | None — no staging, commit, push, or history changes were performed |
 
-**Review status:** Ready for human review. Browser-level visual verification and manual review of the unavailable indicator remain outstanding.
+**Review status:** Accepted by the human developer; committed as `01ff452`.
 
-Phase 0 remains accepted. Assignment 1B has not begun and requires separate authorization.
+Phase 0 and Assignment 1A remain accepted. Assignment 1B verification is recorded below; Assignment 1C has not begun.
+
+## 11. Assignment 1B — Interactive Vancouver Map
+
+Assignment 1B adds a lifecycle-safe MapLibre GL JS component using MapTiler's validated `streets-v4-dark` style, centered at `[-123.1207, 49.2827]` at zoom 12. Vite selectively reads `MAPTILER_API_KEY` from the project-root `.env` and defines only `VITE_MAPTILER_API_KEY` for browser code. `envPrefix` is disabled to prevent automatic exposure of other environment variables. MapLibre's packaged worker is emitted as a Vite URL asset. The map includes navigation controls, provider attribution, loading, configuration-required, and resource-failure states. ResizeObserver updates map dimensions; unmount cleanup removes observers, listeners, and the MapLibre instance.
+
+| Check | Result |
+|---|---|
+| MapLibre dependency and lockfile | Passed — MapLibre GL JS 6.13.0 installed; npm reported 0 vulnerabilities. Install emits a non-fatal Node engine warning for its `@mapbox/jsonlint-lines-primitives` dependency (requires Node 22); the Node 20.19 dev server and build both run successfully |
+| Frontend TypeScript and production build | Passed — `npm run build`; Vite emits the worker asset. Build reports a large JavaScript chunk warning for MapLibre |
+| Browser style and supporting resources | Passed — Chrome rendered Vancouver; 19 MapTiler requests returned HTTP 200 in the verified session |
+| Browser viewport and attribution | Passed — map canvas filled its container; MapTiler and OpenStreetMap attribution was visible |
+| Pan and zoom | Passed — drag-pan and the MapLibre zoom control both changed the rendered frame |
+| Browser resizing | Passed — after viewport resize, map canvas dimensions matched the resized map frame |
+| Map loading state | Passed — loading presentation cleared after map load |
+| Missing MapTiler key | Passed — separate Vite server with the key unset displayed the configuration-required message without creating a map canvas |
+| Backend status and Vite `/api` proxy | Passed — browser showed backend connected during the live-map session; missing-key session retained the unavailable status when backend was stopped |
+| Backend pytest | Passed — 1 existing health test |
+| Ruff | Passed — `ruff check backend/app backend/tests` |
+| Browser console | Passed with non-blocking warning — worker-loading issue found during development was fixed; final style emits a missing optional sprite-image warning for `transportation:road_`; no application exception remained |
+| `.env` ignore and credential exposure | Passed — `.env` remains ignored; browser build exposes only the intended MapTiler key; backend-only credential values are absent from browser assets and changed source |
+| `git diff --check` | Passed — no whitespace issues |
+
+The browser verification used headless Chrome with MapTiler requests succeeding. The actual map was visually inspected and interaction/resizing checks were exercised. The browser key is intentionally visible in browser requests and generated assets; review provider-supported restrictions and the active plan's logo requirement before any shared or public deployment. No automatic retry behavior is implemented.
+
+**Review status:** Ready for human review. The Assignment 1B changes remain uncommitted; human acceptance is pending.
