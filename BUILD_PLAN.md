@@ -2,428 +2,417 @@
 
 ## 1. Current Phase
 
-**Phase:** 7 — Vancouver Camera Pipeline
-**Phase status:** Planned; implementation requires separate, bounded authorization for each assignment. Assignment 7A is the first proposed validation task.
-**Source:** `docs/implementation-plan.md`, Phase 7; `docs/prd.md`, destination-camera requirements; `docs/technical-design.md`, camera catalogue, selection and image-handling design; `docs/data-licensing-and-commercialization.md`, camera rights and retention policy.
-**Previous phase:** Phase 6 — Current + Near-Term Weather, Assignments 6A–6D completed and human accepted on 2026-10-11. Phase 6 final Git checkpoint is human-controlled; verify current repository status before implementation.
+**Phase:** 8 — Multi-View Camera AI Analysis
+**Phase status:** Planned; not yet implemented. Each assignment requires separate human authorization and acceptance.
+**Source:** `docs/implementation-plan.md` Phase 8; `docs/prd.md`; `docs/technical-design.md`; accepted Phase 7 camera contracts and `docs/data-licensing-and-commercialization.md`. Where documents differ, inspect the repository and report the discrepancy rather than silently rewriting accepted authority.
+**Previous phase:** Phase 7 — Vancouver Camera Pipeline, Assignments 7A–7E complete and human accepted on 2026-10-11; final Git checkpoint committed and pushed by the developer.
 
 ### Objective
 
-Add **real, current Vancouver traffic-camera views near the selected destination** to the accepted driving-only journey experience, without AI interpretation yet.
+Convert the **currently retrieved directional images from the one selected destination camera intersection** into **one conservative, structured, source-attributed `CameraObservation`**, through a controlled OpenRouter multimodal request.
 
-**Official camera metadata → validated directional-view catalogue → nearest usable destination intersection → current multi-view image retrieval → ephemeral cache → source-attributed destination-camera UI.**
+**Accepted Phase 7 current frames → bounded image eligibility/snapshot → one multi-image vision call → strict schema and provenance validation → internal `CameraObservation` evidence → Phase 9 evidence organization → Phase 10 AI Journey Briefing.**
 
 The phase must deliver:
 
-- evidence-backed discovery of the City of Vancouver camera metadata, intersection locations and supported source webpages;
-- a **standalone, bounded catalogue-enrichment process** that discovers real directional image URLs rather than fabricating filenames;
-- a validated, locally reusable enriched intersection catalogue, with a provisional approximately 24-hour refresh policy and last-good fallback;
-- deterministic destination-based selection of **one nearest usable camera intersection**, with fallback to the next candidate when images are unavailable;
-- retrieval of **all usable directional views from that one intersection**, allowing any supported number of views;
-- short-lived, overwrite-in-place image storage, with **no historical archive or image time series**;
-- safe backend delivery of current images and honest freshness, missing-view and source-failure states;
-- an additive journey response / camera API contract and an integrated destination-camera frontend, preserving all road and weather behavior;
-- offline and bounded live verification followed by human browser acceptance.
+- verified OpenRouter multimodal model and provider capabilities, with actual image payload and structured-output contract evidence;
+- a small, controlled visual-observation schema and task prompt that distinguish visible facts, tentative interpretations and unknowns;
+- exactly **one logical model assessment per explicit journey-analysis operation for the selected intersection**, containing all eligible current directional frames from that intersection; no per-direction model calls;
+- strict grounding in the supplied pixels: no invented conditions, unsupported traffic severity, route-specific conclusions or extrapolation beyond what is visible;
+- deterministic Pydantic validation, provenance, status and failure/degraded states;
+- bounded model request time, input size, output size, upstream attempts and cost, plus intentional handling of repeat Analyze Journey actions;
+- reuse of the accepted latest-frame camera cache, with no historical image archive or persisted image prompt payloads;
+- a narrow backend observation/status contract for downstream evidence consumers, without a separate camera-AI frontend card;
+- offline regression, small permitted live validation, human review of source frames against normalized telemetry, and acceptance of the internal handoff contract.
 
-Phase 7 retrieves and presents source imagery. **It does not classify rain, traffic, road wetness, visibility or any other conditions using AI or heuristics.** Phase 8 will perform a single multi-view vision assessment of the selected intersection using OpenRouter. Phase 7 must preserve the image references and timestamps needed by that later work without implementing it.
+**Phase 8 extracts internal camera telemetry only.** It must not display raw observations or a new AI interpretation card. Phase 9 later organizes relevance/timeline evidence; Phase 10 creates a single prominent, user-facing AI Journey Briefing at the top of Journey Intelligence. That briefing should be the primary summary, with road events, weather, images, and the map as supporting evidence. Neither downstream phase is authorized here.
 
 ### Locked product boundaries
 
-- **Drive mode only.** City of Vancouver destination validation and explicit route selection remain authoritative.
-- **One selected camera intersection per journey**, chosen for proximity and image usability; collect multiple directional views only from that intersection.
-- **Destination context, not route-wide camera coverage.** No automatic corridor-wide image collection or browsing numerous intersections for analysis.
-- **Current frames only.** Cache images briefly and overwrite/discard them; do not create an archive.
-- **Evidence and licensing first.** Public accessibility does not itself grant redistribution, proxying or third-party AI-processing rights.
+- **Driving only**, City of Vancouver canonical destination, selected route and manual **Analyze Journey** remain authoritative.
+- **One selected camera intersection** per analyzed destination. Use the already-selected intersection, not a second nearest-camera search invented by the AI layer. Do not analyze nearby map-marker cameras.
+- Use **all eligible fresh directional views** from that selected intersection in **one logical OpenRouter request**. Support variable view counts (including one and five); preserve each original source direction label. Do not stitch images into misleading panoramas.
+- Observation describes what is **visually discernible near the camera intersection**, not the exact destination or the entire driving route.
+- **No automated weather verification, traffic speeds, crash detection, road closure declaration, pedestrian identification or license-plate interpretation.** No inference of precipitation or congestion merely because a scene looks dark/wet/occupied.
+- **No archive or time series** of submitted images, prompts containing image bytes, or raw model responses. No background inference, polling or automatic repeat calls.
+- **No user-facing camera AI observations subsection.** The accepted Phase 7 directional gallery remains unchanged. Only the later journey briefing will synthesize camera evidence for users; no raw observation JSON or independent vision narrative is presented.
+- Keep camera-image licensing uncertainty accurately documented. The user has accepted a private, noncommercial hobby MVP development posture but this is **not legal permission**. Phase 8A separately reviews the real transfer of image bytes to OpenRouter and its downstream provider before any live-image submission; use synthetic or explicitly licensed test images until the human authorizes that transfer.
 
 ---
 
 ## 2. Execution Scope and Authorization
 
-Phase 7 comprises four **separately authorized** Codex assignments. Completion of an assignment does not authorize the next. The human developer reviews results, authorizes the next bounded prompt and handles Git staging, commit and push.
+Phase 8 consists of four separately authorized assignments. Completing one does not authorize the next. Human acceptance and Git operations remain separate, manual checkpoints.
 
-### Assignment 7A — Camera Source and Rights Validation
+### Assignment 8A — Vision Contract, Model and Provider Validation
 
-- Inspect current official City of Vancouver camera dataset(s), their records, source pages, coordinates, unique IDs and observed direction/view conventions.
-- Verify an actual, bounded sample of public intersection webpages and image requests; identify working directional-view discovery paths, redirects, content types and common failure cases.
-- Review the approved licensing document and applicable official source terms. Distinguish **metadata licence** from **webpage/image usage rights**; record attribution and any unresolved restrictions on displaying, caching, proxying and later AI processing.
-- Establish a realistic inventory/coverage estimate, representative edge cases and a practical catalogue-refresh approach.
-- Save small sanitized metadata/HTML examples, documented source evidence and proposed parser fixtures where allowed. Do not bulk-download camera images merely to create test fixtures.
-- Recommend a minimal, testable contract for enrichment and ephemeral retrieval, clearly flagging any rights or technical blockers.
+- Inspect actual Phase 7 current-frame, opaque-reference, cache, API and frontend contracts and any existing OpenRouter/client infrastructure.
+- Verify current OpenRouter image-input format, supported image counts/sizes, model endpoint vision capability, JSON-schema or JSON-mode support, routing/retention settings, error shapes, pricing and billing limits. **Do not hardcode a model based only on historical documentation.**
+- Compare a small number of plausible currently available models for **multi-image vision, structured output, reliability, cost and latency**. Recommend **one primary model** and at most one fallback for human selection; do not automatically invoke multiple models.
+- Define a minimal `CameraObservation` schema, prompt contract, clear field semantics, allowed unknown values, per-view evidence references and refusal/insufficient-visibility behavior.
+- Establish the input eligibility policy (fresh vs stale, image dimensions, maximum views/bytes, image ordering and labels) and request budget policy.
+- Inspect OpenRouter/provider data-handling and third-party image-sharing implications; preserve existing City rights findings and distinguish private development from third-party transmission. Record the human decision needed before sending real City frames.
+- Make at most a **small, explicitly authorized and budgeted** contract probe using synthetic/developer-owned test images; no real Vancouver camera frames are transmitted during 8A unless the human separately authorizes it after review.
+- Produce source evidence, tiny nonsecret fixtures, draft schema/prompt and a recommendation for 8B. No production vision adapter or UI.
 
-**Boundary:** Investigation, fixtures and evidence notes only. No production catalogue builder, image API or UI. Phase 7B requires explicit human approval of discovery rules and a suitable MVP image-use posture. Do not assume that city open-data metadata licensing automatically covers the camera JPEGs.
+**8A exit gate:** Human approves the actual primary model/provider route, vision/schema contract, explicit upstream call budget and real-frame transfer posture (or a synthetic-only implementation path). If unsupported, report a focused alternative without guessing.
 
-### Assignment 7B — Enriched Camera Catalogue
+### Assignment 8B — Bounded OpenRouter Vision Adapter
 
-- Build a **standalone, rerunnable enrichment script/service function** using verified official metadata and observed camera webpage markup.
-- Retain stable intersection ID/name/location/page URL plus discovered directional view IDs, directions when reliably identified and validated image URLs.
-- Detect, validate and record missing/duplicate/broken views without guessing filenames or directions.
-- Persist a schema-validated enriched catalogue with an initial approximately 24-hour refresh TTL, atomic replacement and last-good fallback.
-- Keep enrichment bounded: request timeouts, concurrency ceilings, retry limits, response-size limits and source-friendly pacing; do not trigger a full-city scrape per journey.
-- Provide deterministic parser, malformed-page, partial-catalogue, and cache/fallback tests; perform only a bounded live sanity check.
+- Implement a narrow backend OpenRouter client/adapter for **one request containing multiple labeled images**. Reuse existing HTTP/config conventions and the 8A-accepted schema and prompt.
+- Source frames only from the validated current-frame cache/selection contract; reject arbitrary client image URLs, user-supplied local files or off-host imagery.
+- Validate image and metadata eligibility before invoking the model; skip or mark stale/invalid frames according to the 8A policy. Never silently substitute views from another intersection.
+- Enforce backend-held API key, selected model/provider settings, fixed endpoint, timeouts, response/output limits, budget/attempt limits and safe error handling. Avoid uncontrolled retries or fallback cascades; billable attempts must count even when transport/parse fails.
+- Parse the provider response and validate all `CameraObservation` fields with typed Pydantic models and cross-checks for source view IDs, unsupported categories and impossible references.
+- Return typed available/partial/insufficient-evidence/unavailable/error outcomes, retaining accurate model, intersection, frame-retrieval and inference timestamps.
+- Prevent duplicate simultaneous inferences for the same requested snapshot where feasible. Do **not** build a historical observation database or persist raw image-filled prompts/responses.
+- Use mocked HTTP and synthetic/test-owned images for routine tests. If one bounded real-frame live call was separately authorized after 8A, test once within the recorded budget.
 
-**Boundary:** Catalogue production and persistence only. No destination selection, live per-journey image download, journey API integration, UI, or AI interpretation. A catalogue entry describes *discovered candidate views*, not a guarantee that its current JPEGs remain usable.
+**8B boundary:** Adapter and offline tests only, with a narrowly scoped CLI/test harness if helpful. No journey API or frontend integration, no Phase 9 synthesis.
 
-### Assignment 7C — Destination Selection, Image Retrieval and Backend Contract
+### Assignment 8C — Journey-Triggered Vision Orchestration and API
 
-- Select candidate intersections by geodesic/projected distance to the canonical Vancouver destination, using the validated enriched catalogue.
-- Test actual image usability in nearest-first order with a strict candidate and request budget. When a nearer intersection has no usable view, try the next candidate.
-- Select **the first intersection with at least one currently usable view**, then retrieve all usable directional images from **that same intersection**. Do not combine views from different intersections.
-- Verify responses as actual bounded image payloads; reject nonimages, oversized payloads, invalid/unsafe URLs, failed redirects and corrupt images.
-- Store only latest frames in an ephemeral/cache-only location, overwriting prior frames; expose validated backend image references with source/view and fetch times. No archive or per-refresh version history.
-- Supply a small, typed backend destination-camera result and backend delivery endpoints, or a narrowly additive analysis contract, consistent with accepted routing/API patterns.
-- Preserve independent cache/catalogue/image states and honest no-camera, degraded-view and stale/unavailable behavior.
-- Add mocked/fixture-based selection, retrieval, security, cache and API tests.
+- Connect the accepted Phase 7 selected-intersection current frames to the 8B adapter through a **narrow backend operation** tied to the canonical destination and explicit journey analysis lifecycle.
+- Prefer a **separate typed camera-observation API** from `POST /api/trips/analyze` so road/weather results and the image gallery are not blocked by model latency. Inspect existing route and camera contracts before finalizing endpoint and request schema.
+- Prevent user-provided arbitrary image references or unrelated intersection IDs from inducing model processing. Define a short-lived, server-validated selection/snapshot identity or equally narrow correlation mechanism appropriate to the existing code.
+- Require one logical model call for all eligible views from the **one selected intersection**, not a call per frame; handle zero qualifying views without calling OpenRouter.
+- Respect request cancellation and stale-response identities; return source-specific statuses and metadata, not raw frames or unvalidated model prose.
+- Bound repeated clicks and concurrency: no implicit inference on page load, destination typing, marker hover/click or camera image GET requests. Any inference cache, if needed, is short-lived and bounded by frame identities and model/prompt/schema versions; no historical accumulation.
+- Preserve existing camera image delivery, nearby metadata markers, Road Ahead/DriveBC findings, weather and selected-route behavior.
+- Add focused API/transport/duplicate-request tests and full backend regression. Perform a small authorized live probe only if the 8A transfer gate permits it.
 
-**Boundary:** Backend only. No frontend or vision inference. If incorporating camera metadata into `POST /api/trips/analyze`, do so only additively; do not change selected-route identity, road/weather fields or existing source semantics. Do not fetch images on every page render without an explicit journey/user-driven request.
+**8C boundary:** Backend orchestration/API plus only the minimum manual-journey request wiring needed to initiate/retain an internal result safely; no camera-AI presentation or general journey briefing. Do not begin 8D.
 
-### Assignment 7D — Camera UI, Integration and Human Acceptance
+### Assignment 8D — Internal Vision Pipeline Integration and Human Acceptance
 
-- Integrate the camera result into the existing manually initiated Analyze Journey experience, or a clearly linked user-driven destination-camera load consistent with the approved backend contract.
-- Display the chosen intersection, approximate destination distance, all usable directional views, source attribution, image retrieval time and any partial/stale status.
-- Preserve the dark interface and ~65/35 desktop map/panel layout; place imagery naturally alongside destination weather rather than creating a new telemetry dashboard.
-- Keep images tied to the current journey request identity. Clear old camera content when origin, destination or selected route changes; ignore late responses.
-- Handle no usable intersection, missing individual views, stale catalogue, interrupted retrieval, and disabled/unavailable image use with accurate UI text.
-- Add focused frontend tests and backend regression tests; verify a bounded live Vancouver journey and conduct human visual acceptance.
+- Complete and verify the end-to-end **CameraObservation telemetry pipeline**. Eligible directional camera frames from the already-selected intersection produce one schema-validated, provenance-bearing result from the approved OpenRouter adapter.
+- Treat `CameraObservation` as **internal machine-readable evidence** for Phases 9–10, not a standalone user-facing report. Do not create a Camera AI Observation card, expose raw JSON in Journey Intelligence, or add a new map layer/dashboard.
+- Preserve backend-controlled intersection/view identities, original direction labels, source attribution, frame retrieval and verified source-capture times if available, observation generation time, selected model/provider, coverage, and status. Never trust the model to invent provenance.
+- Support honest **available**, **partial**, **insufficient evidence**, **stale imagery**, **unavailable** and **error** outcomes with explicit unknown/not-observable values. Structural validation is required but does not establish the truth of image claims.
+- Make a small, documented, typed and validated result contract usable by a later evidence-assembly stage. Do not implement Phase 9 relevance reconciliation or Phase 10 briefing.
+- Preserve the Phase 7 Destination Cameras gallery unchanged. Users may inspect original images, but they do not see standalone AI camera interpretation or telemetry JSON.
+- Tie inference to **at most one logical assessment per explicit manual Analyze Journey cycle**, within approved cost and request constraints. Do not call OpenRouter on render, image GET/reload, page mount, marker interactions, or unrelated UI changes.
+- Guard against obsolete results after origin, destination, route-selection, or journey-analysis changes. Slow/failed/invalid vision outcomes must not delay or replace camera images, Road Ahead, DriveBC, weather, or routing results. Already-started provider requests may be billable even when the browser abandons the result.
+- Reject malformed, unsupported or unverifiable model output rather than passing it to downstream reasoning. Use a typed unavailable/degraded state instead of invented fallback evidence.
+- Test model output validation, API contract, current-frame/selection binding, duplicate-call and budget controls, stale results, partial/failed provider outcomes, and independent road/weather/gallery behavior. Run relevant backend/frontend suites, Ruff, TypeScript/build, and repository hygiene checks according to changed scope.
+- Conduct only previously authorized and budgeted real-provider assessments. Human acceptance must include comparing representative structured observations to their corresponding source frames and examining unknown/insufficient-evidence handling. Synthetic-only verification must not be reported as actual City-image inference.
+- Record the schema/version, model/provider route, request/cost evidence, verification results, nonblocking limitations, and internal handoff details in `docs/integration-notes/` and `PROJECT_STATE.md`.
 
-**Boundary:** No OpenRouter calls, vision/weather-from-image classification, historical imagery, traffic estimation, multi-intersection analysis, or Phase 8+ implementation.
+**8D boundary:** No camera AI frontend card, raw JSON UI, Phase 9 camera/weather/road reconciliation, Phase 10 AI Journey Briefing, route scoring, rerouting, image archival, or inference on nearby map-marker intersections.
 
-**Assignment rule:** Each assignment is a bounded reviewed unit. Do not add speculative architectures merely because work is phased. Codex must stop after the authorized assignment and leave all Git history operations to the human developer.
-
-## Assignment 7E — Nearby Camera Map Markers and Road Ahead Selection Reset
-
-**Assignment status:** Authorized for implementation after human review of Assignment 7D. This assignment is a limited Phase 7 acceptance amendment.
-
-### Objective
-
-Complete two focused usability improvements before closing Phase 7:
-
-1. Fix the existing Road Ahead map-highlight state so that selecting or resetting a journey cannot leave obsolete road segments highlighted.
-2. Display up to four nearby Vancouver camera-intersection markers on the map after the user manually runs Analyze Journey.
-
-### Scope
-
-**Road Ahead state cleanup**
-
-- Clear selected Road Ahead event and associated highlighted route geometry whenever the origin, canonical destination, route candidates, selected route, or journey-analysis context is invalidated.
-- Ensure stale asynchronous results cannot restore an obsolete selection.
-- Preserve normal route styling and other independent map layers.
-- Add focused regression coverage.
-
-**Nearby camera map markers**
-
-- Reuse the accepted 7B normalized camera catalogue and its existing 24-hour cache.
-- Return up to four nearest camera intersections to the canonical City of Vancouver destination, including the selected gallery intersection when it is within the approved nearby search radius.
-- Use the established 2 km camera search radius unless the accepted application architecture requires a stricter bound.
-- Show markers only after an explicit Analyze Journey action.
-- Distinguish the selected gallery intersection from other nearby cameras through a modest visual treatment.
-- Clicking a marker opens a small map popup containing the official intersection name and a link to its official City camera webpage.
-- Additional markers are metadata-only: do not retrieve, cache, decode, or display their camera images.
-- Marker presence must not imply confirmed image availability.
-- Clear markers on journey-context invalidation and protect against stale responses.
-- Preserve the existing single-intersection multi-view Destination Cameras gallery without an additional camera list.
-
-### Design boundaries
-
-- Maximum four map markers per analyzed destination.
-- No citywide camera-marker layer, clustering, image previews, new source ingestion, automatic background polling, or extra frontend filters.
-- No changes to accepted weather, routing, Road Ahead/DriveBC source ingestion, or Phase 8 AI vision behavior.
-- Prefer a narrow, catalogue-backed metadata API or a backward-compatible response extension, whichever best preserves accepted backend contracts.
-- Use established map-marker, popup, layering, styling, and source-attribution conventions.
-- Preserve existing manual Analyze Journey behavior.
-
-### Verification and human acceptance
-
-Require focused backend/frontend tests as applicable, complete relevant regression checks, frontend TypeScript validation and production build, and repository hygiene checks.
-
-Human acceptance requires:
-
-1. Road Ahead highlighting resets correctly after origin, destination, or selected-route changes.
-2. A normal analyzed journey displays no more than four nearby camera markers.
-3. Marker popups show correct intersection names and working official-page links.
-4. The gallery-selected camera is visually distinguishable when represented on the map.
-5. Changing or clearing the journey removes obsolete camera markers and Road Ahead highlights.
-6. Existing destination camera gallery, weather, road findings, and route interactions remain functional.
-7. No unnecessary image retrieval or automated polling occurs for additional markers.
-
-Assignment 7E is not accepted merely because automated tests pass. Human visual verification is required before Phase 7 is marked complete.
-
-Do not begin Phase 8 during 7E.
+**Assignment rule:** Codex receives authority for only the currently approved assignment; stop and report before starting another. No Git staging, commits, pushes, merges, rebases, tags or history operations.
 
 ---
 
 ## 3. Established Accepted Baseline
 
-### 3.1 Driving journey and application
+### 3.1 Core application and road evidence
 
-- FastAPI; React/Vite/TypeScript; MapLibre/MapTiler dark map; existing API proxy and desktop shell.
-- Canonical geocoded origin/destination, destination **inside City of Vancouver**, ORS driving alternatives and **explicit selected-route choice**.
-- Manual `POST /api/trips/analyze` with exact selected route and original GeoJSON geometry; cancellation/request identity and stale-result invalidation.
-- Backend-held credentials, pytest/Ruff, frontend tests and TypeScript/production build.
-- No Transit/GTFS/other travel modes, automatic rerouting or speculative ETA changes.
+- FastAPI backend; React/Vite/TypeScript; MapLibre/MapTiler dark map; Vite `/api` proxy; backend-only credentials.
+- Canonical origin/destination and City of Vancouver destination validation; ORS driving candidate routes with explicit selection.
+- User-driven `POST /api/trips/analyze` with original route geometry and stale-request invalidation.
+- Road Ahead municipal construction/closure route findings with existing map/panel interactions and caching.
+- DriveBC Open511 regional events, separately mapped and route-relevant findings, with conservative source-status handling.
 
-### 3.2 Phase 4 municipal road evidence
+### 3.2 Destination weather (Phase 6)
 
-- Road Ahead closures and construction, ~24-hour validated source caching and selective detail enrichment.
-- Conservative `CityEvent` models, metre-based route matching, preserved direct intersections, separately bounded nearby events, source statuses and existing map/panel rendering.
+- OpenWeather One Call 4.0 current and 15-minute forecasts with 600-second caches and an existing persistent **100 upstream attempts per UTC day** application budget; provider account limit separately set to 500/day.
+- ECCC GeoMet/SWOB actual station observations with 600-second cache and conservative station-level provenance.
+- `destination_weather` remains independently attributed; AI camera observations are **not** a weather forecast or measured station observation.
 
-### 3.3 Phase 5 regional road evidence
+### 3.3 Cameras (Phase 7A–7E)
 
-- DriveBC Open511 active regional events, bounded pagination, normalized geometry, validated ~600-second cache and stale fallback.
-- Separate route-relevant `drivebc_findings` and broad map-visible `regional_events`, with source attribution, conservative relevance/direction/schedule logic and no cross-source geometry deduplication.
+- `backend/app/vancouver_cameras.py`: validated official catalogue and directional URL enrichment; approximately 24-hour schema-validated cache, last-good fallback. Live Phase 7B observation: 219 intersections, 844 discovered directional URLs; source counts are not immutable product constants.
+- `backend/app/camera_images.py`: canonical destination selection, nearest usable intersection, complete available directions from that intersection; initial 2 km / 12 candidate / 24 request bounds.
+- Accepted 7C image pipeline: source-host restrictions, Pillow validation, latest-frame-only ephemeral cache, **300-second default freshness TTL**, maximum **900-second stale age**, no image history or background polling.
+- `POST /api/cameras/nearest` and opaque `GET /api/cameras/images/{reference}` for destination selection and validated current-frame delivery.
+- Phase 7D gallery integrated with explicit Analyze Journey and request identity; one intersection with its variable number of directional views.
+- Phase 7E `POST /api/cameras/nearby` metadata-only, up to four nearby marker locations; marker click opens official City webpage; marker images are **not** collected for inference.
+- Bottom-left map legend removed, MapLibre attribution compact. Accepted MVP limitation: selected Road Ahead line emphasis may persist across input change/Find Routes but clears on Analyze Journey. Do not reopen as part of Phase 8.
+- Manual camera failure-isolation case and exhaustive narrow-screen review were deferred; existing automated coverage exists.
 
-### 3.4 Phase 6 destination weather evidence
+### 3.4 Existing contracts must remain authoritative
 
-- Accepted `backend/app/openweather.py` One Call 4.0 current plus 15-minute forecast; actual three-hour horizon, independent 600-second product caches and a persistent local 100-upstream-attempts-per-UTC-day guard. Human-set OpenWeather account limit: 500 calls/day.
-- Accepted `backend/app/eccc_swob.py`: regionally fetched ECCC GeoMet station observations, per-station grouping, selected nearby useful measurements, 600-second cache, source time/freshness and coverage limitations.
-- `destination_weather` is additive to the journey response and UI. OpenWeather current/forecast and SWOB measurements remain separately attributed; a station reading is not exact destination weather.
-- Phase 6 passed backend/frontend regressions, bounded live journey verification and **all eight human browser acceptance checks** on 2026-10-11.
-
-### 3.5 Accepted contracts are authoritative
-
-Inspect repository code before extending `JourneyAnalysis`, weather/source statuses, frontend response normalization, cache paths or the request lifecycle. Do not rename or break existing road and weather fields. A camera result is **not** a `CityEvent` or a measured SWOB observation.
-
----
-
-## 4. Camera Evidence, Rights and Provenance
-
-### 4.1 Source and discovery evidence
-
-The source of truth is the **official Vancouver camera metadata and currently observed camera webpages**. Camera image URLs must be discovered and verified, not inferred from station names, view numbers, or assumed filename patterns.
-
-Preserve, when available:
-
-- authoritative source record ID and intersection name;
-- WGS84 coordinates and geometry accuracy/limitations;
-- official camera webpage URL;
-- each discovered view's stable identifier and reliable directional label;
-- image endpoint/source reference and discovery/verification time;
-- image retrieval timestamp, bytes/content type and availability status;
-- source attribution and any limitations.
-
-A webpage's compass label may describe the viewing direction or traffic approach; do not assert which without verified semantics.
-
-### 4.2 Licensing decision gate
-
-`docs/data-licensing-and-commercialization.md` treats Vancouver camera image handling more cautiously than the underlying public metadata. It accepts only an **ephemeral/cache-only MVP posture**, but explicitly warns this does not itself establish permission for image proxying, public display, redistribution or transfer to an external model provider.
-
-Assignment 7A must independently examine current applicable terms and record:
-
-- permissions and attribution for public catalogue metadata;
-- what is and is not established for individual image/webpage content;
-- constraints on automated retrieval, display through RouteLens and short-lived cache;
-- any distinct restrictions on **Phase 8 third-party vision processing**.
-
-Do not claim legal certainty from accessibility. If the intended use is plainly prohibited, stop and propose a permitted alternative. If rights remain unclear, present a bounded **local demonstration posture** and limitations for human review before 7B; do not silently characterize it as cleared for production/commercial use.
-
-### 4.3 Ephemeral-only images
-
-- Latest current frames only, in Git-ignored runtime cache.
-- Overwrite earlier image bytes for each intersection/view rather than saving timestamped history.
-- Bounded TTL and cleanup for obsolete images; choose values from observed image update behavior in 7C.
-- No separate permanent thumbnail set, training corpus, persistent image collection or time-series.
-- Raw images may later be provided to one explicitly authorized vision call in Phase 8, subject to the separate rights/security decision; Phase 7 does not make that call.
+Before changing any camera-frame metadata, response shape, cache identity, frontend request lifecycle, image headers, or OpenRouter configuration, **inspect current code** and record any discrepancy with this summary. Do not duplicate already working source adapters, caches or typed models. Preserve the accepted Phase 7 frontend and camera presentation.
 
 ---
 
-## 5. Assignment 7A — Evidence and Catalogue Design Gate
+## 4. Vision Evidence Contract and Observation Semantics
 
-Research before writing a scraper or issuing extensive requests. Capture the **actual observed** catalogue schema and webpage layout, not a guessed URL algorithm.
+### 4.1 Scope of interpretation
 
-A bounded representative sample should include, where available:
+The single model request receives **the selected intersection's eligible directional camera frames** and their verified labels. The task is to describe observable scene conditions relevant to a traveler near that intersection, without pretending to know anything outside those pixels.
 
-- one conventional intersection with several working directional views;
-- a record with fewer, missing or broken views;
-- representative naming, coordinate and URL variations;
-- transient errors/redirects that affect retrieval;
-- observed image format, dimensions/size and update cadence indicators.
+A useful MVP may describe, **only when visibly supported**:
 
-Document the official dataset endpoint/query shape, record counts or pagination, link ownership, observed directional-view extraction selectors, and realistic total enrichment cost. Avoid scraping the full catalogue merely to answer feasibility questions.
+- general scene visibility (e.g., clear view, obscured image, darkness/glare limiting assessment);
+- apparent road-surface appearance (e.g., visibly reflective/damp-looking, snow-covered, or indeterminate), without asserting that rain is occurring;
+- visible precipitation **only if actually visible**, with an unknown option for ambiguous rain/snow;
+- qualitative visible vehicle presence or queueing **only within the image frame**, without inventing road-wide congestion or delay;
+- obvious temporary obstructions **visible in the frame**, without converting them into an official closure/event;
+- camera usability limits, including missing directions, stale frames and poor visibility.
 
-**7A deliverables:** source evidence note, limited nonsecret examples/fixtures as permitted, verified discovery approach, provisional cache policy, rights assessment and a recommendation for 7B scope. Report unresolved uncertainty rather than inventing completion. No production code.
+Do not require every category to be populated. Unknown/insufficient evidence is a valid successful result.
 
----
+### 4.2 Minimal proposed `CameraObservation` schema (8A finalizes)
 
-## 6. Assignment 7B — Catalogue Enrichment Contract
+Use a bounded typed structure, conceptually:
 
-### 6.1 Catalogue entry
+```text
+CameraObservation
+  status                 available | partial | insufficient_evidence | unavailable | error
+  intersection_id
+  intersection_name
+  observed_views[]       source view ID, original direction label, included/excluded reason
+  generated_at
+  frame_retrieved_at[]   per-view timestamp; source capture time only if source verified
+  model                  selected OpenRouter model and endpoint/provider info as available
+  summary                short, conservative visual description, nullable
+  observations[]         category, value/assessment, evidence_view_ids[], uncertainty label
+  limitations[]          bounded, human-readable uncertainty and coverage limits
+  diagnostics            safe error/status codes; optional measured latency/token/cost metadata
+```
 
-Use a small typed model with source-scoped identity, location, page URL, last discovery/check time and a bounded set of verified candidate view records. Preserve verified native view IDs/directions; nullable labels remain unknown.
+These are **internal contract design inputs**, not an instruction to add speculative fields or UI presentation fields. Freeze the exact Pydantic/JSON-schema shape in 8A after checking the chosen model/provider's structured-output support. Keep backend-proven metadata distinct from the model-produced visual assessment.
 
-### 6.2 Discovery process
+### 4.3 Validation and grounding
 
-- Acquire an authoritative, complete-enough official metadata snapshot with source-aware pagination and schema checks.
-- Visit camera pages **only through controlled official URLs**, with bounded concurrency and user-agent/terms compliance.
-- Extract actual image candidates from verified markup; support observed variability and graceful per-page failures.
-- Validate URL destinations/protocol and required content shape. Avoid trusting arbitrary script or user-provided URLs.
-- Record unavailable/failed enrichment per intersection without treating a partial catalogue as fully populated.
-- Do not generate dozens of speculative URL guesses per record.
-
-### 6.3 Catalogue cache
-
-Choose a documented default around **24 hours**, with source/version/query identity, complete replacement validation, atomic activation, last-good stale fallback and clear partial/failed-refresh diagnostics. Refresh outside ordinary per-journey image lookups where feasible, without introducing an unnecessary polling service. Make initial bootstrapping/re-enrichment an explicit, rerunnable operation.
-
-Avoid requiring SQLite/SQLAlchemy merely to store one locally validated catalogue JSON snapshot; introduce persistence infrastructure only if there is a concrete need.
-
----
-
-## 7. Assignment 7C — Destination Selection and Retrieval
-
-### 7.1 Candidate ordering and fallback
-
-Using canonical Vancouver destination coordinates:
-
-1. Load the current or valid stale enriched catalogue.
-2. Exclude invalid locations and entries with no discoverable views.
-3. Sort candidate intersections by actual metre-distance from destination with stable ID tie-breaking.
-4. Test the nearest intersection's verified view URLs within a strict candidate count/time/network budget.
-5. If **none** is usable, proceed to the next-nearest candidate.
-6. Select the **first** intersection that has at least one usable current image.
-7. Retrieve all other usable views from **that intersection alone**.
-
-Do not pick a more distant intersection just because it has more available views once the nearest usable intersection meets the minimum one-view rule. No multi-intersection stitching or comparison.
-
-### 7.2 Image validation and security
-
-Only accept validated HTTP(S) targets from the approved discovery trust boundary. Enforce host allowlists based on **real** observed official image-serving hosts (including documented CDN hosts if needed). Check every redirect target. Block loopback, private/link-local, metadata-service and otherwise unsafe destinations; never proxy an arbitrary caller-supplied URL.
-
-Bound timeouts, redirects, payload bytes, supported types, image dimensions and requests per journey. Confirm image magic/decoder compatibility rather than trusting a `.jpg` extension or response header alone. Never execute webpage scripts or render untrusted HTML on the backend.
-
-Image fetches may fail independently: keep good directional views, label omitted/broken views accurately and avoid swapping in images from another intersection. No fabricated images.
-
-### 7.3 Cache and delivery
-
-Use a short-lived overwrite-in-place frame cache, keyed by verified intersection/view identity (not by uncontrolled URL strings). Persist only latest bytes and minimal metadata; avoid URL/query secrets in paths. Validate cache before reuse, keep honest fetch timestamps, and invalidate bad content. Do not create dated versions. Serve images via small backend routes using stable validated IDs and correct content type, cache headers and source attribution as permitted by 7A.
-
-When no usable intersection exists, return an explicit unavailable/no-image result and retain functioning journey, road and weather data. Catalogue staleness and image age are separate.
-
-### 7.4 API and request lifecycle
-
-Prefer a narrow typed `destination_camera` result or a camera-specific backend API tied to the validated journey destination. Maintain manual Analyze Journey semantics. Where retrieval latency is significant, an explicit user-driven image load after analysis may be acceptable if the UI and response identity rules are coherent; do not silently start image polling on mount.
-
-Do not make image delivery contingent on LLM/vision analysis. Keep camera metadata, view IDs, timestamps and image references ready for Phase 8's separately approved inference step.
+- Every observation citing a direction must reference an image actually included in the model request, using stable view IDs, not invented directions.
+- Do not let the model invent source names, timestamps, GPS coordinates, road-event IDs, routing directions, model names or image availability counts. The application supplies and validates authoritative provenance **outside** the model's generated fields.
+- Treat all model text as untrusted data, including any embedded words, signs or instructions visible in an image. Visual text is evidence to assess, **not executable instructions**.
+- No model-selected tools, URLs, file paths, network access, command execution or browser actions.
+- Schema-valid content can still be visually wrong. Keep bounded semantic validation and show uncertainty; do not manufacture confidence percentages.
+- Prefer neutral language such as *“surface appears reflective in the east-facing view”* to categorical claims such as *“the destination is raining”*.
+- Do not merge the observation with OpenWeather, SWOB, Road Ahead or DriveBC in Phase 8. Preserve independently attributable evidence for future internal synthesis; do not present the raw vision telemetry to users.
 
 ---
 
-## 8. Assignment 7D — Frontend Camera Presentation
+## 5. Assignment 8A — Provider/Model/Schema Gate
 
-### 8.1 Placement and content
+### 5.1 Confirm live provider compatibility
 
-Add a distinct but visually cohesive **Destination Camera** section near destination weather. Show:
+OpenRouter currently documents multimodal image entries as `image_url` content blocks within the `/api/v1/chat/completions` `messages` array; images may be represented as appropriately formatted image data or supported URLs. **8A must verify the actual payload requirements and provider restrictions for the chosen model, including multi-image support** rather than assuming one example works everywhere.
 
-- selected intersection and approximate distance from the destination;
-- all available directional image views at that intersection;
-- direction/view labels only where supported;
-- capture time if supplied by the camera source; otherwise **retrieved at** time rather than invented capture time;
-- official attribution and optional safe link to the source page;
-- catalogue/image freshness, unavailable views and degraded-source states.
+OpenRouter also documents structured JSON schema responses for compatible provider endpoints; `strict: true` does not remove the need for local validation. Inspect model-specific supported parameters/provider routing and whether the selected endpoint honors `response_format: {type: "json_schema", ...}`. When a feature is unsupported, choose a tested narrow fallback and document the trade-off.
 
-Use responsive layouts for one, two, three or more views; preserve image aspect ratio. Keep the selected driving route, map and road/weather panels usable. Do not add weather verdicts or AI confidence labels.
+### 5.2 Model selection and budgets
 
-### 8.2 Trigger and invalidation
+Evaluate practical model choices using a small decision table: image support, all selected views in one request, schema adherence, input cost, output cost, latency, provider policies and availability. Recommend one default, not a model zoo.
 
-Camera loading must use an explicit, valid canonical destination and belong to the current manual journey-analysis lifecycle. Changing selected route or journey location invalidates old camera results, and late responses cannot repopulate them. Do not fetch the full camera catalogue from the browser or expose unsafe upstream URLs. No automatic image refresh loop or history slider.
+Define before 8B:
 
-### 8.3 Degradation
+- provider/model routing and any supported requirement-filtering flags;
+- backend API key/config names and nonsecret `.env.example` entries;
+- maximum frames per assessment (must support the accepted current five-view source example if the chosen model permits);
+- maximum total image bytes/pixels and whether downscaling is needed, without storing derivative archives;
+- output/token limit sufficient for the schema;
+- network timeout, retry policy and maximum billable attempts per requested analysis;
+- small, durable application-level upstream request budget and optional configurable monetary cap, following accepted OpenWeather guard principles where appropriate but **not sharing the weather quota**;
+- whether cancelled/dropped requests count against budget (if initiated, they do);
+- precise status when key/model/provider is missing or budget exhausted.
 
-Communicate no nearby usable camera, a failed retrieval, partial directional availability, old cached imagery and stale catalogue as different conditions where the backend supports that distinction. Do not show old frames with a misleading “Live” label.
+Do **not** predeclare a numeric OpenRouter budget or hardcode a specific model before 8A research and the developer's approval.
+
+### 5.3 Privacy and data-transfer gate
+
+Review OpenRouter's current prompt logging controls, provider-specific data-retention/training rules, and supported privacy routing constraints (where available). Confirm that using data URLs/image bytes in a request transmits the frames to OpenRouter and potentially the selected downstream model provider.
+
+Retain the documented distinction: *private, noncommercial MVP development* is the user's scope choice, not a third-party transmission permission. Record the user's explicit go/no-go decision before the first real Vancouver frame is sent to OpenRouter. Continue synthetic/developer-owned image adapter work if this gate is not cleared; do not mislabel such tests as live City imagery.
+
+### 5.4 8A deliverables
+
+- `docs/integration-notes/camera-vision-phase-8a.md` or equivalent with dated official API/provider sources;
+- selected model/provider proposal, pricing/support evidence and test results;
+- locked `CameraObservation` field semantics plus JSON schema/prompt draft;
+- explicit image selection/freshness, source-label and request-budget recommendations;
+- rights/privacy status and human go/no-go decision needed for real-frame transfer;
+- tiny safe fixtures and concrete 8B implementation requirements.
+
+No production adapter or frontend code in 8A.
+
+---
+
+## 6. Assignment 8B — Vision Adapter Contract
+
+### 6.1 Request assembly
+
+- Server-only OpenRouter calls with a backend-held key; do not expose key or frame bytes to browser or logs.
+- Use the eligible current frames already validated and stored by Phase 7; encode/transmit in the provider-supported format.
+- One user message may contain introductory task instructions, per-view original direction labels and each corresponding image; **one request** processes all eligible images.
+- Do not submit camera marker locations, unrelated City frames or saved historical versions.
+- Reject zero frames, invalid/stale-only frames according to the 8A policy, oversized requests and mixed-intersection snapshots before upstream transmission.
+- No arbitrary model or prompt selection by the frontend.
+
+### 6.2 Response validation
+
+- Use a schema-mode response where verified supported; treat the provider output as untrusted JSON/text.
+- Enforce expected enums, length bounds, required/optional fields, allowed view IDs, absent-field handling and explicit uncertainty.
+- Validate that observation evidence refers only to included views. Do not silently fix fabricated observations into asserted facts.
+- Keep only minimal normalized observation and non-sensitive request metadata for the current journey; avoid disk-persisting full raw completions or data-URL payloads.
+- Provide typed states for rate-limit, timeout, no eligible images, unsupported provider features, invalid JSON/schema, safety refusal and other controlled failures.
+
+### 6.3 Reliability and request accounting
+
+- Limit upstream attempts per operation; avoid multiple models, cascading fallbacks or unlimited JSON repair loops.
+- Count provider-attempted calls against the approved cap even if HTTP fails or returns unusable output.
+- Protect concurrent requests from exceeding the budget, and avoid accidental duplicate bills caused by double-clicks.
+- When inference fails, keep the camera gallery functional and leave internal observation status explicitly unavailable; do not retry automatically merely to populate a report.
+
+---
+
+## 7. Assignment 8C — Camera Vision API and Journey Lifecycle
+
+### 7.1 Request identity and trust boundary
+
+The backend must know **which validated selected intersection/current snapshot** is being analyzed. Browser-supplied arbitrary IDs or image URLs are not sufficient authorization. Reuse a previously validated camera-selection operation or establish a narrowly bounded server-owned snapshot/correlation token, consistent with Phase 7 architecture and cache lifetimes.
+
+The 8C design must address:
+
+- the selected intersection remains the same as the gallery;
+- snapshot includes only current eligible views and source-labeled metadata;
+- image cache could expire or be pruned while a vision call is pending;
+- user changes destinations, selected routes or analysis identity;
+- a manual Analyze Journey action is repeated;
+- a vision call is already in flight or a recent identical current-frame observation exists.
+
+Do not introduce a database or distributed job queue to solve local MVP request coordination unless the existing architecture truly requires it.
+
+### 7.2 Typed API behavior
+
+Prefer a camera-specific endpoint, e.g. **conceptually** `POST /api/cameras/observe`, with a server-validated request contract decided after inspecting current camera APIs. Provide result status, normalized `CameraObservation` and provenance, not encoded image bytes or raw model responses.
+
+Keep the new AI call independent of weather/road analysis and camera gallery success. If the upstream is slow or unavailable, the user still sees the accepted journey results. The frontend may initiate the manually authorized request and maintain nonvisual status internally, but it must not display an independent camera-AI analysis card or raw telemetry.
+
+Make inability to analyze a missing/poorly visible scene an honest `insufficient_evidence` or unavailable state; do not turn it into a weather or traffic fact.
+
+### 7.3 Ephemeral result policy
+
+A short-lived in-process/result cache may be useful to avoid duplicate paid calls for the **same exact set of current frame identities, prompt/schema/model version and selected intersection**. Decide this in 8C based on existing cache semantics; do not use a long-lived observation archive or hand cached results downstream as current when frames have changed.
+
+Do not poll automatically to refresh an observation. Every external model call must originate from an authorized manual analysis lifecycle.
+
+---
+
+## 8. Assignment 8D — Internal Telemetry Handoff and Acceptance
+
+### 8.1 Internal result ownership and handoff
+
+Complete a documented, typed `CameraObservation` result that later phases can consume without parsing provider prose or assuming unavailable source context. Preserve one selected intersection, accepted directional-view IDs, backend-verified source labels, frame retrieval times, verified capture time only if the source supplies it, inference time, processing status, and model/provider attribution.
+
+The observation should be available through the narrow internal/API boundary established in 8C, with validation occurring **before** any downstream use. The shape must make unknown and nonobservable conditions distinguishable from negative findings. Keep authoritative IDs and timestamps out of model-generated trust boundaries; avoid new persistence or cross-phase orchestration services.
+
+**No new user-facing observations UI:** Retain the existing multi-view gallery, road-event panels, weather panel, map markers, and selected-route display. No raw JSON, individual camera-AI card, supplementary vision summary, or model-debug output appears in Journey Intelligence. The future **Phase 10 AI Journey Briefing** is the intended primary user-facing synthesis, positioned above the supporting evidence panels.
+
+### 8.2 Manual request lifecycle and isolation
+
+- Initiate at most one logical vision assessment from an explicit valid Analyze Journey cycle using the narrow 8C mechanism; the browser must never call OpenRouter directly.
+- Do not invoke inference on image `<img>` retrieval, route typing, component remount, camera-marker click, page load, or background refresh.
+- Abandon or invalidate old observation responses when journey location, selected route or analysis identity changes. Provider billing may still occur after local cancellation; enforce budgets at request initiation.
+- Missing/expired images, incomplete view coverage, failed model validation, absent credentials, provider denial or exhausted budget yield a typed status without blocking ordinary journey evidence.
+- Keep the final output available for future Phase 9/10 consumption **without** implementing those downstream stages yet.
+
+### 8.3 Verification and human acceptance
+
+Review the structured telemetry against corresponding test-owned images or expressly approved real current City frames. Exercise visible vs unknown scenarios, view-reference validation, provider/schema failures, selected-intersection identity, delayed responses, and budget enforcement. Verify the existing gallery and road/weather UI are unaffected; desktop/narrow regression checks are proportionate to actual UI changes. Report synthetic-only tests as synthetic-only, not as a live production vision demo.
 
 ---
 
 ## 9. Validation and Test Requirements
 
-Each assignment must report **Passed / Failed / Not run** for offline tests, live source access and browser verification independently.
+Each assignment reports **Passed / Failed / Not run**, and distinguishes synthetic fixtures, live source frames, real OpenRouter calls and mocked results.
 
-### 7A — source evidence
+### 8A — evidence/model gate
 
-- Official catalogue identity, schema and location fields supported by actual evidence.
-- Verified representative camera pages and real image host/path patterns.
-- Missing/broken/directional variants recorded.
-- Catalogue metadata licence and separate image rights/attribution evaluated; unresolved items explicit.
-- Representative limited fixtures sanitized, current and reasonably attributable.
-- No unapproved full-city image crawl or production code changes.
+- Official current OpenRouter multi-image input/schema docs and chosen provider endpoint checked.
+- One model and tested fallback strategy (if necessary) recommended with pricing/limits.
+- Synthetic image probe, if authorized, uses a bounded API count and nonsecret fixtures.
+- Locked schema semantics, prompt rules, image freshness/eligibility and budget presented for approval.
+- External image-transfer posture and privacy/retention assumptions documented accurately.
 
-### 7B — catalogue enrichment
+### 8B — adapter
 
-- Source snapshot completeness, deduplication and malformed-record handling.
-- Real markup extraction for multiple view counts and missing/changed layout.
-- No guessed filenames/direction semantics.
-- URL trust policy and bounded scraping/retries.
-- Partial page failures, schema drift, catalogue cache corruption and stale fallback tested.
-- Standalone rerun and output validation work without backend/UI coupling.
+- Multiple labeled images in one logical request; correct order and source-view mapping.
+- One, two, four and five image cases where supported, zero images and mixed-intersection rejection.
+- Valid JSON schema, missing/extra fields, malformed/truncated JSON, model refusal and unsupported parameter cases.
+- Hallucinated view IDs, impossible enum values, excessive free text and inconsistent source fields rejected or degraded safely.
+- Prompt-injection-like text embedded in fixture images cannot alter output contract or trigger actions.
+- Timeout, 401/403, 429, 5xx, transport failure, unexpected response shape, cost/attempt cap and concurrency behavior.
+- No raw image bytes or unredacted request payloads in persisted logs/fixtures.
 
-### 7C — image selection and backend
+### 8C — orchestration and API
 
-- Nearest usable intersection selected by real distance; unavailable nearest falls back correctly.
-- At least one image required; all usable views retained from **one** chosen intersection.
-- No mixing camera intersections.
-- Content type, magic/image decode, size, dimension, redirect and host restrictions tested.
-- SSRF/unsafe URL inputs blocked.
-- Ephemeral overwrite/no-history, fresh image reuse, damaged cache and source failure tested.
-- Honest returned source, image ages, status and API response validation.
-- Existing weather/road API tests pass; image endpoints cannot reveal filesystem paths or arbitrary URLs.
+- Only backend-validated selected intersection/current frames enter inference.
+- Camera images are not fetched by arbitrary caller-supplied URLs or from additional map markers.
+- Manual Analyze Journey triggers no more than the authorized logical inference; identical concurrent requests coalesce when implemented.
+- Expired, missing, corrupt and mixed frames handled without model calls or false results.
+- Repeated Analyze Journey and cancelled/outdated journeys do not show stale findings; budget accounting remains honest.
+- Typed unavailable/partial/insufficient-evidence results; road/weather/image gallery unmodified.
+- Full backend regression and Ruff pass.
 
-### 7D — integration/browser
+### 8D — internal telemetry/human acceptance
 
-- Camera section shows actual current image(s) and supported source labels.
-- Individual broken views do not blank otherwise usable views.
-- Different view counts render without overlap/clipping.
-- Distance, capture/retrieval time and stale states are truthful.
-- No camera appears before authorized manual journey action.
-- Journey changes and late responses cannot restore old destination frames.
-- Existing road findings, OpenWeather/SWOB, selected route and map overlays survive.
-- Backend pytest/Ruff, frontend tests/build and bounded live browser review complete.
+- The pipeline returns a **strictly validated, provenance-bearing internal observation**, with explicit unknown/insufficient-evidence states and source-view references.
+- The documented typed API/handoff contract can be consumed by future Phase 9/10 code without parsing raw OpenRouter response text; no downstream synthesis is implemented yet.
+- Malformed/unsupported results never reach downstream consumers as valid evidence; provider failures do not block road, weather or camera images.
+- No vision call before the authorized user action or from map markers/image rendering; request count and budget behavior are verified.
+- Route/destination/selected-route changes invalidate or abandon old observations, and delayed results cannot become the active journey's evidence.
+- No camera AI interpretation card or raw telemetry JSON is introduced. The existing gallery and other journey panels remain functional.
+- Relevant backend/frontend tests, Ruff, TypeScript and production build pass; human review compares structured observations with source imagery and records whether real-frame transmission was authorized and actually tested.
 
 ### General hygiene
 
-Check Git status/diff scope, `git diff --check`, `.env` and image-cache ignores, credentials in URL/log outputs, source fixture rights, test artifact cleanup and absence of committed runtime camera frames. Headless screenshot rendering is not equivalent to interactive human visual acceptance.
+- `.env` and secrets ignored; no API keys in logs/browser.
+- No tracked raw City frames or image-filled OpenRouter requests/responses.
+- `git diff --check`, changed-file review and validated cache artifact ignore checks.
+- No historical observation dataset, background polling or silent recurring model costs.
+- Separate fact/evidence timestamps: catalogue discovery, image retrieval, source capture (if known), model generation.
+- Appropriate provenance and accurate privacy/licensing limitations retained.
 
 ---
 
-## 10. Phase 7 Non-Goals
+## 10. Phase 8 Non-Goals
 
-Phase 7 does **not** authorize:
+Phase 8 does **not** authorize:
 
-- OpenRouter API calls or any vision model processing (Phase 8);
-- precipitation, wet-road, traffic, congestion or visibility conclusions drawn from camera pixels;
-- analysis across multiple camera intersections or route-wide camera sampling;
-- frame history, archival snapshots, timelapse, background surveillance or model-training datasets;
-- camera imagery stored permanently in Git, databases or object storage;
-- traffic count/speed/delay estimation, rerouting or weather-driven ETA calculations;
-- DriveBC highway/bridge camera integration;
-- automatic polling, WebSockets, jobs/queues or a periodic image-harvesting service;
-- transit mode, GTFS, user accounts, saved journeys or a broad UI redesign;
-- speculative image filenames, unverifiable source attribution or license certainty;
-- final AI journey briefing, overall timeline synthesis or Phase 9–12 work.
+- model inference over multiple candidate intersections or the four map marker locations;
+- route-wide traffic estimation, speed/delay prediction, blockage reporting as official fact or camera-based ETA changes;
+- independent precipitation/weather forecasting or forcing agreement with OpenWeather/SWOB;
+- combining camera observations with road events, weather/timelines or a final journey briefing (Phases 9–10);
+- automated camera polling, scheduled vision calls, alert subscriptions, watch jobs or continuous monitoring;
+- storing raw camera history, image datasets, vision request payloads or model responses as permanent archives;
+- face recognition, person tracking, license-plate recognition or identification of individual people/vehicles;
+- multiple-model ensembles, automatic benchmark sweeps over live imagery, recursive agents, tool use or autonomous decision loops;
+- automatic route selection, rerouting, new travel modes, GTFS, DriveBC camera expansion or new map layer features;
+- dedicated camera AI observation card, user-facing raw vision JSON, broad frontend redesign, unrelated Road Ahead highlighting repair, or speculative architecture frameworks;
+- deployment/public commercialization permission claims based solely on hobbyist use.
 
 ---
 
-## 11. Phase 7 Human Acceptance Criteria
+## 11. Phase 8 Human Acceptance Criteria
 
-Phase 7 is eligible for human acceptance only when:
+Phase 8 is eligible for human acceptance only when:
 
-- [ ] Official Vancouver camera metadata and actual webpages have been verified.
-- [ ] Image/data terms and attribution have been reviewed, with unresolved image rights accurately recorded.
-- [ ] Enrichment discovers genuine directional image URLs without guesses.
-- [ ] An enriched catalogue with stable IDs, coordinates, source links, views and timestamps exists.
-- [ ] Catalogue refresh/reuse, validation and last-good fallback are tested.
-- [ ] Nearest-first selection chooses one usable destination intersection and falls back when needed.
-- [ ] All usable views from the chosen intersection are retrieved; no multi-intersection mixing.
-- [ ] No-image and broken-view cases are represented accurately.
-- [ ] Image delivery enforces a verified trust boundary and bounded downloads.
-- [ ] Ephemeral image cache reuses/overwrites current frames; no archive/history is produced.
-- [ ] Camera image age is distinct from discovery age and any actual provider capture time.
-- [ ] Journey request identity and selected-route behavior remain intact.
-- [ ] Existing Road Ahead, DriveBC, OpenWeather and SWOB features remain functional.
-- [ ] Destination Camera UI displays available views, source, distance and time clearly.
-- [ ] Partial/stale/unavailable states are accurate and legible.
-- [ ] Fixture-backed tests, backend/frontend regression, lint and production build pass.
-- [ ] Bounded live Vancouver camera/journey checks and meaningful human browser acceptance are recorded.
-- [ ] Credentials, URLs, generated images and caches are handled safely and are not committed inadvertently.
-- [ ] No vision inference, historical archive, Transit or later-phase work is introduced.
-- [ ] `PROJECT_STATE.md` records implementation evidence, limitations and actual human acceptance.
-- [ ] Codex reports accurately and leaves all Git history actions to the human developer.
+- [ ] The actual selected OpenRouter model/provider supports the accepted multi-image input and response constraints, or the tested fallback is explicitly approved.
+- [ ] `CameraObservation` schema and prompt semantics are documented, strict enough for **downstream validated telemetry consumption** and allow genuine uncertainty.
+- [ ] Any transmission of real City frames to OpenRouter received a distinct human decision, with outstanding provider/source rights clearly recorded.
+- [ ] Only current eligible directional frames from **one selected intersection** are submitted in **one logical request** per authorized analysis.
+- [ ] Original direction labels, view IDs and times are preserved; the application, not model prose, owns authoritative provenance.
+- [ ] Validated observations remain within image-visible evidence; no invented closure, exact rainfall or route-wide congestion claims.
+- [ ] Malformed, incomplete, stale or source-incompatible observations are rejected/degraded instead of shown as reliable facts.
+- [ ] Model credentials, image trust boundaries, request/response sizes, timeouts, attempts, cost and retries are bounded.
+- [ ] Missing, stale-only or zero eligible images do not produce surprise model calls.
+- [ ] Inference failure leaves the existing camera gallery and Road Ahead/DriveBC/weather/route results usable.
+- [ ] No inference triggers from page load, route typing, marker click, image GET or background refresh.
+- [ ] Journey request invalidation and delayed AI responses are handled correctly.
+- [ ] The internal observation contract distinguishes model interpretation, source imagery identity, retrieval age, generation age and unknown capture time. No separate user-facing camera-AI observation card or raw JSON display is added.
+- [ ] Offline tests, appropriate backend/frontend regressions, Ruff, TypeScript and production build pass.
+- [ ] Bounded real-provider verification (when approved), human frame-to-observation review, and any proportionate browser regression checks accurately report what was and was not tested.
+- [ ] No raw image archive, model-prompt cache containing bytes, source secrets or background observation history is introduced.
+- [ ] Existing Phase 7 Road Ahead highlight limitation remains documented; no unrelated refactor is required for Phase 8 acceptance.
+- [ ] `PROJECT_STATE.md` records the implemented contract, model/provider, cost/attempt behavior, verification and developer acceptance.
+- [ ] Codex stops after the current authorized assignment and leaves all Git operations to the human.
 
-These are eligibility conditions, **not automatic acceptance by Codex**.
+These are human review conditions, not automatic acceptance by Codex.
 
 ---
 
@@ -431,44 +420,46 @@ These are eligibility conditions, **not automatic acceptance by Codex**.
 
 Stop the affected assignment and report evidence if:
 
-- official camera metadata or webpages cannot reliably establish intersection/view identities;
-- image host/path patterns require guesswork, unsafe unrestricted proxying or unbounded scraping;
-- source terms clearly prohibit intended retrieval/display, or unresolved rights need explicit approval to proceed with even a bounded demo;
-- a material source change makes full catalogue enrichment or current-frame retrieval infeasible;
-- camera metadata coordinates are unreliable enough to break nearest-first selection;
-- images cannot be served with an acceptable ephemeral/no-archive posture;
-- selected-camera integration requires breaking established road/weather models or request-identity protections;
-- an unapproved third-party service, subscription or broad architecture change is necessary;
-- carrying out the assignment would require Phase 8 vision, background collection or other out-of-scope work.
+- no suitably priced and available OpenRouter model/provider can process the accepted number of images with a usable structured result;
+- live City camera frame transfer to a third-party provider is not authorized for the proposed validation;
+- the model repeatedly produces unsupported scene claims, unstable view references or unusable structured output;
+- input size, provider routing or request cost cannot be reasonably bounded;
+- current-frame selection/identity cannot safely ensure that only one accepted intersection is analyzed;
+- implementation would need unrestricted image URLs, remote code execution, arbitrary model tool use or exposing API credentials;
+- keeping the result consistent would require a historical frame archive, job queue or major redesign;
+- vision errors would break accepted camera/road/weather features or compromise stale-response safety;
+- the plan would require Phase 9/10 timeline synthesis or other unapproved work.
 
-For blockers, provide the observed issue, requirement affected, source evidence, minimal alternatives and completed in-scope work. Routine schema mapping, defensive URL validation, controlled parser updates, cache policies, test fixture refinements and small UI adjustments may proceed autonomously within the approved assignment.
+Report observed issue, affected requirement, minimal safe alternatives, and completed in-scope work. Continue independent safe fixture work if possible, but do not silently expand scope or bypass provider/access restrictions.
 
 ---
 
 ## 13. Phase Completion and Handoff
 
-After each assignment:
+For each assignment:
 
-1. Run proportionate offline, live and (where relevant) browser verification, reporting outcomes separately.
-2. Update `PROJECT_STATE.md` with factual changes, tests, source evidence and limitations **when that assignment authorizes it**. In 7A, the source-evidence note is primary and the human may record acceptance separately.
-3. List changed files, verification commands/results, source behavior, deviations and any remaining blockers.
-4. Stop for human review. Do not begin the next assignment automatically.
-5. Leave Git staging, commits, pushes, merges, rebases, tags and history rewriting to the human developer.
+1. Run proportionate offline verification, and bounded live checks only when authorized; distinguish mocks, synthetic images, actual City frames and real provider calls.
+2. Update `PROJECT_STATE.md` factually if authorized; keep source evidence notes and explicit unresolved decisions.
+3. Report files changed, exact model/provider/settings, request counts and budget consumed, tests, errors, limitations and candidate next steps.
+4. Stop for human review. The next assignment requires its own explicit prompt and approval.
+5. Leave all Git staging/commit/push and history operations to the human developer.
 
-After human Phase 7 acceptance:
+After human Phase 8 acceptance:
 
-1. Record acceptance and human browser evidence in `PROJECT_STATE.md`.
-2. Create the human-controlled Git checkpoint.
-3. Prepare/approve the next `BUILD_PLAN.md` for Phase 8.
-4. Do not begin Phase 8 until separately authorized.
+1. Confirm model outputs visually against the submitted source images and record limitations.
+2. Record the approved model, schema version, cost/rate controls, tests and human acceptance in `PROJECT_STATE.md`.
+3. Human commits and pushes the phase checkpoint.
+4. Prepare a new phase-specific `BUILD_PLAN.md` before Phase 9 implementation.
 
-This build plan governs allowable implementation scope; it does **not** authorize a blanket execution of all of Phase 7.
+This plan is authorization guidance, **not blanket permission** to execute 8A–8D at once.
 
 ---
 
 ## 14. Next Phase
 
-**Phase 8 — Multi-View Camera AI Analysis**
+**Phase 9 — Journey Relevance and Timeline Refinement**
 
-Phase 8 will apply one controlled multimodal assessment to the selected intersection's currently available directional views, producing structured, source-attributed `CameraObservation` evidence. It requires separate authorization and an explicit review of any remaining camera-image rights/security boundaries before sending images to OpenRouter. Phase 8 is outside this build plan.
+Phase 9 may organize the accepted internal camera observations alongside independently sourced road, selected-route and destination-weather evidence, preserving source timestamps, uncertainty and geospatial relevance. It must not portray camera pixels as authoritative measured weather or official road closures.
+
+Phase 10 will generate the primary user-facing **AI Journey Briefing** and position its card at the **top of Journey Intelligence**. A user should be able to understand the journey from the briefing alone; map, road events, weather and camera images remain optional supporting evidence. The briefing must distinguish reliable facts, uncertain visual interpretations and missing sources. No Phase 9+ work is authorized by this build plan.
 

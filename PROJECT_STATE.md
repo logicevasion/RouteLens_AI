@@ -3,16 +3,42 @@
 ## 1. Current Status
 
 **Project:** RouteLens AI  
-**Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 7 — Vancouver Camera Pipeline (complete and human accepted); Phase 8 — Multi-View Camera AI Analysis pending.
-**Phase status:** Assignments 7A–7E are complete and human accepted as of 2026-10-11. Phase 7 implementation and human visual acceptance are complete, with documented nonblocking MVP limitations. Phase 8 has not started.
-**Human review:** The developer confirmed nearby camera markers are visible and look good, direct marker clicks open official City pages, marker hover shows intersection names, and the Destination Cameras gallery works. The remaining Road Ahead highlight behavior is accepted as a nonblocking MVP limitation and is documented below. Assignment 7E remains pending human acceptance.
-**Next assignment:** Complete Assignment 7E human visual acceptance before considering Phase 7 complete. Phase 8 remains unauthorized.
-**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
-**Repository baseline:** Inspected for Assignment 0A
-**MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
+**Planning:** Substantially complete — authoritative documents established; Phase 8 execution plan prepared
+**Current phase:** Phase 8 — Multi-View Camera AI Analysis
+**Phase status:** Phases 0–7 are complete and human accepted. Phase 7 Assignments 7A–7E were accepted on 2026-10-11 and committed/pushed by the human developer. Phase 8 is planned; implementation has not started.
+**Human review:** Phase 7 human acceptance is complete. The developer verified the directional camera gallery, nearby camera markers, intersection hover labels, direct official-page navigation, and removal of unwanted map decorations. Remaining Road Ahead highlight persistence is an accepted nonblocking MVP limitation. Manual camera failure-isolation testing and comprehensive narrow-screen verification remain deferred.
+**Next assignment:** Phase 8A — Vision Contract and Model Validation. Requires separate bounded Codex authorization; no Phase 8 implementation has started.
+**Git checkpoint:** Phase 7 accepted changes, including Assignment 7E and the approved Phase 7 build-plan amendment, were committed and pushed by the human developer on 2026-10-11. Earlier recorded checkpoints include Phase 4 `3c2600a`, Phase 5 plan `c7c31f2`, Assignment 5A `1ff1a6d`, Assignment 5B `18aa6b8`, Assignment 5C `a2c7a69`, Assignment 6B `5dcfaaa`, and Assignment 6C (hash not recorded here).
+**Repository baseline:** Originally inspected in Assignment 0A; subsequent accepted implementation and Git checkpoints supersede that initial scaffold baseline.
+**MVP scope decision (2026-10-11):** RouteLens AI remains driving-only for the datathon. Transit Mode is deferred beyond the MVP. Phase 8 extracts structured camera observations for internal downstream AI reasoning; Phase 9 refines journey relevance and evidence organization; Phase 10 generates the user-facing AI Journey Briefing; Phases 11–12 cover integration hardening and presentation/demo polish.
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A provides the accepted regional Open511 adapter, normalization, and validated cache; its evidence is recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`. Assignment 5B implements selected-route relevance as recorded in Section 24. Assignment 5C integrates the two road-event pipelines through the existing journey-analysis endpoint; see Section 25.
+### Accepted implementation summary
+
+Assignments 0A–0E established the SDD harness, verified provider evidence, and initial project readiness. Phases 1–3 delivered the application shell, Vancouver map, canonical geocoding and destination validation, ORS driving alternatives, and explicit route selection.
+
+Phase 4 delivered City of Vancouver Road Ahead construction/closure ingestion, caching, route relevance, and map/panel presentation. Phase 5 added DriveBC Open511 regional incidents and route-relevant findings. Phase 6 integrated OpenWeather current and near-term forecasts plus ECCC GeoMet/SWOB measured station observations, preserving independent provenance and source status.
+
+Phase 7 delivered the official Vancouver camera catalogue and directional-view enrichment, nearest usable destination intersection selection, real multi-view JPEG retrieval, ephemeral current-frame caching, backend image delivery, destination camera gallery, and up to four clickable nearby camera map markers. All five Phase 7 assignments were human accepted, with documented nonblocking limitations.
+
+### Phase 8 product direction
+
+**Camera vision is an internal evidence-extraction stage, not a standalone user-facing AI report.**
+
+The selected intersection's available directional camera frames will be assessed together through one bounded OpenRouter multimodal request. The model will extract specified visible conditions into a strictly validated, provenance-bearing structured `CameraObservation` result, with explicit uncertainty and unsupported-observation handling.
+
+The structured camera observations are intended as an input to the later AI Journey Briefing pipeline, alongside independently sourced weather, route-relevant road events, and journey context. Camera-derived claims must remain distinguishable from official event reports and weather measurements.
+
+**Phase 8 does not require a separate user-visible camera AI analysis card or raw telemetry JSON display.** The existing camera image gallery remains available as supporting visual evidence. Phase 8 may expose minimal operational status where necessary, but the detailed observation payload is intended for downstream processing.
+
+**Phase 10 presentation direction:** The AI Journey Briefing should appear at the top of the Journey Intelligence panel as the primary summary. It should provide sufficient actionable journey context on its own, with the map, Road Ahead and DriveBC findings, destination weather, and camera imagery available below as optional supporting detail. The briefing must distinguish supported evidence from uncertainty and avoid fabricating conditions or recommendations.
+
+### Outstanding limitations and controls
+
+- Road Ahead event highlighting can remain bold after editing journey inputs or regenerating routes; it clears after a new Analyze Journey operation. Further correction is deferred for this MVP.
+- Camera failure-isolation and comprehensive narrow-screen manual verification are deferred; automated coverage exists.
+- Camera coordinates are approximate; frame retrieval time is not automatically the source capture time.
+- Camera-image permissions and external AI-provider transmission require the separate Phase 8A decision; private MVP development does not itself establish permission.
+- Existing manual Analyze Journey behavior, selected-route identity, bounded source access, backend-held credentials, and human-controlled Git operations remain authoritative.
 
 ## 2. Established Planning Artifacts
 
