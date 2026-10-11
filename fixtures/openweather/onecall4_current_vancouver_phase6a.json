@@ -1,0 +1,32 @@
+{
+  "lat": 49.2827,
+  "lon": -123.1207,
+  "timezone": "America/Vancouver",
+  "timezone_offset": -25200,
+  "data": [
+    {
+      "dt": 1791721895,
+      "sunrise": 1791728832,
+      "sunset": 1791768650,
+      "temp": 7.53,
+      "feels_like": 7.53,
+      "pressure": 1015,
+      "humidity": 75,
+      "dew_point": 3.39,
+      "uvi": 0,
+      "clouds": 0,
+      "visibility": 10000,
+      "wind_speed": 0.89,
+      "wind_deg": 269,
+      "wind_gust": 2.24,
+      "weather": [
+        {
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01n"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "coord": {
+    "lon": -123.1207,
+    "lat": 49.2827
+  },
+  "weather": [
+    {
+      "id": 800,
+      "main": "Clear",
+      "description": "clear sky",
+      "icon": "01n"
+    }
+  ],
+  "base": "stations",
+  "main": {
+    "temp": 7.49,
+    "feels_like": 5.72,
+    "temp_min": 5.64,
+    "temp_max": 9.83,
+    "pressure": 1015,
+    "humidity": 75,
+    "sea_level": 1015,
+    "grnd_level": 982
+  },
+  "visibility": 10000,
+  "wind": {
+    "speed": 2.68,
+    "deg": 172,
+    "gust": 3.58
+  },
+  "clouds": {
+    "all": 0
+  },
+  "dt": 1791721834,
+  "sys": {
+    "type": 2,
+    "id": 2011597,
+    "country": "CA",
+    "sunrise": 1791728832,
+    "sunset": 1791768650
+  },
+  "timezone": -25200,
+  "id": 6173331,
+  "name": "Vancouver",
+  "cod": 200
+}
