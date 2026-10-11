@@ -5,9 +5,9 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 6 — Current and Near-Term Weather
-**Phase status:** Assignment 6B implemented and pending human acceptance; Phase 6 remains in progress.
-**Human review:** Phase 5 accepted. Assignment 6A evidence/product decision accepted; Assignment 6B awaits review.
-**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`
+**Phase status:** Assignment 6C implemented and pending human acceptance; Phase 6 remains in progress.
+**Human review:** Phase 5 accepted. Assignment 6A decision and Assignment 6B implementation accepted; Assignment 6C awaits review.
+**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`.
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
 
@@ -27,14 +27,14 @@ The Codex SDD harness has been drafted and accepted as v1:
 
 - `AGENTS.md` — agent operating rules.
 - `APP_SPEC.md` — condensed application specification.
-- `BUILD_PLAN.md` — current Phase 5 scope and separately authorized assignments.
+- `BUILD_PLAN.md` — current Phase 6 scope and separately authorized assignments.
 - `PROJECT_STATE.md` — implementation reality and progress.
 
 All four root harness files are present and readable. All five listed planning documents are present.
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–5 accepted; Assignment 6B implemented, pending human acceptance; see Sections 26–27.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–5 and Assignment 6B accepted; Assignment 6C implemented, pending human acceptance; see Sections 26–28.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -822,7 +822,7 @@ and 258 passing backend tests.
 The known limitation involving deletion of both local budget-state
 files is accepted for the datathon MVP.
 
-Assignment 6C remains separately authorized and has not started.
+Assignment 6C is implemented and pending human acceptance; see Section 28.
 
 **Files changed:** Added `backend/app/openweather.py` and `backend/tests/test_openweather.py`; updated `.env.example`, `docs/integration-notes/openweather-phase-6a.md`, and this state record. No dependency, frontend, journey-analysis, SWOB, camera, or AI integration files changed.
 
@@ -851,3 +851,86 @@ The guard now persists a separate initialization marker at `<budget-state-path>.
 **Correction verification:** Focused OpenWeather tests — Passed, 29 tests. Full backend pytest — Passed, 258 tests. Ruff — Passed. `git diff --check` and credential/cache-ignore checks — Passed. No live API request was made.
 
 **Correction limitation:** If both the budget state and its initialization marker are deleted (for example, by removing their entire cache directory), the local guard cannot distinguish that from genuine first initialization. Recovering from a marker-without-state condition requires local operator intervention after reconciling usage; no automatic allowance reset is provided.
+
+## 28. Assignment 6C — ECCC GeoMet SWOB Measured Weather Adapter
+
+**Assignment 6C status:** Implemented — pending human acceptance.
+
+The separate ECCC adapter uses the official GeoMet OGC API collection
+`swob-realtime` at `https://api.weather.gc.ca/collections/swob-realtime/items`.
+It validates complete GeoJSON pages, queries the configured Vancouver bbox over
+a bounded six-hour UTC window, and pages in ascending `date_tm-value` order with
+fixed 500-record pages. Refreshes stop after 12 pages, 6,000 records, 8 MiB per
+page, or 75 seconds. Page-count changes and systemic record loss reject a new
+snapshot.
+
+Live verification established that the initial bbox returns useful but sparse
+observations. A live sample returned 20 records from 812 matched observations
+across two station identities, with repeated minute readings. GeoJSON points
+use CRS84 `[longitude, latitude]`; timestamps use UTC `date_tm-value`. Grouping
+prefers `msc_id-value`, then `clim_id-value`, `wmo_synop_id-value`, and
+`tc_id-value`; same-time duplicates select the lexicographically greatest
+source observation ID without merging measurements. Coordinates are retained
+from realtime features; station-catalogue lookup is not required.
+
+Normalized evidence preserves `air_temp`/°C, `rel_hum`/%, 10 m wind speed in
+km/h, wind direction in degrees, precipitation accumulations in mm with
+10-minute or 1-hour intervals, and `snw_dpth` in cm when the value/unit/quality
+are usable. Unknown units and negative quality-coded sentinels are omitted;
+explicit zero precipitation is preserved. Visibility was not observed in the
+retained live sample and is not normalized. Attribution identifies ECCC and
+OGL-Canada.
+
+Destination selection is independent of fetch/cache retrieval. It uses
+haversine metre distances, excludes invalid coordinates and observations more
+than five minutes in the future, allows preferred measurement names to rank
+first, otherwise ranks freshness before proximity, marks observations older
+than 90 minutes stale, favors complementary evidence, and returns at most
+three stations with distance, age, cache staleness, and a selection reason. It
+does not interpolate destination conditions.
+
+The validated regional cache TTL is 600 seconds. Its SHA-256 identity includes
+source, collection, bbox, lookback, and page size. Cache replacement uses an
+fsynced temporary file and atomic replace; expected refresh failures retain a
+valid prior snapshot and report cache staleness independently of station
+observation age. A valid empty feed remains available with zero station
+evidence. SWOB uses its own typed status and does not alter OpenWeather or road
+source behavior.
+
+**Files changed:** Added `backend/app/eccc_swob.py`,
+`backend/tests/test_eccc_swob.py`, sanitized live-derived
+`fixtures/eccc_swob/swob_realtime_vancouver_observed.json`, fixture provenance
+`fixtures/eccc_swob/README.md`, and `docs/integration-notes/eccc-swob-6c.md`;
+updated `.env.example` with the regional bbox/cache TTL and this project-state
+record. No dependency, OpenWeather, road adapter, journey API, frontend,
+camera, or AI files changed.
+
+**Live verification:** Official GeoMet documentation and the live
+`swob-realtime` endpoint were checked. One malformed open-ended request returned
+HTTP 500; a corrected RFC 3339 query succeeded. A bounded 20-record sample
+confirmed the schema, station identities, coordinates, timestamps, repeated
+reports, units, explicit zero accumulations, and a negative QA-coded snow-depth
+sentinel. A separate property-projection request returned HTTP 400, so runtime
+uses bounded full GeoJSON pages and response-size limits. The live sample does
+not establish complete Lower Mainland coverage. Fixture provenance and counts
+are described in `fixtures/eccc_swob/README.md`.
+
+**Verification:** Focused SWOB tests — Passed, 29 tests. Full backend pytest —
+Passed, 287 tests. Ruff across `backend/app` and `backend/tests` — Passed.
+Backend import smoke — Passed. `git diff --check` — Passed. `.env` ignore,
+runtime-cache ignore, and credential/fixture hygiene checks — Passed. Automated
+checks use fixtures and mocked HTTP; live SWOB verification is reported above.
+Frontend and journey-analysis integration checks — Not run and out of scope.
+
+**Known limitations:** The approved bbox produced sparse station coverage and
+must not be described as comprehensive Lower Mainland coverage. Visibility is
+not normalized. Station measurements remain evidence at their own station and
+time, not destination conditions. The adapter is not connected to journey
+analysis; Assignment 6D owns that integration.
+
+**Deviations:** None. No Phase 6D or later assignment was started.
+
+**Git status:** Assignment 6C changes are uncommitted and unstaged. No commit,
+push, or Git history modification was performed.
+
+**Review status:** Assignment 6C accepted by the human developer on 2026-10-11. The ECCC SWOB adapter, source-specific normalization, station grouping and selection, validated regional cache, stale fallback, and independent source status are accepted. Known sparse-station coverage and unavailable visibility measurements remain documented limitations.
