@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 3 — Drive Route Candidates + Selection
-**Phase status:** Assignment 3B implementation complete; ready for human review. Phase 3 is not yet accepted.
-**Human review:** Completed — Assignments 2A–2C and full Phase 2 accepted by human developer on 2026-10-10
-**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`; Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C `15c8028`; Assignment 3A `ca5d880`. Assignment 3B remains uncommitted for human review.
+**Phase status:** Accepted — Phase 3 implementation and verification complete
+**Human review:** Completed — Assignments 3A–3C and full Phase 3 accepted by the human developer on 2026-10-10
+**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`; Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C `15c8028`; Assignment 3A `ca5d880`; Assignment 3B `46572b8`. Assignment 3C pending human commit
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Telemetry and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Telemetry and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -33,7 +33,7 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, 3A, and 3B implemented; Assignment 3B evidence is recorded in Section 17.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, 3A, and 3B implemented; Assignment 3C verification and the Phase 3 assessment are recorded in Section 18.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3B implement backend route-candidate retrieval, frontend route selection, and map rendering. Journey analysis remains disabled and unimplemented.
 
@@ -176,7 +176,11 @@ Additional blockers must be recorded when discovered, including affected workstr
 **Phase 2 progress:** Assignment 2A accepted and committed as `d46e12a`; Assignment 2B accepted and committed as `f3b7d65`; Assignment 2C verification complete and ready for human review
 **Phase 2 acceptance:** Accepted — 2026-10-10, following human functional review and Assignment 2C integrated verification
 **Phase 2 human review:** Completed — geocoding, canonical selection, destination validation, rejection recovery, location-state integrity, map behavior, and desktop layout verified
-**Phase 2 Git checkpoint:** Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C pending human commit
+**Phase 2 Git checkpoint:** Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C `15c8028`
+**Phase 3 progress:** Assignment 3A accepted and committed as `ca5d880`; Assignment 3B accepted and committed as `46572b8`; Assignment 3C verification is complete and ready for human review. Phase 3 acceptance remains with the human developer.
+**Phase 3 acceptance:** Accepted — 2026-10-10, following human browser review and Assignment 3C integrated verification
+**Phase 3 human review:** Completed — real route generation, explicit candidate selection, map rendering, location-change invalidation, and application regression verified
+**Phase 3 Git checkpoint:** Assignment 3A `ca5d880`; Assignment 3B `46572b8`; Assignment 3C pending human commit
 
 Use the following status distinctions:
 
@@ -473,6 +477,116 @@ The panel lists each available candidate with a neutral label, rounded kilometre
 
 **Review status:** Accepted by the human developer on 2026-10-10. Manual browser verification confirmed real ORS driving-route retrieval, MapLibre visualization of alternative routes, explicit user selection, candidate distance/duration summaries, and route invalidation after location changes. Existing autocomplete, City of Vancouver destination validation, map interaction, and desktop shell behavior remained functional.
 
-**Remaining verification:** Assignment 3C will complete the integrated Phase 3 regression assessment, including single-candidate, no-route, provider-failure, and additional asynchronous request scenarios. No telemetry or AI journey analysis has been implemented.
+**Remaining verification at 3B handoff:** Assignment 3C was responsible for integrated Phase 3 regression assessment. Its results and the full acceptance assessment are now recorded in Section 18. No telemetry or AI journey analysis has been implemented.
 
-**Next action:** Human Git checkpoint, followed by separately authorized Assignment 3C — End-to-End Routing Integration. Phase 3 remains in progress.
+**Git checkpoint:** Assignment 3B is committed as `46572b8`. Assignment 3C is separately authorized and its verification assessment is recorded in Section 18.
+
+## 18. Assignment 3C — End-to-End Routing Integration and Phase 3 Assessment
+
+Assignment 3C verified the accepted 3A/3B implementation and made one authorized visual correction in `frontend/src/styles.css`. The Mode card now uses a compact column layout and flexible buttons. No route, API, backend, or dependency changes were needed. Phase 3 is ready for human acceptance review; it is not marked accepted here.
+
+### Integrated live verification
+
+An isolated headless Google Chrome session at 1440×900 loaded the real Vite frontend, MapLibre/MapTiler basemap, and FastAPI API proxy. MapTiler geocoding and City of Vancouver validation ran through the browser; ORS routing responses came through the live backend.
+
+| Scenario | Result |
+|---|---|
+| Richmond → Downtown Vancouver | Passed — canonical MapTiler suggestions were selected; destination validation succeeded; Find Routes enabled; FastAPI returned three real ORS candidates (15.4, 16.0, and 16.1 km; estimated 29–30 minutes). Each candidate had a distinct ID, positive factual summary, and provider-generated `LineString`. No route began selected. Selecting one and then another changed `aria-pressed` and the emphasized geometry without another route request. |
+| Burnaby → Downtown Vancouver | Passed — real geocoding and ORS returned three candidates (14.4–15.0 km; estimated about 25 minutes). Burnaby was accepted as an origin without a City of Vancouver origin-boundary rule. |
+| Richmond as destination | Passed — after a route result existed, selecting Richmond removed all candidates and selection, retained the Burnaby origin, disabled Find Routes, and displayed the City of Vancouver municipal-boundary reason. |
+| Map rendering and interaction | Passed — MapTiler dark Vancouver style rendered with route geometry, navigation controls, and attribution. Initial route fit showed both journey ends. Zoom-control and drag-pan interactions each changed the rendered map frame. |
+
+Three live ORS requests were made across two representative journeys, including one direct response probe of the Richmond journey. A third live journey was skipped to avoid unnecessary provider calls. ORS does not guarantee a fixed number of alternatives, and durations are estimates rather than traffic ETAs.
+
+### Deterministic browser verification
+
+Controlled route responses exercised the frontend without using ORS quota:
+
+| Scenario | Result |
+|---|---|
+| One candidate | Passed — one card rendered, remained unselected on receipt, then selected on deliberate user action. |
+| Sparse IDs (`route-1`, `route-3`) | Passed — both rendered; selecting the second candidate selected only that candidate and did not request routes again. |
+| Empty `routes` and HTTP 422 `no_route_found` | Passed — no cards or selection; the interface showed its recoverable “No usable routes” state and retained valid locations. |
+| HTTP 504 timeout, 503 rate limit, and 502 provider unavailable | Passed — each showed its corresponding safe recoverable feedback; no candidates were presented and retry remained possible. |
+| Malformed top-level route response | Passed — invalid data was not accepted as canonical candidates; a safe unreadable-response message appeared without a frontend crash. |
+| Stale success after origin edit | Passed — candidates and selection cleared immediately, Find Routes disabled while origin was unselected, and a delayed success that ignored abort did not restore routes. |
+| Older failure after newer success | Passed — after editing the origin and starting a newer mocked request, its route remained visible when the older request later returned HTTP 502; stale failure did not overwrite current state. |
+| Repeated Find Routes | Passed — a second response replaced the first candidate set even when an ID overlapped; no prior selection carried over. |
+| Destination validation during pending routing | Passed — selecting Richmond invalidated the in-flight route immediately; after rejection and release of the delayed success, no old candidates or selection returned and Find Routes remained disabled. |
+
+The accepted Phase 2 evidence remains the source for autocomplete debounce, keyboard operation, stale geocoding protection, and full location-input regressions. Assignment 3C also repeated real origin/destination selection and validation in the integrated browser flow.
+
+### Mode styling and viewport regression
+
+The browser initially measured the Drive button extending below its Mode card. After the focused CSS change, Chrome confirmed the Drive button was wholly inside the card at 1440×900, 1280×800, 1024×768, and 390×844. All four viewports had no horizontal document overflow; the MapLibre canvas and attribution were present. Route selection itself updated the existing map rather than recreating it or triggering another route request, as confirmed by the single-request browser measurement and stable map presentation.
+
+### Phase 3 acceptance criteria (`BUILD_PLAN.md`, Section 8)
+
+| Criterion | Assessment |
+|---|---|
+| Backend ORS driving-route adapter exists | Satisfied — accepted 3A implementation and backend suite. |
+| Adapter uses `driving-car` | Satisfied — accepted adapter and request-parameter test. |
+| Real authenticated ORS routing works | Satisfied — live Richmond and Burnaby browser journeys. |
+| Canonical coordinates are handled correctly | Satisfied — location/API tests and live MapTiler→FastAPI→ORS results; GeoJSON ordering is longitude, latitude. |
+| Unsupported destinations are rejected | Satisfied — deterministic API tests and live Richmond destination rejection. |
+| Results normalize to `RouteCandidate` | Satisfied — accepted contract tests and live normalized API response. |
+| Geometry is valid and MapLibre-compatible | Satisfied — LineString validation tests, live provider geometry, and rendered route paths. |
+| Provider distance and duration retain units and association | Satisfied — backend fixture/API tests and correct live candidate summaries. |
+| Candidate identities distinguish alternatives | Satisfied — live distinct IDs and sparse-ID browser scenario. |
+| Focused FastAPI routing endpoint exists | Satisfied — live `POST /api/routes/driving` through Vite proxy. |
+| Multiple alternatives are supported | Satisfied — real journeys returned three candidates. |
+| Fewer-than-requested alternatives are handled | Satisfied — backend normalization/API tests. |
+| Single-route results are supported | Satisfied — deterministic one-candidate browser scenario and backend tests. |
+| Legitimate no-route results are handled | Satisfied — empty success and explicit 422 browser cases; no fake route is drawn. |
+| Malformed routes and provider failures are safe | Satisfied — backend tests and mocked malformed, timeout, rate-limit, and unavailable browser cases. |
+| Find Routes requires canonical origin and destination | Satisfied — accepted 3B browser evidence and live enabled/disabled states. |
+| User explicitly requests driving routes | Satisfied — live UI required a Find Routes click. |
+| Actual alternatives appear on MapLibre | Satisfied — live provider geometry rendered in Chrome. |
+| Alternatives are visually distinguishable | Satisfied — live map screenshot showed distinct candidate lines and selected emphasis. |
+| Candidate summaries show factual distance and duration | Satisfied — live provider summaries appeared on the correct cards. |
+| User explicitly selects a route | Satisfied — no automatic selection; clicking updates selected state. |
+| Selected route is visually identifiable | Satisfied — selected card state and highlighted geometry verified. |
+| Canonical selected route remains available in state | Satisfied — accepted app state stores the actual matching candidate; UI overview updates. |
+| No route is silently selected | Satisfied — live multi-route and mocked single-route results began with no selection. |
+| Location changes invalidate obsolete routes | Satisfied — live destination rejection and mocked origin/destination edits cleared routes and geometry. |
+| Stale routing responses cannot restore old journeys | Satisfied — delayed stale success and destination-validation race were exercised. |
+| Route choice changes without another request | Satisfied — live request count remained one while switching candidates. |
+| Loading, error, and no-route states are appropriate | Satisfied — browser checks covered loading, empty/no-route, malformed data, timeout, rate limit, and provider unavailable. |
+| MapLibre pan, zoom, attribution, and resizing remain functional | Satisfied — pan and zoom changed rendered frames; attribution and canvas appeared at all requested viewports. |
+| Fixed approximately 65/35 desktop layout remains usable | Satisfied — live 1440px map/panel layout and the accepted responsive-layout evidence. |
+| Autocomplete and destination validation remain functional | Satisfied — real integrated MapTiler selection, boundary validation, and rejection recovery; accepted Phase 2 keyboard/debounce evidence reused. |
+| Drive remains active; Transit remains inactive | Satisfied — browser confirmed selected disabled Drive and disabled Transit. |
+| Analyze Journey remains inactive | Satisfied — browser confirmed disabled control. |
+| No traffic, telemetry, or AI findings are fabricated | Satisfied — route context only; telemetry and AI sections remain explicit placeholders. |
+| Backend pytest and Ruff pass | Satisfied — 79 tests passed; Ruff passed. |
+| Frontend TypeScript and production build pass | Satisfied — post-fix `npm run build` passed. |
+| Representative end-to-end selection is verified | Satisfied — two real interactive browser journeys and route switching. |
+| Backend credentials are not exposed in frontend assets | Satisfied — `.env` remains ignored; ORS credential value was absent from built assets. The MapTiler browser key remains intentionally exposed by the approved configuration. |
+| `PROJECT_STATE.md` records verification and limitations | Satisfied — this section records evidence, assessments, and remaining limits. |
+| Completion report and Git boundary are observed | Satisfied — no staging, commit, push, or history operation was performed. |
+
+### Verification summary and limitations
+
+| Check | Result |
+|---|---|
+| Backend pytest | Passed — 79 tests. |
+| Ruff | Passed — `./.venv/bin/python -m ruff check app tests`. |
+| Frontend TypeScript and production build | Passed — post-style-fix `npm run build`; the existing large MapLibre chunk advisory remains. |
+| FastAPI import/startup and `/api/health` | Passed — backend startup completed and `/api/health` returned `{"status":"ok"}` through Vite. |
+| `.env` ignore and `git diff --check` | Passed. |
+| Browser/API mode | Passed — isolated headless Google Chrome with real MapTiler/ORS for two journeys; deterministic mocked browser responses for failure and race cases. MapTiler style and route geometry rendered in this session. |
+| Human acceptance | Not yet given — final Phase 3 review remains with the developer. |
+
+Known limitations remain: ORS may return fewer than three alternatives and may return similar corridors; durations are estimates, not live traffic. No strict Lower Mainland origin boundary is defined. City boundary data has published precision limits. Provider quotas, account terms, and deployment review remain outstanding. Live provider no-route and outage responses were not induced; the relevant application behavior was mocked and backend-tested. The optional MapTiler transportation sprite warning and existing bundle-size advisory may remain. No third short live journey or dedicated frontend unit-test suite was added. No telemetry, transit routing, or AI journey analysis was implemented.
+
+The initial mocked run used an overly specific assertion for the existing shared no-route copy; the assertion was aligned to “No usable routes.” A subsequent test-fixture location re-selection attempt did not preserve UI state, so stale-failure, repeated-request, and destination-validation races were rerun independently with real canonical location selection and mocked route responses; those checks passed. No application defect was associated with either harness correction.
+
+**Deviations:** None. The only source change was the authorized Mode-card styling correction. No dependency, API, or contract change was introduced.
+
+**Git status:** Assignment 3C leaves only `frontend/src/styles.css` and `PROJECT_STATE.md` modified. No staging, commit, push, or history operation was performed. Assignment 3A and 3B are present in Git as `ca5d880` and `46572b8` respectively.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Final browser review confirmed real ORS driving-route generation, MapLibre route visualization, explicit route selection, correct invalidation after location changes, and preservation of existing map and journey-input functionality. The selected Drive styling now remains contained within the Mode control.
+
+**Phase 3 assessment:** Accepted. All applicable Phase 3 acceptance requirements are satisfied using the accepted 3A/3B evidence and Assignment 3C integration verification. Remaining provider limitations and deferred functionality are documented above.
+
+**Next action:** Human Git checkpoint, followed by preparation and review of the Phase 4 build plan. No Phase 4 implementation is authorized yet.
