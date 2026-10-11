@@ -4,13 +4,13 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 4 — Vancouver Road Ahead Vertical Slice
-**Phase status:** Accepted — Assignments 4A–4D complete; Phase 5 has not started
-**Human review:** Phase 4 accepted by the human developer on 2026-10-11
-**Git checkpoint:** Assignments 4A–4C committed; Assignment 4D awaiting human Git checkpoint
+**Current phase:** Phase 5 — Regional Road Context: DriveBC Open511
+**Phase status:** In progress — Assignment 5A implemented and ready for human review; 5B–5D not started
+**Human review:** Phase 4 accepted by the human developer on 2026-10-11; Assignment 5A review pending
+**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A changes are uncommitted
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Accepted Assignments 4A–4C provide Road Ahead ingestion/cache, projected route relevance, detail enrichment, and the analysis API. Assignment 4D integrates the API into the frontend and is ready for human review. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A establishes a regional Open511 source adapter, normalization, and validated cache; its findings and verification are recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -26,14 +26,14 @@ The Codex SDD harness has been drafted and accepted as v1:
 
 - `AGENTS.md` — agent operating rules.
 - `APP_SPEC.md` — condensed application specification.
-- `BUILD_PLAN.md` — current Phase 4 scope and acceptance criteria.
+- `BUILD_PLAN.md` — current Phase 5 scope and separately authorized assignments.
 - `PROJECT_STATE.md` — implementation reality and progress.
 
 All four root harness files are present and readable. All five listed planning documents are present.
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phase 3 accepted. Assignments 4A–4C accepted; Assignment 4D implementation and Phase 4 readiness are recorded in Section 22.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 accepted. Assignment 5A implementation and review readiness are recorded in Section 23.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -686,10 +686,32 @@ The Along Your Route section presents the backend summary, separate route-inters
 
 **Deviations:** None. No Phase 5 or other deferred source work was introduced; no dependency was added.
 
-**Project state:** This section records Assignment 4D implementation and current verification. Phase 4 is ready for human acceptance and is not marked accepted.
+**Project state:** Assignment 4D and Phase 4 were accepted by the human developer on 2026-10-11.
 
-**Git status:** Assignment 4D awaiting the human-controlled Git checkpoint.
+**Git status:** Assignment 4D is included in human commit `3c2600a`.
 
 **Review status:** Human visual review confirmed journey analysis, Road Ahead panel presentation, selected-route visibility, and event highlighting. Final frontend verification: 9 tests passed; TypeScript and production build passed.
 
-**Next action:** Commit and push Assignment 4D, then prepare Phase 5 — DriveBC Open511.
+**Next action:** Assignment 5A is recorded in Section 23; later Phase 5 assignments remain separately authorized work.
+
+## 23. Assignment 5A — DriveBC Open511 Source Foundation
+
+**Status:** Accepted by the human developer on 2026-10-11. Assignment 5A is complete. Phase 5 remains in progress; Assignments 5B–5D have not started.
+
+`BUILD_PLAN.md` describes the approved Phase 5 scope and bounded Assignments 5A–5D. The Phase 5 planning checkpoint was committed as `c7c31f2`. The build-plan status was subsequently corrected to reflect human approval and the completed planning checkpoint. Assignment 5A was separately authorized and has passed human review.
+
+`backend/app/drivebc_open511.py` implements the official HTTPS Open511 v1 `/events` interface. It requests JSON ACTIVE events for configurable bbox scope without event-type or severity filters. The source requires no authentication for the verified public GET request. Normalization preserves source-scoped event identity, event type, title, description, status, severity, original Point/LineString geography, source URLs, timezone-aware creation/update timestamps, and observed provider fields such as roads, direction, subtypes, schedules, and areas in `source_metadata`. Point coordinates are separately exposed as longitude/latitude. LineString representative points are not invented. Missing or unzoned timestamp values remain unknown in typed datetime fields while original strings remain in metadata.
+
+The default provisional bbox remains `-123.45,48.99,-122.45,49.49`, the Greater Vancouver example in DriveBC documentation; constructor configuration and query identity include canonical bbox and page size. It contains representative origins in Richmond, Burnaby, New Westminster, Surrey, and North Vancouver and includes the Highway 1 approach through Langley. It does not define universal Lower Mainland coverage (for example, Abbotsford origins are outside its east edge). One live Point about 6.8 km east of the requested bbox was returned, so bbox result semantics are not treated as strict point containment. See the evidence note for this source-observed discrepancy.
+
+The adapter follows documented `limit`/`offset` and `pagination.next_url`, validates next-page URLs against the approved HTTPS provider host and query scope, and checks response schema/version, page offsets, repeated identities, content length, and bounded page/record/time limits. HTTP redirects are explicitly disabled (`follow_redirects=False`), with an offline regression test confirming that redirect responses are not followed or cached. The provider response has no total count or snapshot token; concurrent source changes during multi-page offset retrieval therefore cannot be ruled out. The 600-second (10-minute) TTL is a configurable MVP default. Cache identity includes endpoint, schema, ACTIVE status, bbox, page size, and format. Validated snapshots are atomically replaced; refresh or cache-write failure retains a valid stale snapshot and reports it through `SourceStatus`. Empty valid results remain available.
+
+**Evidence and live verification:** Official docs and licensing findings, sanitized observed fixtures, geographic assessment, query fields, and pagination limitation are in `docs/integration-notes/open511-5a-evidence.md`. A live default query returned 40 ACTIVE events in one page: 40 `CONSTRUCTION`, 13 `MAJOR`, 27 `MINOR`, 10 Points, and 30 LineStrings. All 40 normalized, with timestamps, roads, and schedules present. A second immediate adapter call used the same cached timestamp at age 0. A separate limited live pagination attempt with `limit=10` received HTTP 429 and was not retried; live multi-page execution remains unverified. The source sample does not show whether other event types, UNKNOWN severity, or absent severity occur; offline tests verify that these are not filtered out.
+
+**Verification:** Focused Open511 tests — Passed, 39 tests. Complete backend pytest — Passed, 205 tests. Ruff (`app tests`) — Passed. Frontend tests — Passed, 9 tests; TypeScript/production build — Passed with the existing >500 kB bundle advisory. Async ASGI health request — Passed, HTTP 200 with `{"status":"ok"}`. `git diff --check`, `.env` ignore, generated cache ignore, and credential-value scan — Passed. Redirect non-following and failed-cache-refresh behavior — Passed through focused offline regression testing. No frontend source changed.
+
+**Dependencies and deviations:** No dependency added. No `CityEvent` model, analysis orchestrator, routes, Road Ahead behavior, or frontend code changed. No 5B–5D behavior was introduced.
+
+**Project state:** Assignment 5A was accepted by the human developer on 2026-10-11. This section and the source evidence note preserve verified provider behavior, implementation decisions, test results, and known limitations. Live multi-page pagination remains unverified due to HTTP 429; deterministic offline pagination tests passed. Assignments 5B–5D remain pending.
+
+**Git status:** Assignment 5A accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.

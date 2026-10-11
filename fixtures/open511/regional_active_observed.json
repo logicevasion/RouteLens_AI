@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "version": "v1",
+    "url": "/events",
+    "up_url": "/"
+  },
+  "events": [
+    {
+      "jurisdiction_url": "https://api.open511.gov.bc.ca/jurisdiction",
+      "url": "https://api.open511.gov.bc.ca/events/drivebc.ca/OBSERVED-POINT-001",
+      "id": "drivebc.ca/OBSERVED-POINT-001",
+      "headline": "CONSTRUCTION",
+      "status": "ACTIVE",
+      "created": "2026-06-24T19:18:54-07:00",
+      "updated": "2026-06-24T19:18:54-07:00",
+      "description": "Sanitized observed description for a construction event.",
+      "+ivr_message": "Sanitized observed IVR text.",
+      "schedule": {
+        "intervals": ["2026-03-09T15:00/"]
+      },
+      "event_type": "CONSTRUCTION",
+      "event_subtypes": ["PLANNED_EVENT"],
+      "severity": "MAJOR",
+      "geography": {
+        "type": "Point",
+        "coordinates": [-122.3815195, 49.05770406]
+      },
+      "roads": [
+        {
+          "name": "Other Roads",
+          "from": "Mt Lehman Road",
+          "direction": "BOTH",
+          "state": "ALL_LANES_OPEN"
+        }
+      ],
+      "areas": [
+        {
+          "url": "http://www.geonames.org/8630136",
+          "name": "Lower Mainland District",
+          "id": "drivebc.ca/1"
+        }
+      ]
+    },
+    {
+      "jurisdiction_url": "https://api.open511.gov.bc.ca/jurisdiction",
+      "url": "/events/drivebc.ca/OBSERVED-LINE-002",
+      "id": "drivebc.ca/OBSERVED-LINE-002",
+      "headline": "CONSTRUCTION",
+      "status": "ACTIVE",
+      "created": "2026-06-24T19:18:54-07:00",
+      "updated": "2026-06-25T08:20:00-07:00",
+      "description": "Sanitized observed description for a road segment.",
+      "schedule": {
+        "intervals": ["2026-06-24T19:18/"]
+      },
+      "event_type": "CONSTRUCTION",
+      "event_subtypes": ["PLANNED_EVENT"],
+      "severity": "MINOR",
+      "geography": {
+        "type": "LineString",
+        "coordinates": [
+          [-122.42641, 49.0757],
+          [-122.42648, 49.07572]
+        ]
+      },
+      "roads": [
+        {
+          "name": "Highway 1",
+          "from": "Westbound",
+          "to": "Mt Lehman Road",
+          "direction": "WEST",
+          "state": "SINGLE_LANE_ALTERNATING_TRAFFIC"
+        }
+      ],
+      "areas": [
+        {
+          "name": "Lower Mainland District",
+          "id": "drivebc.ca/1"
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "offset": "0"
+  }
+}
