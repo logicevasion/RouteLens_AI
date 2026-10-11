@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 4 — Vancouver Road Ahead Vertical Slice
-**Phase status:** In progress — Assignments 4A–4C accepted; Assignment 4D has not started
-**Human review:** Phase 3 accepted on 2026-10-10; Assignments 4A, 4B, and 4C accepted
-**Git checkpoint:** Assignment 4A committed as `e15b926`; Assignment 4B committed as `373580c`; Assignment 4C awaiting human Git checkpoint
+**Phase status:** Accepted — Assignments 4A–4D complete; Phase 5 has not started
+**Human review:** Phase 4 accepted by the human developer on 2026-10-11
+**Git checkpoint:** Assignments 4A–4C committed; Assignment 4D awaiting human Git checkpoint
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Accepted Assignments 4A and 4B provide Road Ahead ingestion/cache and projected route relevance. Assignment 4C adds selective detail enrichment and the backend journey-analysis API; its human review is pending. Assignment 4D frontend integration has not started. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Accepted Assignments 4A–4C provide Road Ahead ingestion/cache, projected route relevance, detail enrichment, and the analysis API. Assignment 4D integrates the API into the frontend and is ready for human review. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -33,9 +33,9 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, 3A, and 3B implemented; Assignment 3C verification and the Phase 3 assessment are recorded in Section 18.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phase 3 accepted. Assignments 4A–4C accepted; Assignment 4D implementation and Phase 4 readiness are recorded in Section 22.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3B implement backend route-candidate retrieval, frontend route selection, and map rendering. Journey analysis remains disabled and unimplemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
 At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 2B adds a shared React location autocomplete and parent-owned canonical origin/destination state. Assignment 3A adds normalized ORS driving routes through the backend; Assignment 3B owns canonical route candidates and selected route at the React app level. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
@@ -616,7 +616,7 @@ Each dataset has an independent atomic JSON cache at `data/cache/road_ahead/{clo
 
 ## 20. Assignment 4B — Geospatial Route Relevance
 
-**Status:** Accepted by the human developer on 2026-10-10. Phase 4 remains in progress. Assignment 4A is committed as `e15b926`; Assignment 4B is committed as `373580c`; Assignment 4C is implemented and ready for review; Assignment 4D has not started.
+**Status:** Accepted by the human developer on 2026-10-10. Phase 4 remains in progress. Assignment 4A is committed as `e15b926`; Assignment 4B is committed as `373580c`; Assignment 4C is committed as `f884de2`; Assignment 4D is recorded in Section 22.
 
 `backend/app/route_relevance.py` accepts the selected ORS GeoJSON LineString and normalized `CityEvent` records. It validates route coordinates and rejects malformed, empty, zero-length, or unsupported routes with `RouteGeometryError`. Event LineString, MultiLineString, Polygon, and mixed GeometryCollection geometries are validated and projected as complete geometries. Missing, structurally invalid, empty, topologically invalid, or unprojectable event geometries are skipped with an event ID and bounded reason code; one such event does not prevent matching other records. No geometry repair or representative-point fallback is performed.
 
@@ -636,7 +636,7 @@ The matcher transforms EPSG:4326 longitude/latitude into **EPSG:26910 (NAD83 / U
 
 **Review status:** Accepted by the human developer on 2026-10-10. Human review confirmed the projected CRS approach, geometry validation, direct-overlap preservation, deterministic nearby ranking, and alignment with the approved Assignment 4B scope. Automated regression and fixture-based verification passed. Live-data matching remains deferred to later Phase 4 integration verification.
 
-**Next action:** Assignment 4C implementation and verification are recorded in Section 21. Assignment 4D remains separately authorized and has not started.
+**Next action:** Assignment 4D implementation and verification are recorded in Section 22; human Phase 4 acceptance remains pending.
 
 ## 21. Assignment 4C — Road Ahead Detail Enrichment and Analysis API
 
@@ -660,8 +660,36 @@ Detail pages are restricted to the official `vanmapp1.vancouver.ca/roadahead/eve
 
 **Deviations:** None. No frontend behavior, additional source adapter, LLM feature, or later-phase functionality was added.
 
-**Git status:** Assignment 4C changes await the human-controlled Git checkpoint. Codex performed no staging, commit, push, or history modification.
+**Git status:** Assignment 4C was committed by the human developer as `f884de2`. Codex performed no staging, commit, push, or history modification during Assignment 4C.
 
 **Review status:** Accepted by the human developer on 2026-10-10. Human review confirmed selective enrichment, URL restrictions, validated caching, parser field boundaries, selected-route validation, partial-source handling, and alignment with the approved Assignment 4C scope.
 
-**Next action:** Human-controlled Assignment 4C Git checkpoint, followed by Assignment 4D — Frontend Integration and Phase 4 Acceptance.
+**Next action:** Human review of Assignment 4D and Phase 4 acceptance; no later-phase work is in progress.
+
+## 22. Assignment 4D — Frontend Integration and Phase 4 Readiness
+
+**Status:** Accepted by the human developer on 2026-10-11. Assignment 4D complete; Phase 4 acceptance criteria satisfied.
+
+The Analyze Journey action is enabled only for canonical origin/destination values and an explicitly selected valid driving route. It submits the selected candidate ID, original GeoJSON geometry, distance in metres, and duration in seconds to `POST /api/trips/analyze`; it does not request routes or analyze automatically. Loading blocks duplicate submissions. Journey edits, route candidate replacement, and route selection changes abort and clear prior analysis. A request sequence and journey key prevent a late response from restoring old findings.
+
+The frontend uses typed analysis/event/detail/source-status models and guards incomplete response values. Successful findings are normalized into one GeoJSON feature per event. MapLibre layers render LineString, MultiLineString, Polygon, and supported GeometryCollection components; direct overlaps and nearby context have separate restrained styling. Layers are placed below the selected route. Selecting a finding updates its map emphasis and fits the map to usable event bounds. Invalid or unsupported event geometry is omitted without affecting its panel finding.
+
+The Along Your Route section presents the backend summary, separate route-intersection and nearby groups, event type and distance, available source-grounded details, validated official links, dataset availability/cache/staleness, enrichment fallback, and analysis time. Partial and unavailable coverage remain distinct from an available zero-finding result. Missing status, schedule, and restriction values remain absent. Other future telemetry sections remain explicit placeholders.
+
+**Automated verification:** Frontend test suite — Passed, 7 focused Node tests covering exact selected-route request construction, readiness gating, stale request identity, supported/mixed geometry, bounds and invalid geometry, typed response fallback, safe official links, and age formatting. Frontend TypeScript and production build — Passed; the pre-existing MapLibre bundle-size advisory remains. Backend pytest — Passed, 166 tests. Ruff — Passed. `git diff --check` — Passed. `.env` ignore check — Passed; no credential values were inspected in output or added to frontend source.
+
+**Live end-to-end verification:** Passed through the running FastAPI API for Richmond, BC to Vancouver City Hall. ORS returned three routes; candidate `route-1` was submitted with 13,704.1 m distance, 1,562 s duration, and 284 coordinates. Both Road Ahead datasets refreshed successfully: closures had 23 received/normalized records and construction had 68. The analysis was `available` with 4 direct overlaps, 10 nearby events, 14 total findings with geometry, and 9 successful plus 5 unavailable detail enrichments. No traffic impact was inferred.
+
+**Browser interaction:** Passed in headless Chrome against the local frontend and live backend. The journey was selected through the existing location UI, one candidate was selected, Analyze Journey began disabled and became enabled after selection, and exactly one analysis request was observed. The browser rendered 2 direct and 10 nearby findings for the route returned in that session, retained one selected route, exposed 12 safe new-tab official links, and exercised finding selection. The MapLibre canvas was present. Pixel-level screenshot inspection was not completed because the temporary Chrome DevTools capture helper could not decode its large screenshot frame; therefore the visible appearance of event strokes/fills was not separately confirmed by screenshot review.
+
+**Limitations:** No changes were made to accepted backend contracts. Automated frontend tests exercise the request/normalization/geometry utilities rather than mounting React components; browser interaction covers the integrated path. Partial/unavailable UI states are covered by response logic and backend regression tests, not induced against live providers. Map geometry is source-backed and handed to MapLibre; visual pixel review remains for human acceptance. The existing large JavaScript bundle advisory and optional MapTiler transportation sprite warning remain.
+
+**Deviations:** None. No Phase 5 or other deferred source work was introduced; no dependency was added.
+
+**Project state:** This section records Assignment 4D implementation and current verification. Phase 4 is ready for human acceptance and is not marked accepted.
+
+**Git status:** Assignment 4D awaiting the human-controlled Git checkpoint.
+
+**Review status:** Human visual review confirmed journey analysis, Road Ahead panel presentation, selected-route visibility, and event highlighting. Final frontend verification: 9 tests passed; TypeScript and production build passed.
+
+**Next action:** Commit and push Assignment 4D, then prepare Phase 5 — DriveBC Open511.

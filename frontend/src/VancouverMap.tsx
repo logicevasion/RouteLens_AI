@@ -12,15 +12,24 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { routeColor, type RouteCandidate } from './routeTypes';
+import type { AnalysisFinding } from './analysisTypes';
+import { eventBounds, roadAheadGeoJson, type RoadAheadFeatureCollection } from './roadAhead';
 
 type MapStatus = 'loading' | 'ready' | 'error';
 type RouteProperties = { routeId: string; selected: boolean; color: string };
 type RouteFeatureCollection = FeatureCollection<LineString, RouteProperties>;
-type VancouverMapProps = { routes: RouteCandidate[]; selectedRouteId: string | null; fitKey: number };
+type VancouverMapProps = {
+  routes: RouteCandidate[];
+  selectedRouteId: string | null;
+  fitKey: number;
+  findings: AnalysisFinding[];
+  selectedEventId: string | null;
+};
 
 const vancouverCenter: [number, number] = [-123.1207, 49.2827];
 const styleUrl = 'https://api.maptiler.com/maps/streets-v4-dark/style.json';
 const routeSourceId = 'routelens-routes';
+const roadAheadSourceId = 'routelens-road-ahead';
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -100,12 +109,79 @@ function syncRoutes(
   }
 }
 
-export default function VancouverMap({ routes, selectedRouteId, fitKey }: VancouverMapProps) {
+function ensureRoadAheadLayers(map: MapLibreMapType) {
+  if (!map.getLayer('routelens-road-ahead-fill')) {
+    map.addLayer({
+      id: 'routelens-road-ahead-fill', type: 'fill', source: roadAheadSourceId,
+      filter: ['!=', ['get', 'selected'], true],
+      paint: {
+        'fill-color': ['case', ['==', ['get', 'classification'], 'direct_overlap'], '#ee7966', '#e5ba70'],
+        'fill-opacity': ['case', ['==', ['get', 'classification'], 'direct_overlap'], 0.19, 0.11],
+      },
+    }, map.getLayer('routelens-route-selected-casing') ? 'routelens-route-selected-casing' : undefined);
+  }
+  if (!map.getLayer('routelens-road-ahead-line')) {
+    map.addLayer({
+      id: 'routelens-road-ahead-line', type: 'line', source: roadAheadSourceId,
+      filter: ['!=', ['get', 'selected'], true],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['case', ['==', ['get', 'classification'], 'direct_overlap'], '#ee7966', '#e5ba70'],
+        'line-width': ['case', ['==', ['get', 'classification'], 'direct_overlap'], 3.5, 2.5],
+        'line-opacity': ['case', ['==', ['get', 'classification'], 'direct_overlap'], 0.88, 0.7],
+      },
+    }, map.getLayer('routelens-route-selected-casing') ? 'routelens-route-selected-casing' : undefined);
+  }
+  if (!map.getLayer('routelens-road-ahead-selected-fill')) {
+    map.addLayer({
+      id: 'routelens-road-ahead-selected-fill', type: 'fill', source: roadAheadSourceId,
+      filter: ['==', ['get', 'selected'], true],
+      paint: { 'fill-color': '#fff06a', 'fill-opacity': 0.12 },
+    });
+  }
+  if (!map.getLayer('routelens-road-ahead-selected-casing')) {
+    map.addLayer({
+      id: 'routelens-road-ahead-selected-casing', type: 'line', source: roadAheadSourceId,
+      filter: ['==', ['get', 'selected'], true],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#17242b', 'line-width': 12, 'line-opacity': 0.96 },
+    });
+  }
+  if (!map.getLayer('routelens-road-ahead-selected-line')) {
+    map.addLayer({
+      id: 'routelens-road-ahead-selected-line', type: 'line', source: roadAheadSourceId,
+      filter: ['==', ['get', 'selected'], true],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#fff06a', 'line-width': 7, 'line-opacity': 1 },
+    });
+  }
+}
+
+function syncRoadAhead(
+  map: MapLibreMapType,
+  findings: AnalysisFinding[],
+  selectedEventId: string | null,
+) {
+  const data = roadAheadGeoJson(findings, selectedEventId) as RoadAheadFeatureCollection;
+  const source = map.getSource(roadAheadSourceId);
+  if (source?.type === 'geojson') (source as GeoJSONSource).setData(data);
+  else if (!source) map.addSource(roadAheadSourceId, { type: 'geojson', data });
+  ensureRoadAheadLayers(map);
+}
+
+function focusSelectedEvent(map: MapLibreMapType, findings: AnalysisFinding[], selectedEventId: string | null) {
+  if (!selectedEventId) return;
+  const finding = findings.find((item) => item.event.id === selectedEventId);
+  const bounds = finding ? eventBounds(finding.event.geometry) : null;
+  if (bounds) map.fitBounds(new LngLatBounds(bounds[0], bounds[1]), { padding: 84, maxZoom: 16.5, duration: 450 });
+}
+
+export default function VancouverMap({ routes, selectedRouteId, fitKey, findings, selectedEventId }: VancouverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMapType | null>(null);
   const lastFitKey = useRef(0);
-  const routeProps = useRef({ routes, selectedRouteId, fitKey });
-  routeProps.current = { routes, selectedRouteId, fitKey };
+  const routeProps = useRef({ routes, selectedRouteId, fitKey, findings, selectedEventId });
+  routeProps.current = { routes, selectedRouteId, fitKey, findings, selectedEventId };
   const [status, setStatus] = useState<MapStatus>('loading');
   const apiKey = import.meta.env.VITE_MAPTILER_API_KEY?.trim();
 
@@ -141,6 +217,8 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey }: Vancou
       setStatus('ready');
       const current = routeProps.current;
       syncRoutes(map, current.routes, current.selectedRouteId, current.fitKey, lastFitKey);
+      syncRoadAhead(map, current.findings, current.selectedEventId);
+      focusSelectedEvent(map, current.findings, current.selectedEventId);
     };
     const handleError = (event: ErrorEvent) => {
       sawResourceError = true;
@@ -175,6 +253,17 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey }: Vancou
     const map = mapRef.current;
     if (map?.isStyleLoaded()) syncRoutes(map, routes, selectedRouteId, fitKey, lastFitKey);
   }, [routes, selectedRouteId, fitKey]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
+    syncRoadAhead(map, findings, selectedEventId);
+  }, [findings, selectedEventId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map?.isStyleLoaded()) focusSelectedEvent(map, routeProps.current.findings, selectedEventId);
+  }, [selectedEventId]);
 
   return (
     <section className="map-frame" aria-label="Interactive map of Vancouver">

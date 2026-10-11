@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
+import RoadAheadPanel from './RoadAheadPanel';
+import { buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
+import type { AnalysisFinding, AnalysisState } from './analysisTypes';
 import {
   routeColor,
   type DrivingRoutesRequest,
@@ -83,6 +86,9 @@ const initialRouteState: RouteRequestState = {
   status: 'idle', candidates: [], selectedRoute: null, error: null, fitKey: 0,
 };
 
+const initialAnalysisState: AnalysisState = { status: 'idle', result: null, error: null };
+const noAnalysisFindings: AnalysisFinding[] = [];
+
 function normalizeRoutes(value: unknown): DrivingRoutesResponse | null {
   if (typeof value !== 'object' || value === null || !('routes' in value) || !Array.isArray(value.routes)) {
     return null;
@@ -144,11 +150,14 @@ type JourneyControlsProps = {
   onDestinationChange: (location: Location | null) => void;
   routeState: RouteRequestState;
   canFindRoutes: boolean;
+  canAnalyze: boolean;
+  analysisState: AnalysisState;
   onJourneyInputEdit: () => void;
   onFindRoutes: () => void;
+  onAnalyze: () => void;
 };
 
-function JourneyControls({ origin, destination, onOriginChange, onDestinationChange, routeState, canFindRoutes, onJourneyInputEdit, onFindRoutes }: JourneyControlsProps) {
+function JourneyControls({ origin, destination, onOriginChange, onDestinationChange, routeState, canFindRoutes, canAnalyze, analysisState, onJourneyInputEdit, onFindRoutes, onAnalyze }: JourneyControlsProps) {
   const [destinationFeedback, setDestinationFeedback] = useState<DestinationFeedback | null>(null);
   const validationSequence = useRef(0);
   const validationController = useRef<AbortController | null>(null);
@@ -258,9 +267,8 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         >
           {routeState.status === 'loading' ? <><span className="map-spinner" aria-hidden="true" /> Finding routes…</> : 'Find routes'}
         </button>
-        <button className="analyze-button" type="button" disabled>
-          <span aria-hidden="true">✦</span>
-          Analyze journey
+        <button className="analyze-button" type="button" disabled={!canAnalyze} onClick={onAnalyze}>
+          {analysisState.status === 'loading' ? <><span className="map-spinner" aria-hidden="true" /> Analyzing…</> : <><span aria-hidden="true">✦</span> Analyze journey</>}
         </button>
       </div>
       <p className="route-request-status" role={routeState.status === 'error' ? 'alert' : 'status'} aria-live="polite">
@@ -268,6 +276,8 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
         {routeState.status === 'error' && routeState.error}
         {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one below.`}
+        {analysisState.status === 'loading' && 'Checking Road Ahead data for the selected route. This may take a little while.'}
+        {analysisState.status === 'error' && analysisState.error}
       </p>
     </section>
   );
@@ -276,9 +286,12 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
 type IntelligencePanelProps = {
   routeState: RouteRequestState;
   onSelectRoute: (route: RouteCandidate) => void;
+  analysisState: AnalysisState;
+  selectedEventId: string | null;
+  onSelectFinding: (eventId: string) => void;
 };
 
-function IntelligencePanel({ routeState, onSelectRoute }: IntelligencePanelProps) {
+function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -298,7 +311,7 @@ function IntelligencePanel({ routeState, onSelectRoute }: IntelligencePanelProps
         <div>
           <h3>{routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'No journey selected'}</h3>
           <p>{routeState.selectedRoute
-            ? `${routeState.selectedRoute.label ?? 'Selected driving route'} is ready for future journey intelligence.`
+            ? `${routeState.selectedRoute.label ?? 'Selected driving route'} is ready to analyze.`
             : routeState.status === 'ready'
               ? 'Select the candidate closest to your planned journey.'
               : 'Choose an origin and destination, then find driving routes.'}</p>
@@ -346,7 +359,9 @@ function IntelligencePanel({ routeState, onSelectRoute }: IntelligencePanelProps
       )}
 
       <div className="intelligence-sections">
-        {intelligenceSections.map((section) => (
+        {intelligenceSections.map((section) => section.title === 'Road and route context' ? (
+          <RoadAheadPanel key={section.title} analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
+        ) : (
           <section className="intelligence-section" key={section.title}>
             <div className="section-heading">
               <span className="section-icon"><SectionIcon name={section.icon} /></span>
@@ -357,7 +372,7 @@ function IntelligencePanel({ routeState, onSelectRoute }: IntelligencePanelProps
           </section>
         ))}
       </div>
-      <p className="panel-note">Live city information has not been loaded.</p>
+      {analysisState.status !== 'success' && <p className="panel-note">Road Ahead results are loaded only when you choose Analyze journey.</p>}
     </aside>
   );
 }
@@ -367,13 +382,30 @@ export default function App() {
   const [routeState, setRouteState] = useState<RouteRequestState>(initialRouteState);
   const [origin, setOrigin] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
+  const [analysisState, setAnalysisState] = useState<AnalysisState>(initialAnalysisState);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const routingSequence = useRef(0);
   const routingController = useRef<AbortController | null>(null);
   const activePair = useRef<string | null>(null);
+  const analysisSequence = useRef(0);
+  const analysisController = useRef<AbortController | null>(null);
+  const activeAnalysisKey = useRef<string | null>(null);
 
   const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
+  const selectedRoute = routeState.status === 'ready' ? routeState.selectedRoute : null;
+  const canAnalyze = isAnalysisReady(origin, destination, selectedRoute) && analysisState.status !== 'loading';
+
+  function invalidateAnalysis() {
+    analysisSequence.current += 1;
+    analysisController.current?.abort();
+    analysisController.current = null;
+    activeAnalysisKey.current = null;
+    setAnalysisState(initialAnalysisState);
+    setSelectedEventId(null);
+  }
 
   function invalidateRoutes() {
+    invalidateAnalysis();
     routingSequence.current += 1;
     routingController.current?.abort();
     routingController.current = null;
@@ -383,6 +415,7 @@ export default function App() {
 
   async function findRoutes() {
     if (!origin || !destination) return;
+    invalidateAnalysis();
     const request: DrivingRoutesRequest = { origin, destination };
     const requestPair = JSON.stringify(request);
     if (routingController.current && activePair.current === requestPair) return;
@@ -435,12 +468,53 @@ export default function App() {
   }
 
   function selectRoute(route: RouteCandidate) {
+    if (routeState.status === 'ready' && routeState.selectedRoute?.id !== route.id) invalidateAnalysis();
     setRouteState((current) => current.status === 'ready' && current.candidates.some((candidate) => candidate.id === route.id)
       ? { ...current, selectedRoute: current.candidates.find((candidate) => candidate.id === route.id) ?? null }
       : current);
   }
 
-  useEffect(() => () => routingController.current?.abort(), []);
+  async function analyzeJourney() {
+    if (!origin || !destination || !selectedRoute || !canAnalyze || analysisController.current) return;
+    const request = buildAnalysisRequest(origin, destination, selectedRoute);
+    const requestKey = JSON.stringify(request);
+    analysisSequence.current += 1;
+    const requestId = analysisSequence.current;
+    const controller = new AbortController();
+    analysisController.current = controller;
+    activeAnalysisKey.current = requestKey;
+    setAnalysisState({ status: 'loading', result: null, error: null });
+    setSelectedEventId(null);
+
+    try {
+      const response = await fetch('/api/trips/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('Road Ahead analysis is temporarily unavailable. Please try again.');
+      const analysis = normalizeJourneyAnalysis(await response.json());
+      if (!analysis || analysis.trip.selected_route.candidate_id !== selectedRoute.id) {
+        throw new Error('Road Ahead analysis returned an unreadable result. Please analyze this route again.');
+      }
+      if (!isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
+      setAnalysisState({ status: 'success', result: analysis, error: null });
+    } catch (error) {
+      if (controller.signal.aborted || !isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
+      setAnalysisState({ status: 'error', result: null, error: error instanceof Error ? error.message : 'Road Ahead analysis is temporarily unavailable. Please try again.' });
+    } finally {
+      if (analysisSequence.current === requestId) {
+        analysisController.current = null;
+        activeAnalysisKey.current = null;
+      }
+    }
+  }
+
+  useEffect(() => () => {
+    routingController.current?.abort();
+    analysisController.current?.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -486,8 +560,11 @@ export default function App() {
         onDestinationChange={setDestination}
         routeState={routeState}
         canFindRoutes={canFindRoutes}
+        canAnalyze={canAnalyze}
+        analysisState={analysisState}
         onJourneyInputEdit={invalidateRoutes}
         onFindRoutes={() => void findRoutes()}
+        onAnalyze={() => void analyzeJourney()}
       />
 
       <div className="workspace">
@@ -497,9 +574,11 @@ export default function App() {
             routes={routeState.status === 'ready' ? routeState.candidates : []}
             selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
             fitKey={routeState.fitKey}
+            findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
+            selectedEventId={selectedEventId}
           />
         </div>
-        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} />
+        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} selectedEventId={selectedEventId} onSelectFinding={setSelectedEventId} />
       </div>
     </main>
   );
