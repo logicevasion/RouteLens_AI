@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 4 — Vancouver Road Ahead Vertical Slice
-**Phase status:** In progress — Assignments 4A and 4B accepted; Assignments 4C–4D have not started
-**Human review:** Phase 3 accepted on 2026-10-10; Assignment 4A accepted and committed; Assignment 4B accepted on 2026-10-10
-**Git checkpoint:** Assignment 4A committed as `e15b926`; Assignment 4B pending human Git checkpoint
+**Phase status:** In progress — Assignments 4A–4C accepted; Assignment 4D has not started
+**Human review:** Phase 3 accepted on 2026-10-10; Assignments 4A, 4B, and 4C accepted
+**Git checkpoint:** Assignment 4A committed as `e15b926`; Assignment 4B committed as `373580c`; Assignment 4C awaiting human Git checkpoint
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Assignment 4A established the Road Ahead ingestion, normalization, and validated caching foundation; Assignment 4B adds projected deterministic route relevance and is ready for human review. Telemetry presentation and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Accepted Assignments 4A and 4B provide Road Ahead ingestion/cache and projected route relevance. Assignment 4C adds selective detail enrichment and the backend journey-analysis API; its human review is pending. Assignment 4D frontend integration has not started. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -589,7 +589,7 @@ The initial mocked run used an overly specific assertion for the existing shared
 
 **Phase 3 assessment:** Accepted. All applicable Phase 3 acceptance requirements are satisfied using the accepted 3A/3B evidence and Assignment 3C integration verification. Remaining provider limitations and deferred functionality are documented above.
 
-**Next action:** Human review of Assignment 4B. Assignments 4C and 4D remain separately authorized work and have not started.
+**Next action:** Road Ahead implementation state and current review readiness are recorded in Sections 19–21. Assignment 4D remains separate and has not started.
 
 ## 19. Assignment 4A — Road Ahead Ingestion, Normalization, and Cache
 
@@ -616,7 +616,7 @@ Each dataset has an independent atomic JSON cache at `data/cache/road_ahead/{clo
 
 ## 20. Assignment 4B — Geospatial Route Relevance
 
-**Status:** Accepted by the human developer on 2026-10-10. Phase 4 remains in progress. Assignment 4A is accepted and committed as `e15b926`; Assignments 4C and 4D have not started.
+**Status:** Accepted by the human developer on 2026-10-10. Phase 4 remains in progress. Assignment 4A is committed as `e15b926`; Assignment 4B is committed as `373580c`; Assignment 4C is implemented and ready for review; Assignment 4D has not started.
 
 `backend/app/route_relevance.py` accepts the selected ORS GeoJSON LineString and normalized `CityEvent` records. It validates route coordinates and rejects malformed, empty, zero-length, or unsupported routes with `RouteGeometryError`. Event LineString, MultiLineString, Polygon, and mixed GeometryCollection geometries are validated and projected as complete geometries. Missing, structurally invalid, empty, topologically invalid, or unprojectable event geometries are skipped with an event ID and bounded reason code; one such event does not prevent matching other records. No geometry repair or representative-point fallback is performed.
 
@@ -632,8 +632,36 @@ The matcher transforms EPSG:4326 longitude/latitude into **EPSG:26910 (NAD83 / U
 
 **Deviations:** None. No ingestion/cache, API, detail enrichment, route-selection frontend, or map presentation work was added.
 
-**Git status:** Assignment 4B changes are awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or history modification.
+**Git status:** Assignment 4B was committed by the human developer as `373580c`. Codex performed no staging, commit, push, or history modification during Assignment 4B.
 
 **Review status:** Accepted by the human developer on 2026-10-10. Human review confirmed the projected CRS approach, geometry validation, direct-overlap preservation, deterministic nearby ranking, and alignment with the approved Assignment 4B scope. Automated regression and fixture-based verification passed. Live-data matching remains deferred to later Phase 4 integration verification.
 
-**Next action:** Human-controlled Git checkpoint for Assignment 4B, followed by preparation of Assignment 4C — Detail Enrichment and Analysis API.
+**Next action:** Assignment 4C implementation and verification are recorded in Section 21. Assignment 4D remains separately authorized and has not started.
+
+## 21. Assignment 4C — Road Ahead Detail Enrichment and Analysis API
+
+**Status:** Accepted by the human developer on 2026-10-10. Backend detail enrichment and journey-analysis API implementation complete; Phase 4 remains in progress.
+
+`POST /api/trips/analyze` accepts a canonical `Trip` with `origin`, `destination`, `mode: "drive"`, and an explicit `selected_route` containing `candidate_id`, actual GeoJSON LineString geometry, distance, duration, and optional label. The endpoint reuses canonical `Location`, enforces the existing City of Vancouver destination polygon, rejects transit mode, and validates selected geometry, coordinate ranges, nonzero length, a 20,000-coordinate limit, and a 1 MB geometry limit. It does not select a route or call ORS.
+
+The analysis orchestration reuses `get_road_ahead_data()` and `match_route_events()` without changing their cache, projection, nearby threshold, or direct-overlap rules. Only returned direct and nearby matches are passed to the detail enricher. Findings retain the normalized `CityEvent` and its original geometry, plus `direct_overlap` or `nearby`, measured distance, and a nested `DetailEnrichment`. Each dataset's accepted `SourceStatus` passes through unchanged. The response status is `available`, `partial`, or `unavailable`; a total source outage is distinguished from available data with no matching events. The deterministic summary uses the actual direct and nearby counts and makes no traffic-impact claim.
+
+Live detail-page inspection used the official closure page `http://vanmapp1.vancouver.ca/roadahead/events/details/14a078dc-e00d-4cd5-b930-770b52c1513d` and construction page `http://vanmapp1.vancouver.ca/roadahead/events/details/0a4e0683-e652-49af-b3ef-d40722ba1732`. Both redirected to HTTPS on the same official host and returned HTTP 200 with `text/html; charset=utf-8`. Both exposed labeled Event, Location, Expected Schedule, Status, Description, Posted, and Updated content. The closure description explicitly says “Full closure”; the construction page's Location was blank and its Description contained multiple project date ranges. No Exceptions label or dedicated restriction section was present in these samples.
+
+The standard-library HTML parser extracts only those observed labeled fields, excludes script/style/navigation/header/footer content, preserves multi-line source text, and retains dates as text. City Contact marks the end of event detail fields. `restriction_text` is populated from an explicit restriction label or the literal Description only when it explicitly names closure/restriction/access language. Unsupported fields remain null. A validated detail result retains event identity and the original official source URL; failures return a bounded availability/error code while preserving the base event. Malformed, negative, and over-limit `Content-Length` headers return the bounded `invalid_content` state before body parsing.
+
+Detail pages are restricted to the official `vanmapp1.vancouver.ca/roadahead/events/details/{UUID}` path. Redirects are followed manually only when the host and event path remain unchanged. Requests use a 7-second timeout, a 1 MB content limit, and concurrency capped at four. Successful extraction is atomically cached under the ignored local `data/cache/road_ahead/details/` path using a SHA-256 digest of an unambiguously length-prefixed dataset/record identity pair. The chosen MVP cache TTL is six hours, configurable on the enricher; this is an implementation default, not a locked product requirement. Expired valid details are refreshed, and a failed refresh falls back to the validated stale result with `stale=true`.
+
+**Verification:** Focused enrichment and analysis API tests — Passed, 33 tests. Complete backend pytest — Passed, 166 tests, including parser field boundaries, Content-Length validation, collision-resistant cache identity, URL/redirect safety, cache behavior, API validation, partial/full source failure, empty results, and a fixture-backed analysis using accepted ORS and Road Ahead data. Ruff — Passed. Frontend TypeScript and production build — Passed; the existing large JavaScript chunk advisory remains. FastAPI health endpoint — Passed in the backend test suite. Live detail retrieval — Passed for one closure and one construction page; the implemented parser extracted their observed title, status, and schedule, and immediate second calls reused cache. Live end-to-end analysis against current datasets was not run; API integration is fixture-backed and deterministic. `git diff --check`, `.env` ignore, and generated cache ignore — Passed.
+
+**Dependencies:** None added. Python's standard-library `html.parser` is used.
+
+**Limitations:** The live sample contained no explicit Exceptions section and the construction Location field was blank. The parser does not interpret date ranges, infer applicability, or infer restrictions beyond preserving explicitly worded source text. Live end-to-end journey analysis against refreshed datasets remains unverified. Assignment 4D map overlays and the Along Your Route panel remain unimplemented.
+
+**Deviations:** None. No frontend behavior, additional source adapter, LLM feature, or later-phase functionality was added.
+
+**Git status:** Assignment 4C changes await the human-controlled Git checkpoint. Codex performed no staging, commit, push, or history modification.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Human review confirmed selective enrichment, URL restrictions, validated caching, parser field boundaries, selected-route validation, partial-source handling, and alignment with the approved Assignment 4C scope.
+
+**Next action:** Human-controlled Assignment 4C Git checkpoint, followed by Assignment 4D — Frontend Integration and Phase 4 Acceptance.

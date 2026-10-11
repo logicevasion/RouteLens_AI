@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.analysis import JourneyAnalysis, Trip, analyze_journey
 from app.geocoding import (
     GeocodingConfigurationError,
     GeocodingError,
@@ -94,3 +95,15 @@ async def get_driving_routes(request: DrivingRouteRequest) -> DrivingRoutesRespo
         ) from None
 
     return DrivingRoutesResponse(routes=candidates)
+
+
+@router.post("/trips/analyze", response_model=JourneyAnalysis)
+async def analyze_trip(trip: Trip) -> JourneyAnalysis:
+    """Analyze Road Ahead evidence against the explicitly selected driving route."""
+    try:
+        return await analyze_journey(trip)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_journey", "message": str(error)},
+        ) from None
