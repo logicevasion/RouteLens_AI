@@ -12,8 +12,8 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { routeColor, type RouteCandidate } from './routeTypes';
-import type { AnalysisFinding } from './analysisTypes';
-import { eventBounds, roadAheadGeoJson, type RoadAheadFeatureCollection } from './roadAhead';
+import type { AnalysisFinding, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
+import { eventBounds, regionalEventsGeoJson, roadAheadGeoJson, sourceScopedEventId, type RoadAheadFeatureCollection } from './roadAhead';
 
 type MapStatus = 'loading' | 'ready' | 'error';
 type RouteProperties = { routeId: string; selected: boolean; color: string };
@@ -23,13 +23,17 @@ type VancouverMapProps = {
   selectedRouteId: string | null;
   fitKey: number;
   findings: AnalysisFinding[];
+  drivebcFindings: DriveBCAnalysisFinding[];
+  regionalEvents: RegionalEvent[];
   selectedEventId: string | null;
+  onSelectEvent: (eventId: string) => void;
 };
 
 const vancouverCenter: [number, number] = [-123.1207, 49.2827];
 const styleUrl = 'https://api.maptiler.com/maps/streets-v4-dark/style.json';
 const routeSourceId = 'routelens-routes';
 const roadAheadSourceId = 'routelens-road-ahead';
+const regionalSourceId = 'routelens-drivebc-regional';
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -167,21 +171,63 @@ function syncRoadAhead(
   if (source?.type === 'geojson') (source as GeoJSONSource).setData(data);
   else if (!source) map.addSource(roadAheadSourceId, { type: 'geojson', data });
   ensureRoadAheadLayers(map);
+  for (const layer of ['routelens-drivebc-selected-line-casing', 'routelens-drivebc-selected-line', 'routelens-drivebc-selected-point']) {
+    if (map.getLayer(layer)) map.moveLayer(layer);
+  }
 }
 
-function focusSelectedEvent(map: MapLibreMapType, findings: AnalysisFinding[], selectedEventId: string | null) {
+function syncRegional(map: MapLibreMapType, events: RegionalEvent[], selectedEventId: string | null) {
+  const data = regionalEventsGeoJson(events, selectedEventId);
+  const source = map.getSource(regionalSourceId);
+  if (source?.type === 'geojson') (source as GeoJSONSource).setData(data);
+  else if (!source) map.addSource(regionalSourceId, { type: 'geojson', data });
+  const before = map.getLayer('routelens-route-selected-casing') ? 'routelens-route-selected-casing' : undefined;
+  if (!map.getLayer('routelens-drivebc-lines')) map.addLayer({
+    id: 'routelens-drivebc-lines', type: 'line', source: regionalSourceId,
+    filter: ['all', ['==', ['geometry-type'], 'LineString'], ['!=', ['get', 'selected'], true]],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#8c9cae', 'line-width': 2.2, 'line-opacity': 0.48, 'line-dasharray': [2, 1.5] },
+  }, before);
+  if (!map.getLayer('routelens-drivebc-points')) map.addLayer({
+    id: 'routelens-drivebc-points', type: 'circle', source: regionalSourceId,
+    filter: ['all', ['==', ['geometry-type'], 'Point'], ['!=', ['get', 'selected'], true]],
+    paint: { 'circle-radius': 4, 'circle-color': '#8099b0', 'circle-opacity': 0.78, 'circle-stroke-color': '#17242b', 'circle-stroke-width': 1.2 },
+  }, before);
+  if (!map.getLayer('routelens-drivebc-selected-line-casing')) map.addLayer({
+    id: 'routelens-drivebc-selected-line-casing', type: 'line', source: regionalSourceId,
+    filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'selected'], true]],
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#10232d', 'line-width': 9, 'line-opacity': 0.95 },
+  });
+  if (!map.getLayer('routelens-drivebc-selected-line')) map.addLayer({
+    id: 'routelens-drivebc-selected-line', type: 'line', source: regionalSourceId,
+    filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'selected'], true]],
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff06a', 'line-width': 5.5, 'line-opacity': 1 },
+  });
+  if (!map.getLayer('routelens-drivebc-selected-point')) map.addLayer({
+    id: 'routelens-drivebc-selected-point', type: 'circle', source: regionalSourceId,
+    filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'selected'], true]],
+    paint: { 'circle-radius': 8, 'circle-color': '#fff06a', 'circle-stroke-color': '#10232d', 'circle-stroke-width': 2.5 },
+  });
+}
+
+function focusSelectedEvent(map: MapLibreMapType, findings: AnalysisFinding[], drivebc: DriveBCAnalysisFinding[], events: RegionalEvent[], selectedEventId: string | null) {
   if (!selectedEventId) return;
-  const finding = findings.find((item) => item.event.id === selectedEventId);
-  const bounds = finding ? eventBounds(finding.event.geometry) : null;
-  if (bounds) map.fitBounds(new LngLatBounds(bounds[0], bounds[1]), { padding: 84, maxZoom: 16.5, duration: 450 });
+  const event = findings.find((item) => sourceScopedEventId(item.event) === selectedEventId)?.event ??
+    drivebc.find((item) => sourceScopedEventId(item.event) === selectedEventId)?.event ??
+    events.find((item) => sourceScopedEventId(item) === selectedEventId);
+  const bounds = event ? eventBounds(event.geometry) : null;
+  if (!bounds) return;
+  if (bounds[0][0] === bounds[1][0] && bounds[0][1] === bounds[1][1]) {
+    map.easeTo({ center: bounds[0], zoom: Math.min(15.5, Math.max(map.getZoom(), 14)), duration: 450, padding: { top: 70, right: 70, bottom: 70, left: 70 } });
+  } else map.fitBounds(new LngLatBounds(bounds[0], bounds[1]), { padding: 84, maxZoom: 15.5, duration: 450 });
 }
 
-export default function VancouverMap({ routes, selectedRouteId, fitKey, findings, selectedEventId }: VancouverMapProps) {
+export default function VancouverMap({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent }: VancouverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMapType | null>(null);
   const lastFitKey = useRef(0);
-  const routeProps = useRef({ routes, selectedRouteId, fitKey, findings, selectedEventId });
-  routeProps.current = { routes, selectedRouteId, fitKey, findings, selectedEventId };
+  const routeProps = useRef({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent });
+  routeProps.current = { routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent };
   const [status, setStatus] = useState<MapStatus>('loading');
   const apiKey = import.meta.env.VITE_MAPTILER_API_KEY?.trim();
 
@@ -217,8 +263,19 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
       setStatus('ready');
       const current = routeProps.current;
       syncRoutes(map, current.routes, current.selectedRouteId, current.fitKey, lastFitKey);
+      syncRegional(map, current.regionalEvents, current.selectedEventId);
       syncRoadAhead(map, current.findings, current.selectedEventId);
-      focusSelectedEvent(map, current.findings, current.selectedEventId);
+      focusSelectedEvent(map, current.findings, current.drivebcFindings, current.regionalEvents, current.selectedEventId);
+      const selectRegionalFeature = (event: { features?: Array<{ properties?: Record<string, unknown> }> }) => {
+        const id = event.features?.[0]?.properties?.eventId;
+        if (typeof id === 'string') routeProps.current.onSelectEvent(id);
+      };
+      map.on('click', 'routelens-drivebc-points', selectRegionalFeature);
+      map.on('click', 'routelens-drivebc-lines', selectRegionalFeature);
+      map.once('remove', () => {
+        map.off('click', 'routelens-drivebc-points', selectRegionalFeature);
+        map.off('click', 'routelens-drivebc-lines', selectRegionalFeature);
+      });
     };
     const handleError = (event: ErrorEvent) => {
       sawResourceError = true;
@@ -257,17 +314,23 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
+    syncRegional(map, regionalEvents, selectedEventId);
     syncRoadAhead(map, findings, selectedEventId);
-  }, [findings, selectedEventId]);
+  }, [findings, regionalEvents, selectedEventId]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (map?.isStyleLoaded()) focusSelectedEvent(map, routeProps.current.findings, selectedEventId);
+    if (map?.isStyleLoaded()) focusSelectedEvent(map, routeProps.current.findings, routeProps.current.drivebcFindings, routeProps.current.regionalEvents, selectedEventId);
   }, [selectedEventId]);
 
   return (
     <section className="map-frame" aria-label="Interactive map of Vancouver">
       <div className="map-canvas" ref={containerRef} />
+      {status === 'ready' && <div className="map-legend" aria-label="Map layers">
+        <span><i className="legend-route" />Selected route</span><span><i className="legend-road-ahead-direct" />Road Ahead intersection</span><span><i className="legend-road-ahead-nearby" />Road Ahead nearby</span>
+        <span><i className="legend-drivebc-point" />DriveBC regional Point</span><span><i className="legend-drivebc-line" />DriveBC regional LineString</span>
+        <span><i className="legend-selected-event" />Focused event</span>
+      </div>}
       {!apiKey ? (
         <div className="map-message" role="status">
           <h2>Map configuration required</h2>

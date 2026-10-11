@@ -4,6 +4,7 @@ import type { RouteLineString } from './routeTypes';
 export type AnalysisStatus = 'available' | 'partial' | 'unavailable';
 export type FindingClassification = 'direct_overlap' | 'nearby';
 export type RoadAheadGeometry =
+  | { type: 'Point'; coordinates: number[] }
   | { type: 'LineString'; coordinates: number[][] }
   | { type: 'MultiLineString'; coordinates: number[][][] }
   | { type: 'Polygon'; coordinates: number[][][] }
@@ -73,6 +74,32 @@ export type AnalysisFinding = {
   detail: DetailEnrichment;
 };
 
+export type DriveBCGeometryBasis = 'linestring_intersection' | 'linestring_proximity' | 'point_proximity';
+export type RegionalGeometry =
+  | { type: 'Point'; coordinates: number[] }
+  | { type: 'LineString'; coordinates: number[][] };
+export type DriveBCSourceEvidence = {
+  event_type: string;
+  status: string | null;
+  severity: string | null;
+  event_subtypes: unknown[];
+  roads: Record<string, unknown>[];
+  schedule: unknown;
+  schedule_text: string | null;
+  direction_assessment: string;
+  temporal_applicability: string;
+  current_impact: string;
+};
+export type DriveBCAnalysisFinding = {
+  event: Omit<CityEvent, 'geometry'> & { geometry: RegionalGeometry | null };
+  classification: FindingClassification;
+  distance_meters: number;
+  geometry_basis: DriveBCGeometryBasis;
+  enrichment_applicability: string;
+  source_evidence: DriveBCSourceEvidence;
+};
+export type RegionalEvent = Omit<CityEvent, 'geometry'> & { geometry: RegionalGeometry | null };
+
 export type SourceStatus = {
   source: string;
   dataset_id: string;
@@ -98,6 +125,8 @@ export type JourneyAnalysis = {
   trip: AnalysisRequest;
   status: AnalysisStatus;
   findings: AnalysisFinding[];
+  drivebc_findings: DriveBCAnalysisFinding[];
+  regional_events: RegionalEvent[];
   unmatchable_events: UnmatchableEvent[];
   source_statuses: SourceStatus[];
   summary: string;

@@ -4,7 +4,7 @@ import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
 import RoadAheadPanel from './RoadAheadPanel';
 import { buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
-import type { AnalysisFinding, AnalysisState } from './analysisTypes';
+import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
 import {
   routeColor,
   type DrivingRoutesRequest,
@@ -88,6 +88,8 @@ const initialRouteState: RouteRequestState = {
 
 const initialAnalysisState: AnalysisState = { status: 'idle', result: null, error: null };
 const noAnalysisFindings: AnalysisFinding[] = [];
+const noDriveBCFindings: DriveBCAnalysisFinding[] = [];
+const noRegionalEvents: RegionalEvent[] = [];
 
 function normalizeRoutes(value: unknown): DrivingRoutesResponse | null {
   if (typeof value !== 'object' || value === null || !('routes' in value) || !Array.isArray(value.routes)) {
@@ -276,7 +278,7 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
         {routeState.status === 'error' && routeState.error}
         {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one below.`}
-        {analysisState.status === 'loading' && 'Checking Road Ahead data for the selected route. This may take a little while.'}
+        {analysisState.status === 'loading' && 'Checking Road Ahead and DriveBC data for the selected route. This may take a little while.'}
         {analysisState.status === 'error' && analysisState.error}
       </p>
     </section>
@@ -372,7 +374,7 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedE
           </section>
         ))}
       </div>
-      {analysisState.status !== 'success' && <p className="panel-note">Road Ahead results are loaded only when you choose Analyze journey.</p>}
+      {analysisState.status !== 'success' && <p className="panel-note">Road event results and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
     </aside>
   );
 }
@@ -575,7 +577,10 @@ export default function App() {
             selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
             fitKey={routeState.fitKey}
             findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
+            drivebcFindings={analysisState.status === 'success' ? analysisState.result.drivebc_findings : noDriveBCFindings}
+            regionalEvents={analysisState.status === 'success' ? analysisState.result.regional_events : noRegionalEvents}
             selectedEventId={selectedEventId}
+            onSelectEvent={setSelectedEventId}
           />
         </div>
         <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} selectedEventId={selectedEventId} onSelectFinding={setSelectedEventId} />

@@ -3,7 +3,7 @@
 ## 1. Current Phase
 
 **Phase:** 5 — Regional Road Context: DriveBC Open511  
-**Phase status:** Approved and in progress. Assignments 5A and 5B are accepted and committed. Assignment 5C is implemented and accepted by the human developer on 2026-10-11, pending its Git checkpoint. Assignment 5D has not started.
+**Phase status:** Complete — Assignments 5A, 5B, 5C, and 5D implemented, verified, and accepted by the human developer on 2026-10-11. Phase 5 acceptance is complete; Git checkpoint pending.
 **Source:** `docs/implementation-plan.md`, Phase 5; `docs/technical-design.md`, DriveBC Open511 sections  
 **Previous phase:** Phase 4 — Vancouver Road Ahead Vertical Slice, human accepted on 2026-10-11 and committed
 

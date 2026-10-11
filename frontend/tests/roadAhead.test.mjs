@@ -8,6 +8,9 @@ const javascript = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const roadAhead = await import(`data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`);
+const driveSource = await readFile(new URL('../src/drivebc.ts', import.meta.url), 'utf8');
+const driveJavascript = ts.transpileModule(driveSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const drivebc = await import(`data:text/javascript;base64,${Buffer.from(driveJavascript).toString('base64')}`);
 
 const line = { type: 'LineString', coordinates: [[-123.12, 49.27], [-123.11, 49.28]] };
 const polygon = { type: 'Polygon', coordinates: [[[-123.12, 49.27], [-123.11, 49.27], [-123.11, 49.28], [-123.12, 49.27]]] };
@@ -59,22 +62,22 @@ test('preserves supported event geometry, including mixed collections, under one
     finding('polygon', 'direct_overlap', polygon), finding('mixed', 'nearby', collection),
     finding('broken', 'nearby', { type: 'Point', coordinates: [-123.12, 49.27] }),
     finding('mixed-partial', 'nearby', { type: 'GeometryCollection', geometries: [line, { type: 'Polygon', coordinates: [] }] })];
-  const geojson = roadAhead.roadAheadGeoJson(findings, 'mixed');
-  assert.equal(geojson.features.length, 5);
-  assert.equal(geojson.features.find((item) => item.id === 'polygon').geometry.type, 'Polygon');
-  assert.equal(geojson.features.find((item) => item.id === 'mixed').geometry.geometries.length, 3);
-  assert.equal(geojson.features.find((item) => item.id === 'mixed').properties.selected, true);
-  assert.equal(geojson.features.find((item) => item.id === 'mixed-partial').geometry.geometries.length, 1);
-  assert.equal(geojson.features.filter((item) => item.id === 'mixed').length, 1);
+  const geojson = roadAhead.roadAheadGeoJson(findings, 'road-ahead-current-road-closures:mixed');
+  assert.equal(geojson.features.length, 6);
+  assert.equal(geojson.features.find((item) => item.id.endsWith(':polygon')).geometry.type, 'Polygon');
+  assert.equal(geojson.features.find((item) => item.id.endsWith(':mixed')).geometry.geometries.length, 3);
+  assert.equal(geojson.features.find((item) => item.id.endsWith(':mixed')).properties.selected, true);
+  assert.equal(geojson.features.find((item) => item.id.endsWith(':mixed-partial')).geometry.geometries.length, 1);
+  assert.equal(geojson.features.filter((item) => item.id.endsWith(':mixed')).length, 1);
 });
 
 test('selects only the matching Road Ahead event for the dedicated map highlight and clears it', () => {
   const findings = [finding('direct', 'direct_overlap', line), finding('mixed', 'nearby', { type: 'GeometryCollection', geometries: [line, polygon] })];
-  const selected = roadAhead.roadAheadGeoJson(findings, 'mixed');
+  const selected = roadAhead.roadAheadGeoJson(findings, 'road-ahead-current-road-closures:mixed');
   assert.equal(selected.features.length, 2);
-  assert.equal(selected.features.find((feature) => feature.id === 'mixed').properties.selected, true);
-  assert.equal(selected.features.find((feature) => feature.id === 'mixed').geometry.geometries.length, 2);
-  assert.equal(selected.features.find((feature) => feature.id === 'direct').properties.selected, false);
+  assert.equal(selected.features.find((feature) => feature.id.endsWith(':mixed')).properties.selected, true);
+  assert.equal(selected.features.find((feature) => feature.id.endsWith(':mixed')).geometry.geometries.length, 2);
+  assert.equal(selected.features.find((feature) => feature.id.endsWith(':direct')).properties.selected, false);
 
   const cleared = roadAhead.roadAheadGeoJson(findings, null);
   assert.equal(cleared.features.every((feature) => feature.properties.selected === false), true);
@@ -83,7 +86,7 @@ test('selects only the matching Road Ahead event for the dedicated map highlight
 test('computes map bounds across polygon and collection coordinates and ignores unusable geometry', () => {
   assert.deepEqual(roadAhead.eventBounds({ type: 'GeometryCollection', geometries: [line, polygon] }),
     [[-123.12, 49.27], [-123.11, 49.28]]);
-  assert.equal(roadAhead.eventBounds({ type: 'Point', coordinates: [-123, 49] }), null);
+  assert.deepEqual(roadAhead.eventBounds({ type: 'Point', coordinates: [-123, 49] }), [[-123, 49], [-123, 49]]);
 });
 
 test('normalizes API findings while preserving absent evidence and detail fallback', () => {
@@ -102,7 +105,63 @@ test('normalizes API findings while preserving absent evidence and detail fallba
   assert.equal(normalized.findings[0].event.status, null);
   assert.equal(normalized.findings[0].detail.availability, 'unavailable');
   assert.equal(normalized.source_statuses[0].stale, true);
+  assert.deepEqual(normalized.drivebc_findings, []);
+  assert.deepEqual(normalized.regional_events, []);
   assert.equal(roadAhead.normalizeJourneyAnalysis({ status: 'available' }), null);
+});
+
+test('normalizes DriveBC evidence and regional Point/LineString snapshots independently', () => {
+  const regional = (id, geometry, extra = {}) => ({ ...event(id, geometry), source: 'DriveBC Open511', source_dataset_id: 'drivebc-open511-active', source_record_id: id, event_type: 'NEW_UNKNOWN_TYPE', severity: 'UNRECOGNIZED', attribution: 'DriveBC Open511', ...extra });
+  const payload = {
+    trip: { origin: {}, destination: {}, mode: 'drive', selected_route: { candidate_id: 'candidate-2', geometry: line, distance_meters: 1, duration_seconds: 1 } },
+    status: 'available', summary: 'Road Ahead and DriveBC checked.', analyzed_at: '2026-10-10T10:00:00Z', findings: [], unmatchable_events: [],
+    source_statuses: [{ source: 'DriveBC Open511', dataset_id: 'drivebc-open511-active', available: true, stale: true, success: false, fetched_at: null, cache_hit: true, refreshed: false, cache_age_seconds: 300, error: null, records_received: 3, records_normalized: 2, records_skipped: 1 }],
+    drivebc_findings: [
+      { event: regional('point', { type: 'Point', coordinates: [-123.12, 49.27] }), classification: 'nearby', distance_meters: 0, geometry_basis: 'point_proximity', source_evidence: { event_type: 'NEW_UNKNOWN_TYPE', severity: 'UNRECOGNIZED', status: 'ACTIVE', roads: [{ name: 'Marine Drive', direction: 'N' }], direction_assessment: 'undetermined', temporal_applicability: 'unknown', current_impact: 'not_established' } },
+      { event: regional('bad', { type: 'Polygon', coordinates: [] }), classification: 'nearby', distance_meters: 1, geometry_basis: 'point_proximity' },
+    ],
+    regional_events: [regional('point', { type: 'Point', coordinates: [-123.12, 49.27] }), regional('line', line), regional('bad', { type: 'Point', coordinates: [NaN, 49] }), regional('unsupported', { type: 'Polygon', coordinates: [] })],
+  };
+  const normalized = roadAhead.normalizeJourneyAnalysis(payload);
+  assert.equal(normalized.drivebc_findings.length, 1);
+  assert.equal(normalized.drivebc_findings[0].geometry_basis, 'point_proximity');
+  assert.equal(normalized.drivebc_findings[0].source_evidence.direction_assessment, 'undetermined');
+  assert.equal(normalized.drivebc_findings[0].source_evidence.current_impact, 'not_established');
+  assert.equal(normalized.drivebc_findings[0].event.severity, 'UNRECOGNIZED');
+  assert.equal(normalized.regional_events.length, 4);
+  assert.equal(normalized.regional_events[2].geometry, null);
+  const geojson = roadAhead.regionalEventsGeoJson(normalized.regional_events, null);
+  assert.equal(geojson.features.length, 2);
+  assert.deepEqual(geojson.features.map((feature) => feature.geometry.type), ['Point', 'LineString']);
+  assert.equal(roadAhead.sourceScopedEventId(normalized.regional_events[0]), 'drivebc-open511-active:point');
+  const selected = roadAhead.regionalEventsGeoJson(normalized.regional_events, 'drivebc-open511-active:line');
+  assert.equal(selected.features.find((feature) => feature.id.endsWith(':line')).properties.selected, true);
+  assert.equal(normalized.source_statuses[0].stale, true);
+});
+
+test('keeps unavailable coverage distinct from a usable zero-match snapshot', () => {
+  const payload = {
+    trip: { origin: {}, destination: {}, mode: 'drive', selected_route: { candidate_id: 'candidate-2', geometry: line, distance_meters: 1, duration_seconds: 1 } },
+    status: 'partial', summary: 'Coverage is partial.', analyzed_at: '2026-10-10T10:00:00Z', findings: [], drivebc_findings: [], regional_events: [], unmatchable_events: [],
+    source_statuses: [{ source: 'DriveBC Open511', dataset_id: 'drivebc-open511-active-v1', success: false, available: false, stale: false, cache_hit: false, refreshed: false, fetched_at: null, cache_age_seconds: null, error: 'unavailable', records_received: 0, records_normalized: 0, records_skipped: 0 }],
+  };
+  const normalized = roadAhead.normalizeJourneyAnalysis(payload);
+  assert.equal(normalized.status, 'partial');
+  assert.equal(normalized.source_statuses[0].available, false);
+  assert.equal(normalized.source_statuses[0].records_received, 0);
+  assert.deepEqual(normalized.drivebc_findings, []);
+  assert.deepEqual(normalized.regional_events, []);
+});
+
+test('uses conservative geometry wording and accepts only official Open511 detail URLs', () => {
+  assert.equal(drivebc.driveBCRelationLabel('linestring_intersection'), 'Intersects route geometry');
+  assert.equal(drivebc.driveBCRelationLabel('linestring_proximity'), 'Nearby road event');
+  assert.equal(drivebc.driveBCRelationLabel('point_proximity'), 'Incident location near route');
+  const url = 'https://api.open511.gov.bc.ca/events/event-123';
+  assert.equal(drivebc.officialDriveBCUrl(url), url);
+  assert.equal(drivebc.officialDriveBCUrl('http://api.open511.gov.bc.ca/events/event-123'), null);
+  assert.equal(drivebc.officialDriveBCUrl('https://example.com/events/event-123'), null);
+  assert.equal(drivebc.officialDriveBCUrl('https://api.open511.gov.bc.ca/events/event-123?next=https://example.com'), null);
 });
 
 test('accepts only official Road Ahead detail links and formats cache age conservatively', () => {

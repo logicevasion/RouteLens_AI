@@ -293,6 +293,30 @@ button, input { font: inherit; }
 .maplibregl-ctrl-attrib a { color: #d0dbe3 !important; }
 .maplibregl-ctrl-bottom-right { z-index: 4; }
 
+.multi-source-panel { padding-top: 14px; }
+.multi-source-panel .analysis-summary { padding: 8px 9px; border-left: 2px solid #65c6bd; border-radius: 0 5px 5px 0; background: rgb(86 200 194 / 5%); }
+.source-record-count { color: #70808c; }
+.source-finding-section { margin-top: 15px; padding-top: 11px; border-top: 1px solid rgb(191 211 232 / 9%); }
+.source-finding-section > h4 { margin: 0; color: #bdd0d8; font-size: 9px; font-weight: 650; letter-spacing: .015em; }
+.finding-group h5 { display: flex; align-items: center; gap: 6px; margin: 11px 0 6px; color: #9eabb5; font-size: 8px; font-weight: 600; }
+.finding-group h5 span { color: #71818d; font-weight: 500; }
+.drivebc-finding { border-left: 2px solid #8299b0; }
+.drivebc-finding .finding-kind { border-color: rgb(130 153 176 / 40%); color: #a9c2d7; white-space: normal; }
+.drivebc-finding .finding-kind-direct_overlap { border-color: rgb(238 121 102 / 42%); color: #f0a293; }
+.drivebc-details { display: block; }
+.provider-attribution { color: #6d7e89; font-size: 7px; }
+.regional-selection { display: grid; gap: 5px; margin-top: 12px; padding: 9px; border: 1px solid rgb(255 226 157 / 35%); border-radius: 6px; background: rgb(255 226 157 / 5%); color: #d6e0e5; font-size: 8px; }
+.regional-selection small { color: #a69c7d; line-height: 1.45; }
+.map-legend { position: absolute; z-index: 3; bottom: 34px; left: 12px; display: grid; gap: 6px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 7px; background: rgb(10 16 22 / 87%); color: #b8c4cd; font-size: 8px; pointer-events: none; }
+.map-legend span { display: flex; align-items: center; gap: 7px; }
+.map-legend i { display: inline-block; width: 13px; height: 3px; border-radius: 3px; }
+.legend-route { background: #51d5cc; }
+.legend-road-ahead-direct { background: #ee7966; }
+.legend-road-ahead-nearby { background: #e5ba70; }
+.legend-drivebc-point { width: 8px !important; height: 8px !important; margin: 0 2px; border: 1px solid #d4e3ef; border-radius: 50% !important; background: #8099b0; }
+.legend-drivebc-line { height: 2px !important; background: repeating-linear-gradient(90deg, #8c9cae 0 3px, transparent 3px 5px); }
+.legend-selected-event { background: #fff06a; }
+
 @media (max-width: 1050px) {
   .topbar { padding-right: 20px; padding-left: 20px; }
   .journey-controls { padding-right: 20px; padding-left: 20px; }

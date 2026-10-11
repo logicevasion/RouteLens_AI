@@ -1,5 +1,5 @@
 import type { FeatureCollection } from 'geojson';
-import type { AnalysisFinding, CityEvent, JourneyAnalysis, RoadAheadGeometry } from './analysisTypes';
+import type { AnalysisFinding, CityEvent, DriveBCAnalysisFinding, DriveBCGeometryBasis, JourneyAnalysis, RegionalEvent, RegionalGeometry, RoadAheadGeometry } from './analysisTypes';
 import type { Location } from './locationTypes';
 import type { RouteCandidate } from './routeTypes';
 
@@ -25,6 +25,7 @@ function usableGeometry(value: unknown): RoadAheadGeometry | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null;
   const candidate = value as { type: unknown; coordinates?: unknown; geometries?: unknown };
   const coordinates = candidate.coordinates;
+  if (candidate.type === 'Point') return validPosition(coordinates) ? value as RoadAheadGeometry : null;
   if (candidate.type === 'LineString') {
     if (Array.isArray(coordinates) && coordinates.length >= 2 && coordinates.every(validPosition)) return value as RoadAheadGeometry;
     return null;
@@ -61,11 +62,11 @@ export function roadAheadGeoJson(findings: AnalysisFinding[], selectedEventId: s
       if (!geometry) return [];
       return [{
         type: 'Feature' as const,
-        id: finding.event.id,
+        id: sourceScopedEventId(finding.event),
         properties: {
           eventId: finding.event.id,
           classification: finding.classification,
-          selected: finding.event.id === selectedEventId,
+          selected: sourceScopedEventId(finding.event) === selectedEventId,
         },
         geometry,
       }];
@@ -87,12 +88,46 @@ export function eventBounds(geometry: RoadAheadGeometry | null): [[number, numbe
   };
   const visit = (item: RoadAheadGeometry) => {
     if (item.type === 'GeometryCollection') item.geometries.forEach(visit);
+    else if (item.type === 'Point') addPosition(item.coordinates);
     else if (item.type === 'LineString') item.coordinates.forEach(addPosition);
     else item.coordinates.flat(1).forEach(addPosition);
   };
   const valid = geometry && usableGeometry(geometry);
   if (valid) visit(valid);
   return Number.isFinite(west) ? [[west, south], [east, north]] : null;
+}
+
+export function sourceScopedEventId(event: Pick<CityEvent, 'source_dataset_id' | 'source_record_id'>): string {
+  return `${event.source_dataset_id}:${event.source_record_id}`;
+}
+
+export function regionalGeometry(value: unknown): RegionalGeometry | null {
+  if (!isRecord(value)) return null;
+  if (value.type === 'Point' && validPosition(value.coordinates)) return value as RegionalGeometry;
+  if (value.type === 'LineString' && Array.isArray(value.coordinates) && value.coordinates.length >= 2 && value.coordinates.every(validPosition)) return value as RegionalGeometry;
+  return null;
+}
+
+export function regionalEventBounds(geometry: RegionalGeometry | null): [[number, number], [number, number]] | null {
+  if (!geometry) return null;
+  const coordinates = geometry.type === 'Point' ? [geometry.coordinates] : geometry.coordinates;
+  const west = Math.min(...coordinates.map((point) => point[0]));
+  const east = Math.max(...coordinates.map((point) => point[0]));
+  const south = Math.min(...coordinates.map((point) => point[1]));
+  const north = Math.max(...coordinates.map((point) => point[1]));
+  return [[west, south], [east, north]];
+}
+
+export function regionalEventsGeoJson(events: RegionalEvent[], selectedEventId: string | null) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: events.flatMap((event) => {
+      const geometry = regionalGeometry(event.geometry);
+      if (!geometry) return [];
+      const id = sourceScopedEventId(event);
+      return [{ type: 'Feature' as const, id, properties: { eventId: id, selected: id === selectedEventId }, geometry }];
+    }),
+  };
 }
 
 export function buildAnalysisRequest(
@@ -162,6 +197,27 @@ function normalizeEvent(value: unknown): CityEvent | null {
   };
 }
 
+function normalizeRegionalEvent(value: unknown): RegionalEvent | null {
+  const event = normalizeEvent(value);
+  return event ? { ...event, geometry: regionalGeometry(event.geometry) } : null;
+}
+
+function normalizeDriveBCEvidence(value: unknown, event: RegionalEvent): DriveBCAnalysisFinding['source_evidence'] {
+  const evidence = isRecord(value) ? value : {};
+  return {
+    event_type: typeof evidence.event_type === 'string' ? evidence.event_type : event.event_type,
+    status: nullableText(evidence.status),
+    severity: nullableText(evidence.severity),
+    event_subtypes: Array.isArray(evidence.event_subtypes) ? evidence.event_subtypes : [],
+    roads: Array.isArray(evidence.roads) ? evidence.roads.filter(isRecord) : [],
+    schedule: evidence.schedule ?? null,
+    schedule_text: nullableText(evidence.schedule_text),
+    direction_assessment: typeof evidence.direction_assessment === 'string' ? evidence.direction_assessment : 'undetermined',
+    temporal_applicability: typeof evidence.temporal_applicability === 'string' ? evidence.temporal_applicability : 'unknown',
+    current_impact: typeof evidence.current_impact === 'string' ? evidence.current_impact : 'not_established',
+  };
+}
+
 function normalizeDetail(value: unknown, event: CityEvent) {
   const detail = isRecord(value) ? value : {};
   const availabilities = ['available', 'no_supported_fields', 'unavailable', 'parse_failed'] as const;
@@ -221,10 +277,29 @@ export function normalizeJourneyAnalysis(value: unknown): JourneyAnalysis | null
     const classification = item.classification as AnalysisFinding['classification'];
     return [{ event, classification, distance_meters: item.distance_meters, detail: normalizeDetail(item.detail, event) }];
   });
+  const unmatchableReasons = ['missing_geometry', 'invalid_structure', 'empty_geometry', 'invalid_topology', 'projection_failure'] as const;
   const unmatchableEvents = Array.isArray(value.unmatchable_events)
-    ? value.unmatchable_events.filter((item): item is { event_id: string; reason: AnalysisFinding['classification'] } =>
-      isRecord(item) && typeof item.event_id === 'string' && typeof item.reason === 'string',
-    ).map((item) => ({ event_id: item.event_id, reason: item.reason as JourneyAnalysis['unmatchable_events'][number]['reason'] }))
+    ? value.unmatchable_events.filter((item) => isRecord(item) && typeof item.event_id === 'string' && unmatchableReasons.includes(item.reason as (typeof unmatchableReasons)[number]))
+      .map((item) => ({ event_id: (item as Record<string, unknown>).event_id as string, reason: (item as Record<string, unknown>).reason as JourneyAnalysis['unmatchable_events'][number]['reason'] }))
+    : [];
+  const drivebcFindings: DriveBCAnalysisFinding[] = Array.isArray(value.drivebc_findings)
+    ? value.drivebc_findings.flatMap((item) => {
+      if (!isRecord(item) || (item.classification !== 'direct_overlap' && item.classification !== 'nearby') ||
+          !['linestring_intersection', 'linestring_proximity', 'point_proximity'].includes(String(item.geometry_basis)) ||
+          typeof item.distance_meters !== 'number' || !Number.isFinite(item.distance_meters)) return [];
+      const event = normalizeRegionalEvent(item.event);
+      if (!event || !event.geometry) return [];
+      return [{
+        event,
+        classification: item.classification,
+        distance_meters: item.distance_meters,
+        geometry_basis: item.geometry_basis as DriveBCGeometryBasis,
+        enrichment_applicability: typeof item.enrichment_applicability === 'string' ? item.enrichment_applicability : 'not_applicable',
+        source_evidence: normalizeDriveBCEvidence(item.source_evidence, event),
+      }];
+    }) : [];
+  const regionalEvents = Array.isArray(value.regional_events)
+    ? value.regional_events.flatMap((item) => { const event = normalizeRegionalEvent(item); return event ? [event] : []; })
     : [];
   const normalizedTrip: JourneyAnalysis['trip'] = {
     origin: origin as unknown as JourneyAnalysis['trip']['origin'],
@@ -242,6 +317,8 @@ export function normalizeJourneyAnalysis(value: unknown): JourneyAnalysis | null
     trip: normalizedTrip,
     status: value.status as JourneyAnalysis['status'],
     findings,
+    drivebc_findings: drivebcFindings,
+    regional_events: regionalEvents,
     unmatchable_events: unmatchableEvents,
     source_statuses: sourceStatuses,
     summary: value.summary,
