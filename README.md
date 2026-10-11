@@ -403,7 +403,7 @@ backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
 ```
 
 The API runs at `http://localhost:8000`; its health endpoint is `http://localhost:8000/api/health`.
-The backend reads `MAPTILER_API_KEY` from the root `.env` file or its process environment.
+The backend reads `MAPTILER_API_KEY` and `OPENROUTESERVICE_API_KEY` from the root `.env` file or its process environment.
 
 Assignment 2A adds these location endpoints:
 
@@ -411,6 +411,8 @@ Assignment 2A adds these location endpoints:
 - `POST /api/locations/validate-destination` accepts one canonical `Location` object and returns `{"valid": true, "reason": null}` when its coordinates are covered by the City of Vancouver boundary, or `{"valid": false, "reason": "..."}` otherwise. Boundary points are included.
 
 Search returns `[]` when there are no usable matches. Invalid query shapes return HTTP 422, missing server credentials return HTTP 503, and upstream provider failures return a sanitized HTTP 502 response.
+
+Assignment 3A adds `POST /api/routes/driving`, which accepts `{"origin": <Location>, "destination": <Location>}`. The destination must be within Vancouver; origins retain the supported regional scope without a newly invented boundary. A successful response is `{"routes": [...]}` with up to three normalized candidates containing a request-scoped `id`, GeoJSON `LineString` geometry, `distance_meters`, `duration_seconds`, and an optional label. An empty `routes` list means no usable candidates were returned in a successful provider response. ORS's explicit unroutable-point response maps to HTTP 422 with `no_route_found`; other configuration, authentication, rate-limit, timeout, and provider failures use sanitized machine-readable error codes. The backend requests metres and ORS's `driving-car` profile; duration is a provider estimate, not a live traffic ETA.
 
 Run the backend checks from the repository root:
 
@@ -439,7 +441,7 @@ Run the TypeScript check and production build with:
 npm run build
 ```
 
-The page reports whether the backend health check succeeded and displays the interactive MapTiler `streets-v4-dark` map centered on Vancouver. Journey tools and the final desktop layout are not implemented yet.
+The page reports whether the backend health check succeeded and displays the interactive MapTiler `streets-v4-dark` map centered on Vancouver. Route candidates are currently available through the backend API only; route rendering and selection controls remain future authorized work.
 
 ---
 

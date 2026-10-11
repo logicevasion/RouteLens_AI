@@ -48,3 +48,32 @@ class DestinationValidation(BaseModel):
 
     valid: bool
     reason: str | None = None
+
+
+class DrivingRouteRequest(BaseModel):
+    """Canonical locations used to request approximate driving corridors."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    origin: Location
+    destination: Location
+
+
+class RouteCandidate(BaseModel):
+    """RouteLens-owned summary of one provider-generated route alternative."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    geometry: dict
+    distance_meters: float
+    duration_seconds: int
+    label: str | None = None
+
+
+class DrivingRoutesResponse(BaseModel):
+    """Available driving candidates; an empty list means none were usable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    routes: list[RouteCandidate]
