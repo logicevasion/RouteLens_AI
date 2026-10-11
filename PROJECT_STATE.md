@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 5 — Regional Road Context: DriveBC Open511
-**Phase status:** In progress — Assignment 5A implemented and ready for human review; 5B–5D not started
-**Human review:** Phase 4 accepted by the human developer on 2026-10-11; Assignment 5A review pending
-**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A changes are uncommitted
+**Phase status:** In progress — Assignment 5A accepted; Assignment 5B implemented and human review completed; 5C–5D not started
+**Human review:** Phase 4 and Assignment 5A accepted by the human developer; Assignment 5B review pending
+**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B changes are uncommitted
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A establishes a regional Open511 source adapter, normalization, and validated cache; its findings and verification are recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A provides the accepted regional Open511 adapter, normalization, and validated cache; its evidence is recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`. Assignment 5B implements selected-route relevance as recorded in Section 24.
 
 ## 2. Established Planning Artifacts
 
@@ -33,7 +33,7 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 accepted. Assignment 5A implementation and review readiness are recorded in Section 23.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 and Assignment 5A accepted. Assignment 5B is implemented and ready for human review; see Section 24.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -714,4 +714,28 @@ The adapter follows documented `limit`/`offset` and `pagination.next_url`, valid
 
 **Project state:** Assignment 5A was accepted by the human developer on 2026-10-11. This section and the source evidence note preserve verified provider behavior, implementation decisions, test results, and known limitations. Live multi-page pagination remains unverified due to HTTP 429; deterministic offline pagination tests passed. Assignments 5B–5D remain pending.
 
-**Git status:** Assignment 5A accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.
+**Git status:** Assignment 5A is included in human commit `1ff1a6d`.
+
+## 24. Assignment 5B — DriveBC Open511 Route Relevance
+
+**Status:** Accepted by the human developer on 2026-10-11. Assignment 5B is complete. Phase 5 remains in progress; Assignments 5C–5D have not started.
+
+`backend/app/drivebc_relevance.py` exposes `match_drivebc_events(route_geometry, events, *, linestring_nearby_distance_meters=500, point_nearby_distance_meters=250, nearby_limit=10)`. It reuses Phase 4's selected-route validation and EPSG:4326-to-EPSG:26910 projector. Results contain ordered `DriveBCEventMatch` values with the original `CityEvent`, classification, measured distance, geometry basis, and typed source evidence; `unmatchable_events` carry reason codes; `excluded_events` retain identities and measured distances for usable but distant events. Duplicate source identities are returned once, with a canonical payload chosen if duplicate identity records differ. The regional collection itself is not modified.
+
+Valid source LineStrings use exact projected Shapely intersection for `direct_overlap`, then minimum projected distance for `nearby` or exclusion. Points use point-to-route distance and can only be `nearby`, including a point at effectively zero distance; they are never represented as verified segment overlap. The separate 250 m Point threshold is more conservative for location-only evidence than the 500 m LineString context threshold. Both are configurable; nearby candidates sort by projected distance then dataset, source record, and event ID. All LineString direct overlaps precede and survive the independent nearby cap. Nearby Point and LineString events share the cap.
+
+The original normalized event remains intact, including geography, source identity, attribution, timestamps, description, and provider metadata. Typed evidence carries event type, status, severity (including `UNKNOWN`), subtypes, roads, and schedule. Direction assessment remains `undetermined`; road labels and source direction are not used to infer a route-road or travel-direction match. Temporal applicability remains `unknown`, and current impact is `not_established`. No wall-clock comparison, recurrence parsing, or ACTIVE-as-current-impact inference is performed. Geometry unsupported or invalid at matching time is isolated with a reason code. Invalid selected routes raise the accepted Phase 4 `RouteGeometryError`. The regional map collection and journey-relevant subset remain separate; no analysis API, cache, frontend, or 5C integration changed.
+
+**Focused verification:** Assignment 5B, Phase 4 route-relevance, and Assignment 5A adapter tests — Passed, 82 tests. Coverage includes Point and LineString behavior, threshold boundaries, projected coordinate order and distances, direct-overlap preservation, nearby caps, ordering and duplicate identities, malformed geometries, invalid routes, metadata retention, temporal/directional uncertainty, sanitized-source saved-route evaluation, and parameterized synthetic direct-LineString/Point matching against all three saved ORS routes.
+
+**Fixture route sanity:** Used each saved ORS feature 0 and both normalized events from `fixtures/open511/regional_active_observed.json`; no live Open511 request was made. With 500 m LineString / 250 m Point thresholds and nearby limit 10, Richmond-to-downtown: 0 direct, 0 nearby LineStrings, 0 nearby Points, 2 distant, 0 unmatchable. New Westminster Station-to-downtown: same counts. Metrotown-to-Vancouver City Hall: same counts. Zero matches are a valid result for these two sanitized records and route snapshots.
+
+**Regression and verification:** Complete backend pytest — Passed, 222 tests. Ruff (`backend/app backend/tests`) — Passed. Frontend tests — Passed, 9 tests. Frontend TypeScript and production build — Passed; Vite reported the existing large-chunk advisory. `git diff --check` and final status/scope inspection — Passed. No browser test was run because this assignment is backend-only. No dependencies were added.
+
+**Known limitations:** Direction and temporal applicability are preserved as unknown for later interpretation; the matcher does not determine whether an ACTIVE record applies at evaluation time. Thresholds are configurable MVP defaults and have not been calibrated against broader source snapshots. The saved-route sanity evidence uses the existing sanitized two-event sample, not live source data. Assignments 5C analysis integration and 5D map/UI work remain pending separate authorization.
+
+**Deviations:** None. Assignment 5B does not modify Road Ahead matching behavior, `CityEvent`, the analysis response, ingestion/cache behavior, authoritative planning documents, or frontend functionality.
+
+**Project state:** Assignment 5B was accepted by the human developer on 2026-10-11. The matcher preserves direct LineString intersections, treats Point events as proximity evidence, and retains direction, schedule, severity, and provenance without inferring current traffic impact. Deterministic tests include positive matching against all three accepted ORS route fixtures. Assignment 5C — Multi-Source Analysis Integration — is next.
+
+**Git status:** Assignment 5B accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.
