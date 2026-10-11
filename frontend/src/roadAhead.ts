@@ -2,6 +2,7 @@ import type { FeatureCollection } from 'geojson';
 import type { AnalysisFinding, CityEvent, DriveBCAnalysisFinding, DriveBCGeometryBasis, JourneyAnalysis, RegionalEvent, RegionalGeometry, RoadAheadGeometry } from './analysisTypes';
 import type { Location } from './locationTypes';
 import type { RouteCandidate } from './routeTypes';
+import { normalizeDestinationWeather } from './weather';
 
 export type RoadAheadFeatureProperties = {
   eventId: string;
@@ -321,6 +322,7 @@ export function normalizeJourneyAnalysis(value: unknown): JourneyAnalysis | null
     regional_events: regionalEvents,
     unmatchable_events: unmatchableEvents,
     source_statuses: sourceStatuses,
+    destination_weather: normalizeDestinationWeather(value.destination_weather),
     summary: value.summary,
     analyzed_at: value.analyzed_at,
   };

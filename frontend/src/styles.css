@@ -228,6 +228,40 @@ button, input { font: inherit; }
 .empty-state { margin: 8px 0 0 34px; color: #74828f; font-size: 9px; line-height: 1.45; }
 .panel-note { margin: auto 16px 15px; padding-top: 12px; color: #677582; font-size: 8px; letter-spacing: .015em; }
 
+.destination-weather-panel { padding: 14px 2px 15px; border-bottom: 1px solid rgb(191 211 232 / 8%); }
+.weather-heading, .weather-subheading, .station-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weather-heading .eyebrow { margin-bottom: 4px; color: #6f9b9a; }
+.weather-heading h3 { margin: 0; color: #dce7ec; font-size: 12px; font-weight: 600; }
+.weather-badge { padding: 4px 7px; border: 1px solid rgb(85 197 139 / 25%); border-radius: 99px; color: #84c9a1; font-size: 8px; }
+.weather-badge-muted { border-color: rgb(223 121 121 / 28%); color: #e09a91; }
+.weather-state, .weather-provenance, .weather-stale-note, .weather-attribution { margin: 7px 0 0; color: #8998a4; font-size: 8px; line-height: 1.5; }
+.weather-unavailable { color: #e1a18f; }
+.weather-source-block { margin-top: 12px; }
+.weather-subheading { justify-content: flex-start; margin-bottom: 7px; }
+.weather-subheading h4 { margin: 0; color: #c0ccd4; font-size: 9px; font-weight: 650; }
+.weather-subheading span { color: #71818d; font-size: 8px; }
+.current-weather-main { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border: 1px solid rgb(86 200 194 / 13%); border-radius: 7px; background: linear-gradient(110deg, rgb(86 200 194 / 7%), rgb(255 255 255 / 1%)); }
+.current-weather-main > strong { color: #edf5f5; font-size: 27px; font-weight: 560; letter-spacing: -.05em; white-space: nowrap; }
+.current-weather-main > span { color: #d4e0e5; font-size: 9px; text-transform: capitalize; }
+.current-weather-main small { display: block; margin-top: 4px; color: #82929e; font-size: 8px; text-transform: none; }
+.weather-metrics { display: flex; flex-wrap: wrap; gap: 5px 11px; margin-top: 7px; color: #81909c; font-size: 8px; }
+.weather-metrics b { color: #c2cfd6; font-weight: 550; }
+.weather-stale-note { color: #d6b66d; }
+.forecast-strip { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 3px; scrollbar-color: #35424e transparent; scrollbar-width: thin; }
+.forecast-point { display: flex; min-width: 76px; flex: 1 0 76px; flex-direction: column; gap: 4px; padding: 7px; border: 1px solid rgb(191 211 232 / 8%); border-radius: 6px; background: rgb(6 12 17 / 24%); }
+.forecast-point time, .forecast-point span, .forecast-point small { color: #84939f; font-size: 7px; white-space: nowrap; }
+.forecast-point b { color: #e0e9ee; font-size: 12px; font-weight: 600; }
+.forecast-point span { overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; }
+.forecast-point small { color: #8bcac4; }
+.station-list { display: grid; gap: 6px; }
+.station-observation { padding: 8px; border: 1px solid rgb(191 211 232 / 8%); border-radius: 6px; background: rgb(6 12 17 / 24%); }
+.station-title b { color: #d2dde4; font-size: 8px; font-weight: 600; }
+.station-title span { color: #8dbfba; font-size: 7px; white-space: nowrap; }
+.weather-measurements { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.weather-measurement { padding: 3px 5px; border-radius: 4px; background: rgb(191 211 232 / 5%); color: #9baab5; font-size: 7px; line-height: 1.4; }
+.weather-measurement b { color: #b9c7d0; font-weight: 600; }
+.weather-attribution { color: #63727d; font-size: 7px; }
+
 .road-ahead-panel { padding: 14px 2px 15px; border-bottom: 1px solid rgb(191 211 232 / 8%); }
 .road-ahead-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .road-ahead-heading .eyebrow { margin-bottom: 4px; color: #6f9b9a; }

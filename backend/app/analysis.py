@@ -13,8 +13,25 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.detail_enrichment import DetailEnrichment, RoadAheadDetailEnricher
 from app.drivebc_open511 import Open511Error, Open511Result, get_drivebc_open511_data
 from app.drivebc_relevance import DriveBCEventEvidence, match_drivebc_events
+from app.eccc_swob import (
+    RegionalSwobResult,
+    SelectedStationObservation,
+    SwobDiagnostics,
+    SwobError,
+    SwobSourceStatus,
+    fetch_regional_observations,
+    select_for_destination,
+)
 from app.geography import validate_destination
 from app.models import Location
+from app.openweather import (
+    CurrentWeatherResult,
+    ForecastWeatherResult,
+    OpenWeatherClient,
+    OpenWeatherError,
+    OpenWeatherResult,
+    WeatherSourceStatus,
+)
 from app.road_ahead import (
     DATASETS,
     CityEvent,
@@ -167,6 +184,18 @@ class AnalysisUnmatchableEvent(BaseModel):
     dataset_id: str
 
 
+class DestinationWeather(BaseModel):
+    """Destination-only weather evidence, kept separate from road events."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    openweather_current: CurrentWeatherResult
+    openweather_forecast: ForecastWeatherResult
+    eccc_status: SwobSourceStatus
+    eccc_observations: list[SelectedStationObservation] = Field(default_factory=list)
+    eccc_attribution: str
+
+
 class JourneyAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -177,8 +206,62 @@ class JourneyAnalysis(BaseModel):
     regional_events: list[CityEvent] = Field(default_factory=list)
     unmatchable_events: list[AnalysisUnmatchableEvent]
     source_statuses: list[SourceStatus]
+    destination_weather: DestinationWeather
     summary: str
     analyzed_at: datetime
+
+
+def _unavailable_openweather() -> OpenWeatherResult:
+    return OpenWeatherResult(
+        current=CurrentWeatherResult(status=WeatherSourceStatus(
+            dataset_id="onecall4_current", success=False, available=False,
+            error="OpenWeather is temporarily unavailable.",
+        )),
+        forecast=ForecastWeatherResult(status=WeatherSourceStatus(
+            dataset_id="onecall4_timeline_15min", success=False, available=False,
+            error="OpenWeather is temporarily unavailable.",
+        )),
+    )
+
+
+def _unavailable_swob() -> RegionalSwobResult:
+    from app.eccc_swob import ATTRIBUTION
+
+    return RegionalSwobResult(
+        observations=[], diagnostics=SwobDiagnostics(),
+        status=SwobSourceStatus(
+            success=False, available=False, error="ECCC GeoMet/SWOB is temporarily unavailable."
+        ),
+        attribution=ATTRIBUTION,
+    )
+
+
+async def _destination_openweather(trip: Trip, evaluation_time: datetime) -> OpenWeatherResult:
+    try:
+        return await OpenWeatherClient().get_weather(
+            trip.destination.latitude, trip.destination.longitude, evaluation_time=evaluation_time
+        )
+    except (OpenWeatherError, OSError, ValueError, TypeError, TimeoutError):
+        # Provider/cache configuration failures stay inside the weather source boundary.
+        return _unavailable_openweather()
+
+
+async def _destination_swob(
+    trip: Trip, evaluation_time: datetime
+) -> tuple[RegionalSwobResult, list[SelectedStationObservation]]:
+    try:
+        regional = await fetch_regional_observations()
+        selected = select_for_destination(
+            regional,
+            latitude=trip.destination.latitude,
+            longitude=trip.destination.longitude,
+            now=evaluation_time,
+            limit=3,
+            preferred_measurements=["precipitation"],
+        )
+        return regional, selected
+    except (SwobError, OSError, ValueError, TypeError, TimeoutError):
+        return _unavailable_swob(), []
 
 
 def _unavailable_road_ahead() -> RoadAheadResult:
@@ -263,14 +346,17 @@ def _diagnostic(event: UnmatchableEvent, *, source: str, dataset_id: str) -> Ana
 
 
 async def analyze_journey(trip: Trip, *, enricher: RoadAheadDetailEnricher | None = None) -> JourneyAnalysis:
-    """Acquire both source snapshots independently and match each with its accepted rules."""
+    """Acquire road and destination-weather evidence independently for the selected route."""
     destination_result = validate_destination(trip.destination)
     if not destination_result.valid:
         raise ValueError(destination_result.reason or "Destination is outside the supported area.")
 
-    road_result, open511_result = await asyncio.gather(
+    analysis_time = datetime.now(timezone.utc)
+    road_result, open511_result, openweather_result, swob_result = await asyncio.gather(
         get_road_ahead_data(),
         get_drivebc_open511_data(),
+        _destination_openweather(trip, analysis_time),
+        _destination_swob(trip, analysis_time),
         return_exceptions=True,
     )
     road_data: RoadAheadResult = _source_result(
@@ -283,6 +369,13 @@ async def analyze_journey(trip: Trip, *, enricher: RoadAheadDetailEnricher | Non
         _unavailable_open511(),
         (Open511Error, OSError, TimeoutError),
     )
+    weather_data: OpenWeatherResult = (
+        _unavailable_openweather() if isinstance(openweather_result, BaseException) else openweather_result
+    )
+    if isinstance(swob_result, BaseException):
+        regional_swob, selected_swob = _unavailable_swob(), []
+    else:
+        regional_swob, selected_swob = swob_result
 
     road_matches = match_route_events(trip.selected_route.geometry, road_data.events)
     drivebc_matches = match_drivebc_events(trip.selected_route.geometry, open511_data.events)
@@ -329,6 +422,13 @@ async def analyze_journey(trip: Trip, *, enricher: RoadAheadDetailEnricher | Non
         regional_events=open511_data.events,
         unmatchable_events=unmatchable,
         source_statuses=statuses,
+        destination_weather=DestinationWeather(
+            openweather_current=weather_data.current,
+            openweather_forecast=weather_data.forecast,
+            eccc_status=regional_swob.status,
+            eccc_observations=selected_swob,
+            eccc_attribution=regional_swob.attribution,
+        ),
         summary=summary,
-        analyzed_at=datetime.now(timezone.utc),
+        analyzed_at=analysis_time,
     )

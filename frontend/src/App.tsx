@@ -3,6 +3,7 @@ import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
 import RoadAheadPanel from './RoadAheadPanel';
+import DestinationWeatherPanel from './DestinationWeatherPanel';
 import { buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
 import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
 import {
@@ -278,7 +279,7 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
         {routeState.status === 'error' && routeState.error}
         {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one below.`}
-        {analysisState.status === 'loading' && 'Checking Road Ahead and DriveBC data for the selected route. This may take a little while.'}
+        {analysisState.status === 'loading' && 'Checking road sources and destination weather for the selected route. This may take a little while.'}
         {analysisState.status === 'error' && analysisState.error}
       </p>
     </section>
@@ -361,7 +362,9 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedE
       )}
 
       <div className="intelligence-sections">
-        {intelligenceSections.map((section) => section.title === 'Road and route context' ? (
+        {intelligenceSections.map((section) => section.title === 'Destination conditions' ? (
+          <DestinationWeatherPanel key={section.title} analysis={analysisState} />
+        ) : section.title === 'Road and route context' ? (
           <RoadAheadPanel key={section.title} analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
         ) : (
           <section className="intelligence-section" key={section.title}>
@@ -374,7 +377,7 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedE
           </section>
         ))}
       </div>
-      {analysisState.status !== 'success' && <p className="panel-note">Road event results and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
+      {analysisState.status !== 'success' && <p className="panel-note">Weather, road findings, and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
     </aside>
   );
 }

@@ -4,10 +4,11 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 6 — Current and Near-Term Weather
-**Phase status:** Assignment 6C implemented and pending human acceptance; Phase 6 remains in progress.
-**Human review:** Phase 5 accepted. Assignment 6A decision and Assignment 6B implementation accepted; Assignment 6C awaits review.
-**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`.
+**Current phase:** Phase 6 — Current + Near-Term Weather
+**Phase status:** Complete — Assignments 6A–6D accepted by the human developer on 2026-10-11.
+**Human review:** Phase 6 implementation and interactive browser experience accepted.
+**Next phase:** Phase 7 — Vancouver Camera Pipeline, pending separate authorization.
+**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
 
@@ -34,7 +35,7 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–5 and Assignment 6B accepted; Assignment 6C implemented, pending human acceptance; see Sections 26–28.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–5 and Assignments 6A–6C accepted; Assignment 6D implemented, pending human visual acceptance; see Sections 26–29.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -822,7 +823,7 @@ and 258 passing backend tests.
 The known limitation involving deletion of both local budget-state
 files is accepted for the datathon MVP.
 
-Assignment 6C is implemented and pending human acceptance; see Section 28.
+Assignment 6C is accepted by the human developer; see Section 28.
 
 **Files changed:** Added `backend/app/openweather.py` and `backend/tests/test_openweather.py`; updated `.env.example`, `docs/integration-notes/openweather-phase-6a.md`, and this state record. No dependency, frontend, journey-analysis, SWOB, camera, or AI integration files changed.
 
@@ -854,7 +855,7 @@ The guard now persists a separate initialization marker at `<budget-state-path>.
 
 ## 28. Assignment 6C — ECCC GeoMet SWOB Measured Weather Adapter
 
-**Assignment 6C status:** Implemented — pending human acceptance.
+**Assignment 6C status:** Accepted by the human developer on 2026-10-11.
 
 The separate ECCC adapter uses the official GeoMet OGC API collection
 `swob-realtime` at `https://api.weather.gc.ca/collections/swob-realtime/items`.
@@ -925,12 +926,98 @@ Frontend and journey-analysis integration checks — Not run and out of scope.
 **Known limitations:** The approved bbox produced sparse station coverage and
 must not be described as comprehensive Lower Mainland coverage. Visibility is
 not normalized. Station measurements remain evidence at their own station and
-time, not destination conditions. The adapter is not connected to journey
-analysis; Assignment 6D owns that integration.
+time, not destination conditions. At the end of Assignment 6C, the adapter had
+not yet been connected to journey analysis; Assignment 6D integration is
+recorded in Section 29.
 
 **Deviations:** None. No Phase 6D or later assignment was started.
 
-**Git status:** Assignment 6C changes are uncommitted and unstaged. No commit,
-push, or Git history modification was performed.
+**Git status:** The human developer reports Assignment 6C accepted and committed;
+the checkpoint hash is not recorded here. Codex performed no Git history operation.
 
 **Review status:** Assignment 6C accepted by the human developer on 2026-10-11. The ECCC SWOB adapter, source-specific normalization, station grouping and selection, validated regional cache, stale fallback, and independent source status are accepted. Known sparse-station coverage and unavailable visibility measurements remain documented limitations.
+
+## 29. Assignment 6D — Combined Weather Journey Integration and Frontend
+
+**Assignment 6D status:** Implemented — pending human visual acceptance. Phase 6
+remains in progress; Phase 7 has not started.
+
+`POST /api/trips/analyze` now adds `destination_weather` while retaining the
+existing trip, selected route, Road Ahead findings/enrichment, DriveBC findings,
+regional map events, three road source statuses, and road-focused summary.
+Weather is separate from `CityEvent` and contains independently status-bearing
+OpenWeather current and next-three-hour forecast results plus ECCC source status,
+up to three destination-selected measured station observations, and attribution.
+The request continues to use canonical validated destination coordinates and
+the explicit selected route; weather analysis does not request another ORS route.
+Road and weather acquisition runs concurrently. Expected adapter failures and
+unexpected source task errors are isolated so weather failures retain successful
+road analysis.
+
+The frontend replaces the destination-conditions placeholder with a compact
+Destination Weather section. It shows current structured conditions and
+freshness, only returned forecast timestamps and probabilities, reported
+coverage gaps, and measured ECCC station values with distance, observation age,
+stale status, accumulation intervals, and attribution. Missing values remain
+unknown. Existing analysis abort/sequence invalidation continues to clear and
+reject obsolete weather with the rest of the analysis result.
+
+**Files changed:** `backend/app/analysis.py`,
+`backend/tests/test_analysis_api.py`, `frontend/package.json`,
+`frontend/src/App.tsx`, `frontend/src/analysisTypes.ts`,
+`frontend/src/roadAhead.ts`, `frontend/src/styles.css`,
+`frontend/src/DestinationWeatherPanel.tsx`, `frontend/src/weather.ts`,
+`frontend/tests/roadAhead.test.mjs`, `frontend/tests/weather.test.mjs`, and
+`frontend/tests/weatherPanel.test.mjs`.
+
+**Verification:** Backend pytest — Passed, 293 tests (one existing Python
+multiprocessing fork deprecation warning in the OpenWeather budget test). Ruff over `backend/app`
+and `backend/tests` — Passed. Frontend tests — Passed, including weather
+normalization and server-rendered panel checks. TypeScript check and production
+build — Passed; Vite reports the existing large bundle advisory. Backend import
+and `/api/health` smoke — Passed. `git diff --check` and `.env`/weather-cache
+ignore checks — Passed. New artifacts were inspected for credential leakage;
+OpenWeather credentials remain backend-side and absent from frontend code.
+
+**Bounded live verification:** One representative Richmond-to-Vancouver
+journey validated the destination, returned three live ORS alternatives, and
+explicitly selected route-1 for one manual analysis request. The combined API
+returned 14 Road Ahead findings, 2 DriveBC route findings, 40 regional map
+events, available OpenWeather current plus 12 continuous forecast intervals,
+and 3 selected ECCC stations. Both OpenWeather products refreshed in that
+single journey (two upstream product attempts); no counter was reset or bypassed.
+The station sample included observations 2.7–13.2 km from the destination and
+ages of 42 seconds to 47.7 minutes. These remain station-specific measurements.
+The live journey request used canonical API location objects; live UI autocomplete
+was not exercised.
+
+**Browser verification:** Headless Chrome loaded the Vite frontend and rendered
+the dark desktop shell with the Destination Weather section in the established
+panel. The backend health indicator connected when the backend was running.
+The map remained on its loading state, and automated browser interaction tools
+were unavailable, so browser route selection, analysis activation, and populated
+weather rendering were not verified. Automated component rendering and the live
+API journey provide separate evidence. Final human visual acceptance remains
+pending.
+
+**Known limitations:** No weather map or route sampling was introduced. SWOB
+coverage remains sparse and station observations are not destination conditions.
+The browser review did not verify the interactive end-to-end flow or successful
+MapLibre tile rendering in this environment. OpenWeather account-level billing
+and provider terms remain the previously documented human responsibility.
+
+**Deviations:** None. No weather adapter limits, cache TTLs, request budget,
+road contracts, or later-phase functionality were changed.
+
+**Git status:** Assignment 6D changes are unstaged and uncommitted. No commit,
+push, or Git history modification was performed.
+
+**Review status:** Assignment 6D and Phase 6 accepted by the human developer on 2026-10-11.
+
+**Human visual acceptance:** All eight checks passed: map/routing, manual analysis, existing road intelligence, OpenWeather current conditions, three-hour forecast, ECCC station observations, interface presentation, and journey invalidation/reanalysis.
+
+**Verification:** 293 backend tests passed; Ruff, frontend tests, TypeScript validation, production build, and bounded live journey analysis passed. Human browser testing confirmed the complete weather experience.
+
+**Known limitations:** ECCC station coverage is sparse; readings represent specific stations rather than exact destination conditions. OpenWeather forecasts retain their native uncertainty and actual coverage. Existing documented provider, cache, and budget restrictions remain in effect.
+
+**Phase status:** Complete and human accepted. Phase 7 has not started.

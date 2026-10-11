@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -9,7 +10,26 @@ import pytest
 
 from app.detail_enrichment import DetailEnrichment
 from app.drivebc_open511 import Open511Error, Open511Result, normalize_event
+from app.eccc_swob import (
+    ATTRIBUTION,
+    PrecipitationAccumulation,
+    RegionalSwobResult,
+    SelectedStationObservation,
+    StationObservation,
+    SwobDiagnostics,
+    SwobSourceStatus,
+)
 from app.main import app
+from app.openweather import (
+    CurrentWeather,
+    CurrentWeatherResult,
+    ForecastCoverage,
+    ForecastInterval,
+    ForecastWeatherResult,
+    OpenWeatherResult,
+    WeatherCondition,
+    WeatherSourceStatus,
+)
 from app.road_ahead import (
     DATASETS,
     CityEvent,
@@ -91,6 +111,26 @@ def default_open511(monkeypatch: pytest.MonkeyPatch):
     async def get_data():
         return Open511Result(events=[], source_status=open511_status())
     monkeypatch.setattr("app.analysis.get_drivebc_open511_data", get_data)
+
+    async def no_openweather(trip, evaluation_time):
+        return OpenWeatherResult(
+            current=CurrentWeatherResult(status=WeatherSourceStatus(
+                dataset_id="onecall4_current", success=False, available=False, error="offline test"
+            )),
+            forecast=ForecastWeatherResult(status=WeatherSourceStatus(
+                dataset_id="onecall4_timeline_15min", success=False, available=False, error="offline test"
+            )),
+        )
+    async def no_swob(trip, evaluation_time):
+        return (
+            RegionalSwobResult(
+                diagnostics=SwobDiagnostics(),
+                status=SwobSourceStatus(success=False, available=False, error="offline test"),
+            ),
+            [],
+        )
+    monkeypatch.setattr("app.analysis._destination_openweather", no_openweather)
+    monkeypatch.setattr("app.analysis._destination_swob", no_swob)
 
 
 class FakeEnricher:
@@ -372,3 +412,145 @@ def test_all_source_datasets_unavailable_is_not_a_clear_route(monkeypatch: pytes
     assert body["findings"] == body["drivebc_findings"] == body["regional_events"] == []
     assert "unavailable" in body["summary"]
     assert "clear" not in body["summary"].lower()
+
+
+def test_weather_contract_keeps_partial_sources_destination_and_route_independent(monkeypatch: pytest.MonkeyPatch) -> None:
+    at = datetime(2026, 10, 11, 12, 0, tzinfo=timezone.utc)
+    captured: dict[str, object] = {}
+    current = CurrentWeather(
+        requested_coordinates={"latitude": 49.263, "longitude": -123.114}, observed_at=at,
+        fetched_at=at, temperature_c=8.5, condition=WeatherCondition(group="Clouds", description="overcast clouds"),
+    )
+    async def weather(trip, evaluation_time):
+        captured["destination"] = (trip.destination.latitude, trip.destination.longitude)
+        captured["route"] = trip.selected_route.candidate_id
+        return OpenWeatherResult(
+            current=CurrentWeatherResult(weather=current, status=WeatherSourceStatus(
+                dataset_id="onecall4_current", success=True, available=True, stale=True,
+                cache_age_seconds=900, fetched_at=at,
+            )),
+            forecast=ForecastWeatherResult(
+                intervals=[ForecastInterval(
+                    requested_coordinates=current.requested_coordinates, forecast_at=at,
+                    fetched_at=at, precipitation_probability_pct=None, temperature_c=8.0,
+                )],
+                coverage=ForecastCoverage(
+                    evaluation_time=at, window_end=at.replace(hour=15), expected_interval_count=12,
+                    returned_interval_count=1, missing_intervals=[at.replace(minute=15)], continuous=False,
+                ),
+                status=WeatherSourceStatus(dataset_id="onecall4_timeline_15min", success=True, available=True),
+            ),
+        )
+
+    observation = StationObservation(
+        station_id="C123456789", station_name="Vancouver Harbour", source_record_id="sample-1",
+        latitude=49.29, longitude=-123.12, observed_at=at, retrieved_at=at,
+        precipitation=[PrecipitationAccumulation(value=0.0, unit="mm", source_field="pcpn_amt_pst10mts", interval_seconds=600)],
+        attribution=ATTRIBUTION,
+    )
+    selected = SelectedStationObservation(
+        observation=observation, distance_meters=3200, observation_age_seconds=1080,
+        observation_stale=False, cache_stale=True, useful_measurements=["precipitation"], selection_reason="nearby",
+    )
+    async def swob(trip, evaluation_time):
+        captured["swob_destination"] = (trip.destination.latitude, trip.destination.longitude)
+        return (
+            RegionalSwobResult(observations=[observation], diagnostics=SwobDiagnostics(),
+                              status=SwobSourceStatus(success=False, available=True, stale=True, cache_age_seconds=900)),
+            [selected],
+        )
+    monkeypatch.setattr("app.analysis._destination_openweather", weather)
+    monkeypatch.setattr("app.analysis._destination_swob", swob)
+    road = event("still-visible", [[-123.12, 49.27], [-123.11, 49.28]])
+    async def road_data(): return RoadAheadResult(events=[road], source_statuses=source_statuses())
+    monkeypatch.setattr("app.analysis.get_road_ahead_data", road_data)
+    monkeypatch.setattr("app.analysis.RoadAheadDetailEnricher", lambda: FakeEnricher())
+
+    body = api(payload()).json()
+    weather_body = body["destination_weather"]
+    assert captured["destination"] == captured["swob_destination"] == (49.263, -123.114)
+    assert captured["route"] == body["trip"]["selected_route"]["candidate_id"] == "route-2"
+    assert [finding["event"]["id"] for finding in body["findings"]] == [road.id]
+    assert weather_body["openweather_current"]["status"]["stale"] is True
+    assert weather_body["openweather_forecast"]["coverage"]["continuous"] is False
+    assert weather_body["openweather_forecast"]["intervals"][0]["precipitation_probability_pct"] is None
+    assert weather_body["eccc_observations"][0]["distance_meters"] == 3200
+    assert weather_body["eccc_observations"][0]["observation_age_seconds"] == 1080
+    assert weather_body["eccc_observations"][0]["observation"]["precipitation"][0]["interval_seconds"] == 600
+
+
+def test_all_weather_unavailable_keeps_successful_road_findings(monkeypatch: pytest.MonkeyPatch) -> None:
+    road = event("weather-does-not-mask-road", [[-123.12, 49.27], [-123.11, 49.28]])
+    async def road_data(): return RoadAheadResult(events=[road], source_statuses=source_statuses())
+    monkeypatch.setattr("app.analysis.get_road_ahead_data", road_data)
+    monkeypatch.setattr("app.analysis.RoadAheadDetailEnricher", lambda: FakeEnricher())
+    body = api(payload()).json()
+    weather_body = body["destination_weather"]
+    assert [finding["event"]["id"] for finding in body["findings"]] == [road.id]
+    assert weather_body["openweather_current"]["status"]["available"] is False
+    assert weather_body["openweather_forecast"]["status"]["available"] is False
+    assert weather_body["eccc_status"]["available"] is False
+
+
+@pytest.mark.parametrize("failed_product", ["current", "forecast"])
+def test_openweather_products_are_reported_independently(monkeypatch: pytest.MonkeyPatch, failed_product: str) -> None:
+    at = datetime(2026, 10, 11, 12, 0, tzinfo=timezone.utc)
+    current_available = failed_product != "current"
+    forecast_available = failed_product != "forecast"
+    current_status = WeatherSourceStatus(
+        dataset_id="onecall4_current", success=current_available, available=current_available,
+        error=None if current_available else "upstream unavailable",
+    )
+    forecast_status = WeatherSourceStatus(
+        dataset_id="onecall4_timeline_15min", success=forecast_available, available=forecast_available,
+        error=None if forecast_available else "upstream unavailable",
+    )
+    async def weather(trip, evaluation_time):
+        return OpenWeatherResult(
+            current=CurrentWeatherResult(
+                weather=CurrentWeather(requested_coordinates={"latitude": trip.destination.latitude,
+                    "longitude": trip.destination.longitude}, observed_at=at, fetched_at=at) if current_available else None,
+                status=current_status,
+            ),
+            forecast=ForecastWeatherResult(
+                intervals=[], coverage=None, status=forecast_status,
+            ),
+        )
+    async def swob(trip, evaluation_time):
+        return (
+            RegionalSwobResult(diagnostics=SwobDiagnostics(),
+                status=SwobSourceStatus(success=True, available=True)),
+            [],
+        )
+    monkeypatch.setattr("app.analysis._destination_openweather", weather)
+    monkeypatch.setattr("app.analysis._destination_swob", swob)
+    monkeypatch.setattr("app.analysis.RoadAheadDetailEnricher", lambda: FakeEnricher())
+    weather_body = api(payload()).json()["destination_weather"]
+    assert weather_body["openweather_current"]["status"]["available"] is current_available
+    assert weather_body["openweather_forecast"]["status"]["available"] is forecast_available
+    assert weather_body["eccc_status"]["available"] is True
+    assert weather_body["eccc_observations"] == []
+
+
+@pytest.mark.parametrize("failed_source", ["openweather", "swob"])
+def test_unexpected_weather_task_exception_does_not_fail_road_analysis(
+    monkeypatch: pytest.MonkeyPatch, failed_source: str
+) -> None:
+    road = event("provider-error-isolated", [[-123.12, 49.27], [-123.11, 49.28]])
+    async def road_data(): return RoadAheadResult(events=[road], source_statuses=source_statuses())
+    async def fail(*args, **kwargs): raise RuntimeError("unexpected provider failure")
+    monkeypatch.setattr("app.analysis.get_road_ahead_data", road_data)
+    monkeypatch.setattr("app.analysis.RoadAheadDetailEnricher", lambda: FakeEnricher())
+    monkeypatch.setattr(
+        "app.analysis._destination_openweather" if failed_source == "openweather" else "app.analysis._destination_swob",
+        fail,
+    )
+    response = api(payload())
+    assert response.status_code == 200
+    body = response.json()
+    assert [finding["event"]["id"] for finding in body["findings"]] == [road.id]
+    if failed_source == "openweather":
+        assert body["destination_weather"]["openweather_current"]["status"]["available"] is False
+        assert body["destination_weather"]["openweather_forecast"]["status"]["available"] is False
+    else:
+        assert body["destination_weather"]["eccc_status"]["available"] is False

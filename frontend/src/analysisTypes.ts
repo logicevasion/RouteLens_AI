@@ -116,6 +116,49 @@ export type SourceStatus = {
   records_skipped: number;
 };
 
+export type WeatherSourceStatus = Omit<SourceStatus, 'records_received' | 'records_normalized' | 'records_skipped'>;
+export type WeatherCondition = { code: number | null; group: string | null; description: string | null };
+export type CurrentWeatherEvidence = {
+  source: string; product: string; observed_at: string; fetched_at: string;
+  temperature_c: number | null; feels_like_c: number | null; condition: WeatherCondition | null;
+  humidity_pct: number | null; wind_speed_m_s: number | null; wind_direction_deg: number | null;
+  wind_gust_m_s: number | null; visibility_m: number | null;
+};
+export type ForecastInterval = {
+  source: string; product: string; forecast_at: string; fetched_at: string;
+  precipitation_probability_pct: number | null; temperature_c: number | null;
+  feels_like_c: number | null; condition: WeatherCondition | null;
+  humidity_pct: number | null; wind_speed_m_s: number | null; visibility_m: number | null;
+};
+export type ForecastCoverage = {
+  evaluation_time: string; window_end: string; first_interval_at: string | null;
+  last_interval_at: string | null; expected_interval_count: number; returned_interval_count: number;
+  missing_intervals: string[]; malformed_records: number; duplicate_records: number;
+  initial_page_only: boolean; continuous: boolean;
+};
+export type MeasuredValue = {
+  value: number; unit: string; source_field: string; interval_seconds: number | null;
+  quality_code: number | null;
+};
+export type StationObservation = {
+  source: string; station_id: string; station_name: string | null; latitude: number | null;
+  longitude: number | null; observed_at: string; retrieved_at: string;
+  temperature: MeasuredValue | null; relative_humidity: MeasuredValue | null;
+  precipitation: MeasuredValue[]; wind_speed: MeasuredValue | null;
+  wind_direction: MeasuredValue | null; snow_depth: MeasuredValue | null; attribution: string;
+};
+export type SelectedStationObservation = {
+  observation: StationObservation; distance_meters: number; observation_age_seconds: number;
+  observation_stale: boolean; cache_stale: boolean; useful_measurements: string[];
+  selection_reason: string;
+};
+export type DestinationWeather = {
+  openweather_current: { weather: CurrentWeatherEvidence | null; status: WeatherSourceStatus };
+  openweather_forecast: { intervals: ForecastInterval[]; coverage: ForecastCoverage | null; status: WeatherSourceStatus };
+  eccc_status: WeatherSourceStatus; eccc_observations: SelectedStationObservation[];
+  eccc_attribution: string;
+};
+
 export type UnmatchableEvent = {
   event_id: string;
   reason: 'missing_geometry' | 'invalid_structure' | 'empty_geometry' | 'invalid_topology' | 'projection_failure';
@@ -129,6 +172,7 @@ export type JourneyAnalysis = {
   regional_events: RegionalEvent[];
   unmatchable_events: UnmatchableEvent[];
   source_statuses: SourceStatus[];
+  destination_weather: DestinationWeather;
   summary: string;
   analyzed_at: string;
 };
