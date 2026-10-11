@@ -24,6 +24,20 @@ The MVP is a local desktop web application.
 
 Public deployment is not required.
 
+## MVP Journey Mode Boundary — 2026-10-11
+
+The datathon MVP supports **driving journeys exclusively**.
+
+The supported journey contract consists of a canonical origin, a City of Vancouver destination, and an explicitly selected driving-route candidate with GeoJSON LineString geometry.
+
+Transit Mode, GTFS preprocessing, transit service selection, service-alert ingestion, and transit-specific relevance matching are deferred beyond the MVP.
+
+No transit-specific models, adapters, endpoints, UI components, or acceptance tests are required for the active implementation.
+
+The existing driving-route, Road Ahead, and DriveBC contracts remain unchanged.
+
+The primary architectural priority is the integration of road-event evidence, weather, destination camera observations, multimodal camera analysis, and source-grounded journey briefings.
+
 ---
 
 # 2. High-Level Architecture
@@ -38,7 +52,6 @@ RouteLens consists of:
 - source-specific cache policies;
 - a Vancouver camera catalogue-enrichment pipeline;
 - ephemeral camera-image caching;
-- deterministic transit-service matching;
 - OpenRouter-backed AI inference.
 
 High-level flow:
@@ -49,17 +62,16 @@ User
  ▼
 React / Vite frontend
  │
- │ origin / destination / mode
- │ selected route
- │ optional transit-service selections
+ │ origin / destination
+ │ explicitly selected driving route
  ▼
 FastAPI backend
  │
  ├── MapTiler geocoding/autocomplete
- ├── openrouteservice routing
+ └── openrouteservice driving routes
  │
  ▼
-Canonical Trip / Selected Route
+Canonical Trip / Selected Driving Route
  │
  ▼
 Journey Analysis Orchestrator
@@ -68,8 +80,7 @@ Journey Analysis Orchestrator
  ├── Vancouver Road Ahead
  ├── DriveBC Open511
  ├── ECCC SWOB
- ├── OpenWeather
- └── TransLink GTFS Static + Service Alerts
+ └── OpenWeather
  │
  ▼
 Validation / Normalization / Provenance
@@ -77,9 +88,8 @@ Validation / Normalization / Provenance
  ▼
 Deterministic Relevance
  │
- ├── geospatial matching
+ ├── route geometry and proximity
  ├── temporal applicability
- ├── transit route/direction matching
  └── freshness / source status
  │
  ▼
@@ -148,8 +158,6 @@ AI does not decide:
 - which camera is nearest;
 - which camera image directions exist;
 - whether a source is fresh;
-- which transit route ID the user selected;
-- whether an alert selector matches the selected service;
 - whether a source value is missing.
 
 Those responsibilities belong to deterministic code.
@@ -180,9 +188,7 @@ Missing values must not be silently interpreted as normal or zero.
 Examples:
 
 - missing precipitation is not zero precipitation;
-- missing transit direction is not a known direction;
 - missing schedule is not 24-hour applicability;
-- absent delay information is not on-time service;
 - unavailable imagery is not evidence of clear weather.
 
 Unknown values remain unknown.
@@ -228,8 +234,6 @@ Examples:
 - an Open511 incident elsewhere in Metro Vancouver may appear on the regional map;
 - only events relevant to the selected journey become briefing candidates.
 
-Likewise, transit alerts may be highly relevant to the briefing without any transit map visualization.
-
 ---
 
 ## 3.9 Simplicity Over Infrastructure
@@ -271,7 +275,6 @@ Responsibilities:
 - user input;
 - autocomplete UI;
 - route candidate selection;
-- transit-service selection;
 - map rendering;
 - telemetry visualization;
 - journey intelligence panel;
@@ -303,7 +306,6 @@ Locked backend stack:
 
 Additional lightweight libraries may be introduced where clearly justified, for example:
 
-- GTFS-Realtime Protocol Buffer decoding;
 - HTML parsing for deterministic Road Ahead detail-page enrichment.
 
 Responsibilities:
@@ -313,7 +315,6 @@ Responsibilities:
 - routing/geocoding coordination;
 - source-specific cache management;
 - geospatial relevance;
-- transit selector matching;
 - camera-catalogue enrichment;
 - camera selection;
 - image proxy/cache;
@@ -350,8 +351,6 @@ Primary use:
 - return up to three candidate routes where available.
 
 RouteLens does not expect exact Google Maps parity.
-
-Transit mode may still use an approximate generic corridor, but no transit-routing engine is required.
 
 ---
 
@@ -498,15 +497,12 @@ Conceptual models include:
 - `Trip`
 - `RouteCandidate`
 - `SelectedRoute`
-- `TransitLeg`
 - `CityEvent`
 - `CameraIntersection`
 - `CameraView`
 - `CameraObservation`
 - `WeatherObservation`
 - `WeatherForecast`
-- `TransitAlert`
-- `TransitAlertMatch`
 - `SourceStatus`
 - `SourceMetadata`
 - `JourneyBriefing`
@@ -577,18 +573,14 @@ Conceptual:
 class Trip(BaseModel):
     origin: Location
     destination: Location
-    mode: Literal["drive", "transit"]
+    mode: Literal["drive"]
     selected_route: SelectedRoute
-
-    transit_legs: list[TransitLeg] = []
 
     estimated_duration_seconds: int | None = None
     estimated_arrival_at: datetime | None = None
 ```
 
 The downstream system should operate on this model regardless of how origin/destination were entered.
-
-Transit legs are populated only for Transit mode.
 
 ---
 
@@ -619,36 +611,9 @@ Conceptual:
 class SelectedRoute(BaseModel):
     candidate_id: str
     geometry: dict
-    mode: Literal["drive", "transit"]
 ```
 
 The route geometry is used to produce a Shapely line and buffered relevance corridor.
-
----
-
-# 13. TransitLeg Model
-
-Conceptual:
-
-```python
-class TransitLeg(BaseModel):
-    order: int
-
-    route_id: str
-    route_short_name: str | None
-    route_long_name: str | None
-
-    route_type: int | None
-
-    direction_id: int | None
-    direction_label: str | None
-```
-
-The UI exposes human-friendly names.
-
-The backend preserves GTFS identifiers.
-
-Exact boarding/exiting stops are not required for MVP.
 
 ---
 
@@ -848,75 +813,6 @@ Do not implement fields that the selected endpoint does not provide.
 
 ---
 
-# 20. TransitAlert Model
-
-Conceptual:
-
-```python
-class TransitAlert(BaseModel):
-    id: str
-    source: str
-
-    header: str
-    description: str | None
-    url: str | None
-
-    cause: str | None
-    effect: str | None
-
-    active_periods: list[dict]
-
-    selectors: list[dict]
-
-    source_metadata: SourceMetadata
-```
-
-The normalized model must preserve enough selector detail to distinguish:
-
-- route-level;
-- direction-specific;
-- stop-specific;
-- trip-specific
-
-scope.
-
-Do not flatten these distinctions away.
-
----
-
-# 21. TransitAlertMatch Model
-
-Matching results should be represented separately from the raw normalized alert.
-
-Conceptual:
-
-```python
-class TransitAlertMatch(BaseModel):
-    alert_id: str
-
-    matched_leg_order: int
-
-    match_scope: Literal[
-        "route",
-        "route_direction",
-        "stop_specific",
-        "trip_specific",
-    ]
-
-    match_strength: str
-
-    reason: str
-
-    temporally_applicable: bool | None
-```
-
-This allows the LLM to receive both:
-
-- the alert;
-- why RouteLens considered it relevant.
-
----
-
 # 22. SourceStatus Model
 
 Each external source should report its own state.
@@ -992,9 +888,6 @@ class JourneyAnalysis(BaseModel):
     weather_observations: list[WeatherObservation]
     weather_forecasts: list[WeatherForecast]
 
-    transit_alerts: list[TransitAlert]
-    transit_matches: list[TransitAlertMatch]
-
     timeline_events: list[dict]
 
     briefing: JourneyBriefing | None
@@ -1018,8 +911,6 @@ backend/app/sources/
 ├── road_ahead.py
 ├── drivebc_open511.py
 ├── eccc_swob.py
-├── translink_static.py
-├── translink_realtime.py
 ├── openweather.py
 ├── maptiler.py
 └── openrouteservice.py
@@ -1149,31 +1040,6 @@ Requirements:
 - allow one route when alternatives are unavailable;
 - normalize route geometry;
 - visually distinguish selected/unselected candidates.
-
----
-
-# 30. Transit Corridor Generation
-
-Transit mode does not reconstruct real transit routing.
-
-Instead:
-
-```text
-origin
- + destination
-      ↓
-approximate geographic corridor
-      ↓
-road/weather/camera context
-      +
-user-selected GTFS services
-      ↓
-TransLink Service Alert matching
-```
-
-The approximate corridor is for environmental/geographic context.
-
-It must not be used as the sole mechanism for transit-alert matching.
 
 ---
 
@@ -1920,16 +1786,1432 @@ may indicate localized/changing conditions.
 
 ---
 
-# 66. TransLink Static Data
+# 80. Main Journey Analysis Endpoint
 
-GTFS Static provides the lookup/index layer for Transit-mode selections.
+Primary orchestration endpoint:
 
-Required files for MVP:
+```text
+POST /api/trips/analyze
+```
+
+Responsibilities:
+
+1. validate input;
+2. construct canonical `Trip`;
+3. verify selected route;
+4. load Road Ahead data;
+5. load regional Open511 data;
+6. load SWOB observations;
+7. load OpenWeather data;
+8. select/fetch Vancouver camera views;
+9. analyze camera views;
+10. normalize source data;
+11. perform deterministic relevance filtering;
+12. build journey timeline;
+13. prepare structured briefing evidence;
+14. call journey-briefing model;
+15. return `JourneyAnalysis`.
+
+---
+
+# 81. Synchronous Orchestration
+
+The MVP should use one main synchronous orchestration flow.
+
+Do not introduce:
+
+- job queues;
+- worker processes;
+- polling architecture;
+- WebSocket requirements.
+
+The frontend may show progressive loading stages, but the backend may still treat analysis as one request.
+
+If actual latency becomes unacceptable, staged loading may later be revisited.
+
+---
+
+# 82. Concurrent Fetching
+
+Independent source requests should execute concurrently where practical.
+
+Example:
+
+```text
+Road Ahead ──────────┐
+Open511 ─────────────┤
+SWOB ────────────────┤
+OpenWeather ─────────┼── concurrent where safe
+Vancouver camera ────┤
+```
+
+Not every step is fully independent.
+
+For example:
+
+- camera selection requires destination coordinates;
+- Road Ahead detail enrichment occurs after route relevance is known.
+
+Concurrency should follow data dependencies.
+
+---
+
+# 83. Manual Refresh
+
+No automatic whole-journey refresh is required.
+
+After analysis completes, state remains static until the user:
+
+- re-runs analysis;
+- manually refreshes/re-analyzes.
+
+Individual source cache TTLs still apply when the next analysis occurs.
+
+---
+
+# 84. Source-Specific Cache Policy
+
+Initial consolidated strategy:
+
+| Source | Initial policy | Status |
+|---|---:|---|
+| Vancouver camera catalogue | ~24h | provisional |
+| Vancouver camera images | on demand / ephemeral | locked |
+| Road Ahead datasets | ~24h | locked |
+| Road Ahead detail pages | cached selectively | TTL pending |
+| DriveBC Open511 | ~5–15m | agreed initial |
+| ECCC SWOB | ~10–15m | provisional |
+| OpenWeather | TBD after API validation | pending |
+
+Do not force every source into exactly the same cache mechanism.
+
+---
+
+# 85. Generic Validated Cache Flow
+
+For cacheable structured sources:
+
+```text
+source requested
+      ↓
+valid cache?
+  ├── no → fetch
+  └── yes
+        ↓
+      fresh?
+      ├── yes → use
+      └── no  → fetch
+                  ↓
+               validate
+                  ↓
+            ┌─────┴─────┐
+          valid       invalid
+            │             │
+        replace       retain old
+            │             │
+        return new     return stale
+```
+
+Stale fallback must be visible in `SourceStatus`.
+
+---
+
+# 86. Source Timeouts
+
+Every external HTTP adapter should use an explicit timeout.
+
+A source should not hang indefinitely.
+
+Use modest source-appropriate values.
+
+Exact values remain configuration-driven.
+
+---
+
+# 87. Retry Strategy
+
+Retries should remain minimal.
+
+Preferred:
+
+- zero or one retry;
+- retry only transient failures.
+
+Do not create long backoff behavior inside a user-facing synchronous request.
+
+Fast partial failure is preferable to blocking the whole analysis.
+
+---
+
+# 88. Raw vs Normalized Data
+
+Raw source payloads may be cached.
+
+However:
+
+> normalized models are the application contract.
+
+Business logic must not directly depend on arbitrary cached source JSON.
+
+Flow:
+
+```text
+raw source response
+      ↓
+validate
+      ↓
+optional raw cache
+      ↓
+normalize
+      ↓
+RouteLens model
+      ↓
+application logic
+```
+
+---
+
+# 89. SQLite Responsibilities
+
+SQLite may store:
+
+- generic source cache metadata;
+- raw payload cache where appropriate;
+- camera catalogue metadata;
+- camera image metadata;
+- camera-analysis results;
+- normalized events where useful;
+- normalized weather observations where useful;
+- trip-analysis results if useful.
+
+SQLite is not intended to become:
+
+- a historical telemetry warehouse;
+- a camera archive;
+- a long-term city-data mirror;
+- a user-account database.
+
+---
+
+# 90. SQLAlchemy
+
+SQLAlchemy remains locked.
+
+Use it for:
+
+- persistence;
+- database access;
+- schema clarity.
+
+Avoid unnecessary repository/service abstractions if they do not improve clarity.
+
+---
+
+# 91. API Endpoints
+
+Likely endpoints:
+
+```text
+GET  /api/health
+
+GET  /api/places/search
+POST /api/routes
+
+POST /api/trips/analyze
+
+GET  /api/cameras/{intersection_id}
+GET  /api/cameras/{intersection_id}/views/{view_id}/image
+```
+
+Exact endpoint shape may evolve.
+
+Keep the API surface small.
+
+---
+
+# 92. Place Search Endpoint
+
+Possible:
+
+```text
+GET /api/places/search?q=...
+```
+
+Responsibilities:
+
+- MapTiler search;
+- geographic bias;
+- normalized results.
+
+Use the simplest supported secure integration.
+
+---
+
+# 93. Route Endpoint
+
+Possible:
+
+```text
+POST /api/routes
+```
+
+Input:
+
+```json
+{
+  "origin": {},
+  "destination": {},
+  "mode": "drive"
+}
+```
+
+Response:
+
+```json
+{
+  "routes": []
+}
+```
+
+Drive mode may return up to three candidates.
+
+---
+
+# 95. Camera Endpoints
+
+Possible:
+
+```text
+GET /api/cameras/{intersection_id}
+GET /api/cameras/{intersection_id}/views/{view_id}/image
+```
+
+Camera AI analysis does not necessarily need a public standalone endpoint if it is always performed during `/api/trips/analyze`.
+
+Keep endpoint design minimal.
+
+---
+
+# 96. Journey Briefing Pipeline
+
+After deterministic relevance filtering:
+
+```text
+Trip
++
+Selected Route
++
+Relevant CityEvents
++
+CameraObservation
++
+SWOB observations
++
+OpenWeather current/forecast
++
+Source freshness / limitations
+      ↓
+compact evidence payload
+      ↓
+OpenRouter
+      ↓
+structured briefing
+      ↓
+Pydantic validation
+      ↓
+JourneyBriefing
+```
+
+Do not send raw API payloads.
+
+---
+
+# 97. Journey Briefing Structured Output
+
+Required shape:
+
+```json
+{
+  "status": "minor_conditions",
+  "summary": "Your journey is mostly clear, with wet roads near the destination.",
+  "highlights": [
+    "Recent camera views show wet pavement downtown.",
+    "One construction restriction overlaps the selected route."
+  ],
+  "recommendation": "Allow for localized road work and be prepared for possible light rain."
+}
+```
+
+Target:
+
+- concise;
+- evidence-based;
+- no invented events;
+- no unsupported delays;
+- 3–6 important points maximum.
+
+---
+
+# 98. Journey Timeline Generation
+
+Timeline events should be generated primarily deterministically.
+
+Potential categories:
+
+- construction;
+- incident;
+- weather condition;
+- camera destination condition;
+- destination condition.
+
+Order road/geographic events by approximate route position where meaningful.
+
+---
+
+# 99. Frontend Component Boundaries
+
+Recommended components:
+
+```text
+App
+├── JourneyInput
+│   ├── AddressAutocomplete
+│   └── AnalyzeButton
+│
+├── RouteSelector
+│
+├── MapPanel
+│   ├── RouteLayer
+│   ├── CameraLayer
+│   ├── RoadAheadLayer
+│   └── Open511Layer
+│
+└── IntelligencePanel
+    ├── JourneyOverview
+    │   ├── JourneyStatus
+    │   ├── DestinationConditions
+    │   ├── RouteIssues
+    │   ├── JourneyTimeline
+    │   ├── JourneyBriefing
+    │   └── SourceFreshness
+    │
+    └── CameraDetail
+```
+
+These are light boundaries.
+
+Do not over-componentize trivial markup.
+
+---
+
+# 100. Frontend State
+
+Likely top-level state:
+
+```text
+origin
+destination
+mode
+
+routeCandidates
+selectedRoute
+
+analysis
+
+selectedCameraIntersection
+
+analysisLoading
+sourceErrors
+```
+
+No Redux or advanced global-state framework is required.
+
+React state/hooks are sufficient unless implementation proves otherwise.
+
+---
+
+# 101. Route Selection UX
+
+Drive flow:
+
+```text
+user inputs trip
+      ↓
+route candidates fetched
+      ↓
+MapLibre displays up to 3 routes
+      ↓
+user selects closest match
+      ↓
+selected route highlighted
+      ↓
+Analyze Journey
+```
+
+Unselected routes should be muted.
+
+---
+
+# 103. Journey Analysis UX
+
+After submission:
+
+- selected route remains visible;
+- route reveal animation may run;
+- loading states appear;
+- map telemetry appears;
+- destination camera becomes prominent;
+- timeline appears;
+- briefing appears after evidence is ready.
+
+Animation must not block data display.
+
+---
+
+# 104. Destination Camera UX
+
+The destination-condition panel should display:
+
+- selected intersection name;
+- all usable directional views;
+- freshness;
+- AI observation;
+- relevant weather context.
+
+A dedicated CameraDetail panel may be used.
+
+Alternative intersection browsing is optional and not a core MVP workflow.
+
+---
+
+# 105. Map Layers
+
+Likely MapLibre layers:
+
+- selected route;
+- alternative route candidates;
+- Vancouver camera intersection markers;
+- Road Ahead geometry;
+- Open511 regional road events;
+- optional weather station markers.
+
+Removed from MVP:
+
+- DriveBC camera layer;
+- transit route layer;
+- transit vehicle layer;
+- transit-stop layer.
+
+---
+
+# 106. Open511 Regional Visualization
+
+Open511 map rendering should not depend on journey relevance.
+
+All active regional events may be shown subject to:
+
+- marker clustering;
+- category filters;
+- severity styling
+
+if required for readability.
+
+The briefing uses a smaller journey-specific subset.
+
+---
+
+# 107. Visual Priority
+
+Map styling should make:
+
+1. selected route;
+2. direct route disruptions;
+3. Vancouver camera location;
+4. regional incidents
+
+immediately understandable.
+
+Avoid visual clutter.
+
+---
+
+# 108. Framer Motion Usage
+
+Use Framer Motion for:
+
+- card entrance;
+- panel transitions;
+- subtle loading/reveal;
+- route-analysis state changes.
+
+Do not use motion for:
+
+- simulated traffic;
+- moving transit vehicles;
+- decorative continuous animation.
+
+---
+
+# 109. Logging
+
+Use lightweight structured/application logging.
+
+Log:
+
+- source fetch start/result;
+- source failures;
+- cache hits/misses;
+- cache stale fallback;
+- source latency;
+- pagination counts;
+- number of normalized records;
+- LLM call latency;
+- LLM validation failures;
+- total analysis timing.
+
+No external observability platform required.
+
+---
+
+# 110. Error Isolation
+
+Each adapter should convert expected source-specific failures into local source errors.
+
+Example:
+
+```text
+OpenWeather timeout
+      ↓
+SourceStatus(success=False)
+      ↓
+orchestrator continues
+      ↓
+JourneyAnalysis returned
+```
+
+Unexpected programming errors should remain visible during development.
+
+Do not broadly swallow exceptions.
+
+---
+
+# 111. Frontend Failure Presentation
+
+Examples:
+
+```text
+Camera imagery unavailable
+
+SWOB observation temporarily unavailable
+
+Road Ahead data is 31 hours old
+
+OpenWeather temporarily unavailable
+```
+
+The UI should emphasize useful successful data rather than converting partial failure into a full-screen error.
+
+---
+
+# 112. Configuration
+
+Environment variables may include:
+
+- API keys;
+- source URLs;
+- cache TTLs;
+- regional bounding boxes;
+- relevance radii;
+- request timeout settings;
+- OpenRouter model identifiers;
+- debug flags.
+
+Local development:
+
+```text
+.env
+```
+
+Repository:
+
+```text
+.env.example
+```
+
+`.env` must be excluded from Git.
+
+---
+
+# 113. Example Environment Variables
+
+Conceptual:
+
+```text
+MAPTILER_API_KEY=
+OPENROUTESERVICE_API_KEY=
+OPENWEATHER_API_KEY=
+OPENROUTER_API_KEY=
+
+OPENROUTER_VISION_MODEL=
+OPENROUTER_TEXT_MODEL=
+
+VANCOUVER_CAMERA_CATALOG_TTL_SECONDS=
+ROAD_AHEAD_CACHE_TTL_SECONDS=
+ROAD_AHEAD_DETAIL_CACHE_TTL_SECONDS=
+OPEN511_CACHE_TTL_SECONDS=
+SWOB_CACHE_TTL_SECONDS=
+OPENWEATHER_CACHE_TTL_SECONDS=
+
+OPEN511_BBOX=
+SWOB_BBOX=
+
+ROUTE_EVENT_RADIUS_METERS=
+DESTINATION_CAMERA_RADIUS_METERS=
+```
+
+Exact names may evolve.
+
+---
+
+# 114. Secret Handling
+
+Rules:
+
+- never hardcode API keys;
+- never commit `.env`;
+- never return secret keys to frontend;
+- all OpenRouter calls are backend-only;
+- backend logs must avoid printing credentials;
+- `.env.example` contains placeholders only.
+
+---
+
+# 115. Testing Strategy
+
+Testing should emphasize deterministic behavior.
+
+Primary tool:
+
+- pytest.
+
+External-source tests should use:
+
+- saved fixtures;
+- mocked HTTP responses.
+
+Do not depend on live APIs for routine automated tests.
+
+---
+
+# 116. Vancouver Camera Tests
+
+Test:
+
+- metadata parsing;
+- webpage directional-image extraction;
+- missing directions;
+- broken image URLs;
+- nearest-camera selection;
+- fallback to next-nearest usable intersection;
+- multiple usable views;
+- no usable camera case;
+- cache overwrite behavior.
+
+---
+
+# 117. Road Ahead Tests
+
+Fixtures should cover both datasets.
+
+Test:
+
+- `LineString`;
+- `MultiLineString`;
+- `GeometryCollection`;
+- missing `street`;
+- incomplete project/location fields;
+- direct route overlap;
+- nearby event;
+- distant event;
+- preservation of all direct overlaps;
+- detail-page parsing;
+- failed detail parsing fallback;
+- stale-cache fallback.
+
+---
+
+# 118. Open511 Tests
+
+Test:
+
+- valid event;
+- optional missing fields;
+- pagination;
+- active regional fetch;
+- all severities retained;
+- line/point geometry;
+- direction metadata;
+- schedule metadata;
+- route-near and route-distant events;
+- cache reuse;
+- stale fallback.
+
+---
+
+# 119. SWOB Tests
+
+Test:
+
+- repeated observations from same station;
+- latest-observation selection;
+- station absent from catalogue;
+- missing precipitation;
+- zero precipitation;
+- missing wind;
+- measurement-time preservation;
+- proximity vs measurement availability;
+- stale observation handling.
+
+---
+
+# 120. OpenWeather Tests
+
+After endpoint validation, test:
+
+- successful current response;
+- forecast response;
+- missing optional fields;
+- timestamp handling;
+- normalized precipitation fields;
+- cache behavior;
+- failure isolation.
+
+Do not write tests for fields the actual selected endpoint does not expose.
+
+---
+
+# 123. Geospatial Tests
+
+Test:
+
+- coordinate projection;
+- event direct intersection;
+- event inside buffer;
+- event outside buffer;
+- distance in metres;
+- camera-intersection ranking;
+- destination proximity;
+- configured-radius behavior.
+
+These should remain deterministic and lightweight.
+
+---
+
+# 124. Camera Analysis Tests
+
+Do not require live LLM calls in automated tests.
+
+Test:
+
+- valid structured response;
+- invalid JSON;
+- missing fields;
+- out-of-range confidence;
+- null/uncertain values;
+- multi-image input preparation;
+- fallback behavior.
+
+Live multimodal checks remain manual/integration-level.
+
+---
+
+# 125. Journey Briefing Tests
+
+Given mocked OpenRouter output:
+
+- valid briefing accepted;
+- malformed output rejected;
+- missing highlights handled;
+- recommendation nullable if allowed.
+
+Also test evidence construction so that:
+
+- only relevant road events are included;
+- source provenance survives;
+- stale/unavailable sources are represented;
+- raw API payloads are excluded.
+
+---
+
+# 126. Integration Tests
+
+Use controlled mocked sources to test:
+
+```text
+POST /api/trips/analyze
+```
+
+Expected:
+
+- multiple sources combine correctly;
+- one source can fail;
+- stale source may fall back;
+- result still returns;
+- source statuses are accurate;
+- nearest usable camera is selected;
+- correct route events are included;
+- unmatched alerts are excluded.
+
+---
+
+# 127. Manual Live Integration Checks
+
+Manual checks should validate:
+
+- MapTiler autocomplete;
+- openrouteservice routes;
+- Vancouver camera dataset;
+- Vancouver camera-page enrichment;
+- actual camera JPEGs;
+- Road Ahead datasets;
+- multiple Road Ahead detail pages;
+- Open511 regional bbox/pagination;
+- ECCC SWOB;
+- OpenWeather;
+- OpenRouter camera analysis;
+- OpenRouter journey briefing.
+
+DriveBC cameras are not part of the MVP checklist.
+
+---
+
+# 128. Ruff / Type Checking
+
+Ruff should be used for:
+
+- linting;
+- import cleanup;
+- simple consistency checks.
+
+Additional typing checks may be added if useful, but should not become a major project burden.
+
+Frontend should pass:
+
+```text
+npm run build
+```
+
+before a phase is considered complete.
+
+---
+
+# 129. Development Boundaries
+
+Avoid:
+
+- unnecessary repository abstractions;
+- deep inheritance hierarchies;
+- elaborate dependency injection;
+- speculative generic adapters;
+- premature interfaces;
+- generalized “city telemetry platform” architecture.
+
+Favor concrete readable code.
+
+---
+
+# 130. Git Control
+
+The human owns Git history.
+
+Coding agents may:
+
+- inspect repository state;
+- inspect diffs;
+- modify files;
+- run tests/builds;
+- report changes.
+
+Coding agents must not:
+
+- commit;
+- push;
+- force-push;
+- rewrite history;
+- create tags;
+- merge;
+- decide that a phase is accepted.
+
+Phase flow:
+
+```text
+Codex implements
+      ↓
+Codex verifies
+      ↓
+Codex reports
+      ↓
+Human reviews
+      ↓
+Human requests fixes OR accepts
+      ↓
+Human commits
+```
+
+---
+
+# 131. Phase Completion Expectations
+
+A meaningful development phase should leave:
+
+- working implementation;
+- passing relevant tests;
+- successful frontend/backend build where applicable;
+- no obvious broken repository state;
+- clear report of changed files;
+- clear report of verification performed;
+- no Git commit made by the coding agent.
+
+---
+
+# 132. Security Scope
+
+RouteLens is not a security-focused project.
+
+Normal application hygiene still applies:
+
+- backend-only secret storage;
+- input validation;
+- no secrets in logs;
+- safe image handling;
+- bounded external request timeouts;
+- dependency discipline;
+- reasonable error handling.
+
+Do not spend MVP time on heavyweight security architecture.
+
+---
+
+# 133. Performance Expectations
+
+Expected workload:
+
+- one interactive user;
+- one selected route;
+- modest regional telemetry;
+- one selected Vancouver camera intersection;
+- typically 2–4 directional camera images;
+- one multimodal camera AI call;
+- one journey-briefing AI call.
+
+Prioritize perceived latency.
+
+Useful optimizations:
+
+- concurrent source fetching;
+- shared source caches;
+- no route-specific Open511 refetch;
+- no repeated camera-analysis calls;
+- small LLM evidence payloads.
+
+---
+
+# 134. Analysis Latency
+
+The target is not a fixed SLA.
+
+The UI should communicate progress while:
+
+- caches load;
+- source APIs respond;
+- camera images download;
+- AI calls complete.
+
+A slower optional source should not make the application appear frozen.
+
+---
+
+# 135. AI Cost Control
+
+Cost-control strategies:
+
+- one camera intersection per journey;
+- one multimodal request across all usable views;
+- no repeated time-series camera polling;
+- cache current analysis where useful;
+- send compact normalized evidence to text model;
+- avoid raw API payloads;
+- allow independent vision/text model selection.
+
+---
+
+# 136. Data Retention
+
+Persist only what helps:
+
+- cache;
+- debugging;
+- normalized current data;
+- current analysis;
+- demo reliability.
+
+Camera images:
+
+> ephemeral current frames only.
+
+Do not create:
+
+- historical camera archive;
+- telemetry warehouse;
+- long-term transit feed archive.
+
+---
+
+# 137. DriveBC Cameras — Deferred Architecture
+
+DriveBC camera integration is explicitly outside the MVP.
+
+If added later, it should reuse:
+
+- camera-provider abstraction;
+- image validation;
+- ephemeral caching;
+- multimodal classification.
+
+A future DriveBC adapter should not require a separate AI pipeline.
+
+No DriveBC camera code should be implemented during MVP phases unless scope is explicitly reopened.
+
+---
+
+# 138. Technical Non-Goals
+
+This architecture does not include:
+
+- exact Google Maps route import;
+- Google Maps SDK;
+- exact transit itinerary reconstruction;
+- transit Trip Updates;
+- transit Vehicle Positions;
+- exact trip selection;
+- stop-level journey planning;
+- transit vehicle animation;
+- transit map overlays;
+- DriveBC camera integration;
+- multiple camera intersections per journey;
+- historical camera storage;
+- camera time-series analysis;
+- image upscaling;
+- camera traffic-speed estimation;
+- complex cross-source deduplication;
+- weather interpolation;
+- PostGIS;
+- historical telemetry warehouse;
+- realtime push subscriptions;
+- WebSockets;
+- background worker system;
+- mobile architecture;
+- authentication;
+- accounts;
+- personalization;
+- city simulation;
+- complex ML ranking;
+- model training.
+
+---
+
+# 139. Initial Technical Success Criteria
+
+The technical design is realized when:
+
+1. React/Vite loads with a dark MapTiler/MapLibre map.
+2. Origin/destination autocomplete works.
+3. Vancouver destination validation works.
+4. Drive mode returns route candidates.
+5. User can select a candidate route.
+6. FastAPI orchestrates all MVP source adapters.
+7. Normalized models preserve source provenance.
+8. Geographic calculations use meter-appropriate projection.
+9. Road Ahead ingests both official datasets.
+10. Road Ahead preserves full source geometry.
+11. Relevant Road Ahead detail pages can be deterministically enriched.
+12. Direct Road Ahead overlaps are preserved before nearby-event limits.
+13. Open511 fetches all active regional pages within the configured bbox.
+14. Open511 events render regionally.
+15. Journey-specific Open511 relevance is filtered deterministically.
+16. SWOB recent observations are grouped by station.
+17. SWOB selects useful fresh observations without treating missing data as zero.
+18. OpenWeather endpoint/schema has been validated against the actual API key.
+19. OpenWeather current/near-term data is normalized.
+20. Vancouver camera catalogue enrichment extracts real directional image URLs.
+21. Nearest usable camera intersection is selected.
+22. All available usable directional views are fetched ephemerally.
+23. One multimodal inference analyzes those views.
+24. Camera output validates through Pydantic.
+25. Journey timeline is built from normalized relevant evidence.
+26. Journey briefing validates through Pydantic.
+27. `JourneyAnalysis` reaches the frontend.
+28. Partial source failures produce useful results.
+29. Stale structured caches can fall back safely.
+30. automated tests use fixtures/mocks for external sources.
+31. frontend and backend builds/tests succeed locally.
+
+---
+
+# 140. Technical Mental Model
+
+The system should remain understandable as:
+
+```text
+INPUT
+origin / destination
+selected driving route
+        ↓
+ROUTE CONTEXT
+approximate corridor
+        ↓
+INGESTION
+source-specific cached feeds
+        ↓
+VALIDATION + NORMALIZATION
+RouteLens models + provenance
+        ↓
+DETERMINISTIC RELEVANCE
+geometry + timing + identifiers
+        ↓
+OBSERVATION
+road + weather + camera
+        ↓
+AI INTERPRETATION
+multi-view camera assessment
++
+journey briefing
+        ↓
+PRESENTATION
+MapLibre map + journey panel
+```
+
+If implementation becomes substantially more complicated than this model, reconsider the architecture before adding infrastructure.
+
+---
+
+# 141. Source Responsibility Summary
+
+| Source | Primary technical responsibility |
+|---|---|
+| Vancouver Webcams | Destination visual evidence |
+| Vancouver Road Ahead | Municipal construction / closure geometry + selective detail enrichment |
+| DriveBC Open511 | Regional active road-event context |
+| ECCC SWOB | Measured weather-station evidence |
+| OpenWeather | Coordinate-based current / near-term weather |
+
+TransLink GTFS Static and GTFS-Realtime Service Alerts are
+deferred beyond the MVP.
+
+DriveBC cameras are also deferred.
+
+---
+
+# 142. Implementation Guidance
+
+This design should be implemented using vertical slices.
+
+Do not build every source, table, and frontend component before testing end-to-end behavior.
+
+Preferred pattern:
+
+```text
+one source/capability
+  ↓
+real input
+  ↓
+normalization
+  ↓
+deterministic relevance
+  ↓
+API output
+  ↓
+visible frontend result
+  ↓
+verification
+```
+
+Examples:
+
+```text
+Road Ahead feed
+→ geometry
+→ route matching
+→ detail enrichment
+→ map overlay
+→ journey card
+```
+
+or:
+
+```text
+Vancouver camera catalogue
+→ directional image URL enrichment
+→ nearest usable destination intersection
+→ multi-view image retrieval
+→ multimodal AI assessment
+→ destination conditions panel
+```
+
+Then expand.
+
+The detailed phase order belongs in:
+
+> `docs/implementation-plan.md`
+
+The coding-agent execution rules belong in:
+
+> `docs/development-workflow.md`
+
+This document remains the architecture-level source of truth.
+
+---
+
+# Appendix A — Deferred Transit Technical Architecture
+
+**Status:** Post-MVP reference design. Deferred on 2026-10-11.
+
+The following models, GTFS adapters, selection workflows, matching
+rules, API endpoints, and tests are retained for future consideration.
+
+They are not part of the driving-only datathon MVP.
+
+Codex must not implement these capabilities unless the project scope
+is explicitly reopened.
+
+## Original Technical Reference — TransLink Static Data
+
+GTFS Static provides the lookup/index layer for future Transit-mode selections.
+
+The original design identified these required files for that deferred feature:
 
 - `routes.txt`;
 - `trips.txt`.
 
-`stops.txt` may be parsed or retained for future work but is not required for the locked service-selection flow.
+`stops.txt` may be parsed or retained for future work but was not required for the original service-selection flow.
+
+# 13. TransitLeg Model
+
+Conceptual:
+
+```python
+class TransitLeg(BaseModel):
+    order: int
+
+    route_id: str
+    route_short_name: str | None
+    route_long_name: str | None
+
+    route_type: int | None
+
+    direction_id: int | None
+    direction_label: str | None
+```
+
+The UI exposes human-friendly names.
+
+The backend preserves GTFS identifiers.
+
+Exact boarding/exiting stops are not required for MVP.
+
+---
+
+# 20. TransitAlert Model
+
+Conceptual:
+
+```python
+class TransitAlert(BaseModel):
+    id: str
+    source: str
+
+    header: str
+    description: str | None
+    url: str | None
+
+    cause: str | None
+    effect: str | None
+
+    active_periods: list[dict]
+
+    selectors: list[dict]
+
+    source_metadata: SourceMetadata
+```
+
+The normalized model must preserve enough selector detail to distinguish:
+
+- route-level;
+- direction-specific;
+- stop-specific;
+- trip-specific
+
+scope.
+
+Do not flatten these distinctions away.
+
+---
+
+# 21. TransitAlertMatch Model
+
+Matching results should be represented separately from the raw normalized alert.
+
+Conceptual:
+
+```python
+class TransitAlertMatch(BaseModel):
+    alert_id: str
+
+    matched_leg_order: int
+
+    match_scope: Literal[
+        "route",
+        "route_direction",
+        "stop_specific",
+        "trip_specific",
+    ]
+
+    match_strength: str
+
+    reason: str
+
+    temporally_applicable: bool | None
+```
+
+This allows the LLM to receive both:
+
+- the alert;
+- why RouteLens considered it relevant.
+
+---
+
+# 30. Transit Corridor Generation
+
+Transit mode does not reconstruct real transit routing.
+
+Instead:
+
+```text
+origin
+ + destination
+      ↓
+approximate geographic corridor
+      ↓
+road/weather/camera context
+      +
+user-selected GTFS services
+      ↓
+TransLink Service Alert matching
+```
+
+The approximate corridor is for environmental/geographic context.
+
+It must not be used as the sole mechanism for transit-alert matching.
 
 ---
 
@@ -2190,308 +3472,6 @@ Transit is primarily a briefing/panel information source.
 
 ---
 
-# 80. Main Journey Analysis Endpoint
-
-Primary orchestration endpoint:
-
-```text
-POST /api/trips/analyze
-```
-
-Responsibilities:
-
-1. validate input;
-2. construct canonical `Trip`;
-3. verify selected route;
-4. load Road Ahead data;
-5. load regional Open511 data;
-6. load SWOB observations;
-7. load OpenWeather data;
-8. select/fetch Vancouver camera views;
-9. analyze camera views;
-10. if Transit mode, load/match TransLink Service Alerts;
-11. normalize source data;
-12. perform deterministic relevance filtering;
-13. build journey timeline;
-14. prepare structured briefing evidence;
-15. call journey-briefing model;
-16. return `JourneyAnalysis`.
-
----
-
-# 81. Synchronous Orchestration
-
-The MVP should use one main synchronous orchestration flow.
-
-Do not introduce:
-
-- job queues;
-- worker processes;
-- polling architecture;
-- WebSocket requirements.
-
-The frontend may show progressive loading stages, but the backend may still treat analysis as one request.
-
-If actual latency becomes unacceptable, staged loading may later be revisited.
-
----
-
-# 82. Concurrent Fetching
-
-Independent source requests should execute concurrently where practical.
-
-Example:
-
-```text
-Road Ahead ──────────┐
-Open511 ─────────────┤
-SWOB ────────────────┤
-OpenWeather ─────────┼── concurrent where safe
-Vancouver camera ────┤
-TransLink alerts ────┘
-```
-
-Not every step is fully independent.
-
-For example:
-
-- camera selection requires destination coordinates;
-- transit alert matching requires selected service IDs;
-- Road Ahead detail enrichment occurs after route relevance is known.
-
-Concurrency should follow data dependencies.
-
----
-
-# 83. Manual Refresh
-
-No automatic whole-journey refresh is required.
-
-After analysis completes, state remains static until the user:
-
-- re-runs analysis;
-- manually refreshes/re-analyzes.
-
-Individual source cache TTLs still apply when the next analysis occurs.
-
----
-
-# 84. Source-Specific Cache Policy
-
-Initial consolidated strategy:
-
-| Source | Initial policy | Status |
-|---|---:|---|
-| Vancouver camera catalogue | ~24h | provisional |
-| Vancouver camera images | on demand / ephemeral | locked |
-| Road Ahead datasets | ~24h | locked |
-| Road Ahead detail pages | cached selectively | TTL pending |
-| DriveBC Open511 | ~5–15m | agreed initial |
-| ECCC SWOB | ~10–15m | provisional |
-| GTFS Static | ~weekly / new feed | provisional |
-| GTFS-Realtime Service Alerts | ~30–60s | provisional |
-| OpenWeather | TBD after API validation | pending |
-
-Do not force every source into exactly the same cache mechanism.
-
----
-
-# 85. Generic Validated Cache Flow
-
-For cacheable structured sources:
-
-```text
-source requested
-      ↓
-valid cache?
-  ├── no → fetch
-  └── yes
-        ↓
-      fresh?
-      ├── yes → use
-      └── no  → fetch
-                  ↓
-               validate
-                  ↓
-            ┌─────┴─────┐
-          valid       invalid
-            │             │
-        replace       retain old
-            │             │
-        return new     return stale
-```
-
-Stale fallback must be visible in `SourceStatus`.
-
----
-
-# 86. Source Timeouts
-
-Every external HTTP adapter should use an explicit timeout.
-
-A source should not hang indefinitely.
-
-Use modest source-appropriate values.
-
-Exact values remain configuration-driven.
-
----
-
-# 87. Retry Strategy
-
-Retries should remain minimal.
-
-Preferred:
-
-- zero or one retry;
-- retry only transient failures.
-
-Do not create long backoff behavior inside a user-facing synchronous request.
-
-Fast partial failure is preferable to blocking the whole analysis.
-
----
-
-# 88. Raw vs Normalized Data
-
-Raw source payloads may be cached.
-
-However:
-
-> normalized models are the application contract.
-
-Business logic must not directly depend on arbitrary cached source JSON.
-
-Flow:
-
-```text
-raw source response
-      ↓
-validate
-      ↓
-optional raw cache
-      ↓
-normalize
-      ↓
-RouteLens model
-      ↓
-application logic
-```
-
----
-
-# 89. SQLite Responsibilities
-
-SQLite may store:
-
-- generic source cache metadata;
-- raw payload cache where appropriate;
-- camera catalogue metadata;
-- camera image metadata;
-- camera-analysis results;
-- normalized events where useful;
-- normalized weather observations where useful;
-- transit static indexes where useful;
-- trip-analysis results if useful.
-
-SQLite is not intended to become:
-
-- a historical telemetry warehouse;
-- a camera archive;
-- a long-term city-data mirror;
-- a user-account database.
-
----
-
-# 90. SQLAlchemy
-
-SQLAlchemy remains locked.
-
-Use it for:
-
-- persistence;
-- database access;
-- schema clarity.
-
-Avoid unnecessary repository/service abstractions if they do not improve clarity.
-
----
-
-# 91. API Endpoints
-
-Likely endpoints:
-
-```text
-GET  /api/health
-
-GET  /api/places/search
-POST /api/routes
-
-GET  /api/transit/routes
-GET  /api/transit/routes/{id}/directions
-
-POST /api/trips/analyze
-
-GET  /api/cameras/{intersection_id}
-GET  /api/cameras/{intersection_id}/views/{view_id}/image
-```
-
-Exact endpoint shape may evolve.
-
-Keep the API surface small.
-
----
-
-# 92. Place Search Endpoint
-
-Possible:
-
-```text
-GET /api/places/search?q=...
-```
-
-Responsibilities:
-
-- MapTiler search;
-- geographic bias;
-- normalized results.
-
-Use the simplest supported secure integration.
-
----
-
-# 93. Route Endpoint
-
-Possible:
-
-```text
-POST /api/routes
-```
-
-Input:
-
-```json
-{
-  "origin": {},
-  "destination": {},
-  "mode": "drive"
-}
-```
-
-Response:
-
-```json
-{
-  "routes": []
-}
-```
-
-Drive mode may return up to three candidates.
-
-Transit may return a simple contextual corridor if needed.
-
----
-
 # 94. Transit Selection Endpoints
 
 Possible:
@@ -2504,193 +3484,6 @@ GET /api/transit/routes/{route_id}/directions
 The frontend uses these to build ordered `TransitLeg` selections.
 
 These endpoints are backed by preprocessed GTFS Static data.
-
----
-
-# 95. Camera Endpoints
-
-Possible:
-
-```text
-GET /api/cameras/{intersection_id}
-GET /api/cameras/{intersection_id}/views/{view_id}/image
-```
-
-Camera AI analysis does not necessarily need a public standalone endpoint if it is always performed during `/api/trips/analyze`.
-
-Keep endpoint design minimal.
-
----
-
-# 96. Journey Briefing Pipeline
-
-After deterministic relevance filtering:
-
-```text
-Trip
-+
-Selected Route
-+
-Relevant CityEvents
-+
-CameraObservation
-+
-SWOB observations
-+
-OpenWeather current/forecast
-+
-Selected Transit Legs
-+
-Matched Transit Alerts
-+
-Source freshness / limitations
-      ↓
-compact evidence payload
-      ↓
-OpenRouter
-      ↓
-structured briefing
-      ↓
-Pydantic validation
-      ↓
-JourneyBriefing
-```
-
-Do not send raw API payloads.
-
----
-
-# 97. Journey Briefing Structured Output
-
-Required shape:
-
-```json
-{
-  "status": "minor_conditions",
-  "summary": "Your journey is mostly clear, with wet roads near the destination.",
-  "highlights": [
-    "Recent camera views show wet pavement downtown.",
-    "One construction restriction overlaps the selected route."
-  ],
-  "recommendation": "Allow for localized road work and be prepared for possible light rain."
-}
-```
-
-Target:
-
-- concise;
-- evidence-based;
-- no invented events;
-- no unsupported delays;
-- 3–6 important points maximum.
-
----
-
-# 98. Journey Timeline Generation
-
-Timeline events should be generated primarily deterministically.
-
-Potential categories:
-
-- construction;
-- incident;
-- weather condition;
-- camera destination condition;
-- transit service alert;
-- destination condition.
-
-Order road/geographic events by approximate route position where meaningful.
-
-Transit alerts may be associated with journey order through selected transit-leg order rather than map location.
-
----
-
-# 99. Frontend Component Boundaries
-
-Recommended components:
-
-```text
-App
-├── JourneyInput
-│   ├── AddressAutocomplete
-│   ├── ModeSelector
-│   ├── TransitServiceSelector
-│   └── AnalyzeButton
-│
-├── RouteSelector
-│
-├── MapPanel
-│   ├── RouteLayer
-│   ├── CameraLayer
-│   ├── RoadAheadLayer
-│   └── Open511Layer
-│
-└── IntelligencePanel
-    ├── JourneyOverview
-    │   ├── JourneyStatus
-    │   ├── DestinationConditions
-    │   ├── RouteIssues
-    │   ├── TransitAlerts
-    │   ├── JourneyTimeline
-    │   ├── JourneyBriefing
-    │   └── SourceFreshness
-    │
-    └── CameraDetail
-```
-
-These are light boundaries.
-
-Do not over-componentize trivial markup.
-
----
-
-# 100. Frontend State
-
-Likely top-level state:
-
-```text
-origin
-destination
-mode
-
-routeCandidates
-selectedRoute
-
-transitLegs
-
-analysis
-
-selectedCameraIntersection
-
-analysisLoading
-sourceErrors
-```
-
-No Redux or advanced global-state framework is required.
-
-React state/hooks are sufficient unless implementation proves otherwise.
-
----
-
-# 101. Route Selection UX
-
-Drive flow:
-
-```text
-user inputs trip
-      ↓
-route candidates fetched
-      ↓
-MapLibre displays up to 3 routes
-      ↓
-user selects closest match
-      ↓
-selected route highlighted
-      ↓
-Analyze Journey
-```
-
-Unselected routes should be muted.
 
 ---
 
@@ -2717,349 +3510,6 @@ Analyze Journey
 ```
 
 The UI stores canonical GTFS identifiers beneath friendly labels.
-
----
-
-# 103. Journey Analysis UX
-
-After submission:
-
-- selected route remains visible;
-- route reveal animation may run;
-- loading states appear;
-- map telemetry appears;
-- destination camera becomes prominent;
-- matched transit alerts appear in Transit mode;
-- timeline appears;
-- briefing appears after evidence is ready.
-
-Animation must not block data display.
-
----
-
-# 104. Destination Camera UX
-
-The destination-condition panel should display:
-
-- selected intersection name;
-- all usable directional views;
-- freshness;
-- AI observation;
-- relevant weather context.
-
-A dedicated CameraDetail panel may be used.
-
-Alternative intersection browsing is optional and not a core MVP workflow.
-
----
-
-# 105. Map Layers
-
-Likely MapLibre layers:
-
-- selected route;
-- alternative route candidates;
-- Vancouver camera intersection markers;
-- Road Ahead geometry;
-- Open511 regional road events;
-- optional weather station markers.
-
-Removed from MVP:
-
-- DriveBC camera layer;
-- transit route layer;
-- transit vehicle layer;
-- transit-stop layer.
-
----
-
-# 106. Open511 Regional Visualization
-
-Open511 map rendering should not depend on journey relevance.
-
-All active regional events may be shown subject to:
-
-- marker clustering;
-- category filters;
-- severity styling
-
-if required for readability.
-
-The briefing uses a smaller journey-specific subset.
-
----
-
-# 107. Visual Priority
-
-Map styling should make:
-
-1. selected route;
-2. direct route disruptions;
-3. Vancouver camera location;
-4. regional incidents
-
-immediately understandable.
-
-Avoid visual clutter.
-
----
-
-# 108. Framer Motion Usage
-
-Use Framer Motion for:
-
-- card entrance;
-- panel transitions;
-- subtle loading/reveal;
-- route-analysis state changes.
-
-Do not use motion for:
-
-- simulated traffic;
-- moving transit vehicles;
-- decorative continuous animation.
-
----
-
-# 109. Logging
-
-Use lightweight structured/application logging.
-
-Log:
-
-- source fetch start/result;
-- source failures;
-- cache hits/misses;
-- cache stale fallback;
-- source latency;
-- pagination counts;
-- number of normalized records;
-- LLM call latency;
-- LLM validation failures;
-- total analysis timing.
-
-No external observability platform required.
-
----
-
-# 110. Error Isolation
-
-Each adapter should convert expected source-specific failures into local source errors.
-
-Example:
-
-```text
-TransLink timeout
-      ↓
-SourceStatus(success=False)
-      ↓
-orchestrator continues
-      ↓
-JourneyAnalysis returned
-```
-
-Unexpected programming errors should remain visible during development.
-
-Do not broadly swallow exceptions.
-
----
-
-# 111. Frontend Failure Presentation
-
-Examples:
-
-```text
-Transit alerts unavailable
-
-Camera imagery unavailable
-
-SWOB observation temporarily unavailable
-
-Road Ahead data is 31 hours old
-
-OpenWeather temporarily unavailable
-```
-
-The UI should emphasize useful successful data rather than converting partial failure into a full-screen error.
-
----
-
-# 112. Configuration
-
-Environment variables may include:
-
-- API keys;
-- source URLs;
-- cache TTLs;
-- regional bounding boxes;
-- relevance radii;
-- request timeout settings;
-- OpenRouter model identifiers;
-- debug flags.
-
-Local development:
-
-```text
-.env
-```
-
-Repository:
-
-```text
-.env.example
-```
-
-`.env` must be excluded from Git.
-
----
-
-# 113. Example Environment Variables
-
-Conceptual:
-
-```text
-MAPTILER_API_KEY=
-OPENROUTESERVICE_API_KEY=
-OPENWEATHER_API_KEY=
-TRANSLINK_API_KEY=
-OPENROUTER_API_KEY=
-
-OPENROUTER_VISION_MODEL=
-OPENROUTER_TEXT_MODEL=
-
-VANCOUVER_CAMERA_CATALOG_TTL_SECONDS=
-ROAD_AHEAD_CACHE_TTL_SECONDS=
-ROAD_AHEAD_DETAIL_CACHE_TTL_SECONDS=
-OPEN511_CACHE_TTL_SECONDS=
-SWOB_CACHE_TTL_SECONDS=
-TRANSLINK_ALERT_CACHE_TTL_SECONDS=
-OPENWEATHER_CACHE_TTL_SECONDS=
-
-OPEN511_BBOX=
-SWOB_BBOX=
-
-ROUTE_EVENT_RADIUS_METERS=
-DESTINATION_CAMERA_RADIUS_METERS=
-```
-
-Exact names may evolve.
-
----
-
-# 114. Secret Handling
-
-Rules:
-
-- never hardcode API keys;
-- never commit `.env`;
-- never return secret keys to frontend;
-- all OpenRouter calls are backend-only;
-- backend logs must avoid printing credentials;
-- `.env.example` contains placeholders only.
-
----
-
-# 115. Testing Strategy
-
-Testing should emphasize deterministic behavior.
-
-Primary tool:
-
-- pytest.
-
-External-source tests should use:
-
-- saved fixtures;
-- mocked HTTP responses.
-
-Do not depend on live APIs for routine automated tests.
-
----
-
-# 116. Vancouver Camera Tests
-
-Test:
-
-- metadata parsing;
-- webpage directional-image extraction;
-- missing directions;
-- broken image URLs;
-- nearest-camera selection;
-- fallback to next-nearest usable intersection;
-- multiple usable views;
-- no usable camera case;
-- cache overwrite behavior.
-
----
-
-# 117. Road Ahead Tests
-
-Fixtures should cover both datasets.
-
-Test:
-
-- `LineString`;
-- `MultiLineString`;
-- `GeometryCollection`;
-- missing `street`;
-- incomplete project/location fields;
-- direct route overlap;
-- nearby event;
-- distant event;
-- preservation of all direct overlaps;
-- detail-page parsing;
-- failed detail parsing fallback;
-- stale-cache fallback.
-
----
-
-# 118. Open511 Tests
-
-Test:
-
-- valid event;
-- optional missing fields;
-- pagination;
-- active regional fetch;
-- all severities retained;
-- line/point geometry;
-- direction metadata;
-- schedule metadata;
-- route-near and route-distant events;
-- cache reuse;
-- stale fallback.
-
----
-
-# 119. SWOB Tests
-
-Test:
-
-- repeated observations from same station;
-- latest-observation selection;
-- station absent from catalogue;
-- missing precipitation;
-- zero precipitation;
-- missing wind;
-- measurement-time preservation;
-- proximity vs measurement availability;
-- stale observation handling.
-
----
-
-# 120. OpenWeather Tests
-
-After endpoint validation, test:
-
-- successful current response;
-- forecast response;
-- missing optional fields;
-- timestamp handling;
-- normalized precipitation fields;
-- cache behavior;
-- failure isolation.
-
-Do not write tests for fields the actual selected endpoint does not expose.
 
 ---
 
@@ -3097,492 +3547,3 @@ Test:
 - rate-limit handling.
 
 ---
-
-# 123. Geospatial Tests
-
-Test:
-
-- coordinate projection;
-- event direct intersection;
-- event inside buffer;
-- event outside buffer;
-- distance in metres;
-- camera-intersection ranking;
-- destination proximity;
-- configured-radius behavior.
-
-These should remain deterministic and lightweight.
-
----
-
-# 124. Camera Analysis Tests
-
-Do not require live LLM calls in automated tests.
-
-Test:
-
-- valid structured response;
-- invalid JSON;
-- missing fields;
-- out-of-range confidence;
-- null/uncertain values;
-- multi-image input preparation;
-- fallback behavior.
-
-Live multimodal checks remain manual/integration-level.
-
----
-
-# 125. Journey Briefing Tests
-
-Given mocked OpenRouter output:
-
-- valid briefing accepted;
-- malformed output rejected;
-- missing highlights handled;
-- recommendation nullable if allowed.
-
-Also test evidence construction so that:
-
-- only relevant road events are included;
-- transit specificity is preserved;
-- source provenance survives;
-- stale/unavailable sources are represented;
-- raw API payloads are excluded.
-
----
-
-# 126. Integration Tests
-
-Use controlled mocked sources to test:
-
-```text
-POST /api/trips/analyze
-```
-
-Expected:
-
-- multiple sources combine correctly;
-- one source can fail;
-- stale source may fall back;
-- result still returns;
-- source statuses are accurate;
-- nearest usable camera is selected;
-- correct route events are included;
-- relevant transit alerts match selected legs;
-- unmatched alerts are excluded.
-
----
-
-# 127. Manual Live Integration Checks
-
-Manual checks should validate:
-
-- MapTiler autocomplete;
-- openrouteservice routes;
-- Vancouver camera dataset;
-- Vancouver camera-page enrichment;
-- actual camera JPEGs;
-- Road Ahead datasets;
-- multiple Road Ahead detail pages;
-- Open511 regional bbox/pagination;
-- ECCC SWOB;
-- OpenWeather;
-- GTFS Static preprocessing;
-- TransLink Service Alerts;
-- TransLink request headers;
-- OpenRouter camera analysis;
-- OpenRouter journey briefing.
-
-DriveBC cameras are not part of the MVP checklist.
-
----
-
-# 128. Ruff / Type Checking
-
-Ruff should be used for:
-
-- linting;
-- import cleanup;
-- simple consistency checks.
-
-Additional typing checks may be added if useful, but should not become a major project burden.
-
-Frontend should pass:
-
-```text
-npm run build
-```
-
-before a phase is considered complete.
-
----
-
-# 129. Development Boundaries
-
-Avoid:
-
-- unnecessary repository abstractions;
-- deep inheritance hierarchies;
-- elaborate dependency injection;
-- speculative generic adapters;
-- premature interfaces;
-- generalized “city telemetry platform” architecture.
-
-Favor concrete readable code.
-
----
-
-# 130. Git Control
-
-The human owns Git history.
-
-Coding agents may:
-
-- inspect repository state;
-- inspect diffs;
-- modify files;
-- run tests/builds;
-- report changes.
-
-Coding agents must not:
-
-- commit;
-- push;
-- force-push;
-- rewrite history;
-- create tags;
-- merge;
-- decide that a phase is accepted.
-
-Phase flow:
-
-```text
-Codex implements
-      ↓
-Codex verifies
-      ↓
-Codex reports
-      ↓
-Human reviews
-      ↓
-Human requests fixes OR accepts
-      ↓
-Human commits
-```
-
----
-
-# 131. Phase Completion Expectations
-
-A meaningful development phase should leave:
-
-- working implementation;
-- passing relevant tests;
-- successful frontend/backend build where applicable;
-- no obvious broken repository state;
-- clear report of changed files;
-- clear report of verification performed;
-- no Git commit made by the coding agent.
-
----
-
-# 132. Security Scope
-
-RouteLens is not a security-focused project.
-
-Normal application hygiene still applies:
-
-- backend-only secret storage;
-- input validation;
-- no secrets in logs;
-- safe image handling;
-- bounded external request timeouts;
-- dependency discipline;
-- reasonable error handling.
-
-Do not spend MVP time on heavyweight security architecture.
-
----
-
-# 133. Performance Expectations
-
-Expected workload:
-
-- one interactive user;
-- one selected route;
-- modest regional telemetry;
-- one selected Vancouver camera intersection;
-- typically 2–4 directional camera images;
-- one multimodal camera AI call;
-- one journey-briefing AI call.
-
-Prioritize perceived latency.
-
-Useful optimizations:
-
-- concurrent source fetching;
-- shared source caches;
-- no route-specific Open511 refetch;
-- no repeated camera-analysis calls;
-- small LLM evidence payloads.
-
----
-
-# 134. Analysis Latency
-
-The target is not a fixed SLA.
-
-The UI should communicate progress while:
-
-- caches load;
-- source APIs respond;
-- camera images download;
-- AI calls complete.
-
-A slower optional source should not make the application appear frozen.
-
----
-
-# 135. AI Cost Control
-
-Cost-control strategies:
-
-- one camera intersection per journey;
-- one multimodal request across all usable views;
-- no repeated time-series camera polling;
-- cache current analysis where useful;
-- send compact normalized evidence to text model;
-- avoid raw API payloads;
-- allow independent vision/text model selection.
-
----
-
-# 136. Data Retention
-
-Persist only what helps:
-
-- cache;
-- debugging;
-- normalized current data;
-- current analysis;
-- demo reliability.
-
-Camera images:
-
-> ephemeral current frames only.
-
-Do not create:
-
-- historical camera archive;
-- telemetry warehouse;
-- long-term transit feed archive.
-
----
-
-# 137. DriveBC Cameras — Deferred Architecture
-
-DriveBC camera integration is explicitly outside the MVP.
-
-If added later, it should reuse:
-
-- camera-provider abstraction;
-- image validation;
-- ephemeral caching;
-- multimodal classification.
-
-A future DriveBC adapter should not require a separate AI pipeline.
-
-No DriveBC camera code should be implemented during MVP phases unless scope is explicitly reopened.
-
----
-
-# 138. Technical Non-Goals
-
-This architecture does not include:
-
-- exact Google Maps route import;
-- Google Maps SDK;
-- exact transit itinerary reconstruction;
-- transit Trip Updates;
-- transit Vehicle Positions;
-- exact trip selection;
-- stop-level journey planning;
-- transit vehicle animation;
-- transit map overlays;
-- DriveBC camera integration;
-- multiple camera intersections per journey;
-- historical camera storage;
-- camera time-series analysis;
-- image upscaling;
-- camera traffic-speed estimation;
-- complex cross-source deduplication;
-- weather interpolation;
-- PostGIS;
-- historical telemetry warehouse;
-- realtime push subscriptions;
-- WebSockets;
-- background worker system;
-- mobile architecture;
-- authentication;
-- accounts;
-- personalization;
-- city simulation;
-- complex ML ranking;
-- model training.
-
----
-
-# 139. Initial Technical Success Criteria
-
-The technical design is realized when:
-
-1. React/Vite loads with a dark MapTiler/MapLibre map.
-2. Origin/destination autocomplete works.
-3. Vancouver destination validation works.
-4. Drive mode returns route candidates.
-5. User can select a candidate route.
-6. Transit mode can retain an approximate geographic corridor.
-7. FastAPI orchestrates all MVP source adapters.
-8. Normalized models preserve source provenance.
-9. Geographic calculations use meter-appropriate projection.
-10. Road Ahead ingests both official datasets.
-11. Road Ahead preserves full source geometry.
-12. Relevant Road Ahead detail pages can be deterministically enriched.
-13. Direct Road Ahead overlaps are preserved before nearby-event limits.
-14. Open511 fetches all active regional pages within the configured bbox.
-15. Open511 events render regionally.
-16. Journey-specific Open511 relevance is filtered deterministically.
-17. SWOB recent observations are grouped by station.
-18. SWOB selects useful fresh observations without treating missing data as zero.
-19. OpenWeather endpoint/schema has been validated against the actual API key.
-20. OpenWeather current/near-term data is normalized.
-21. Vancouver camera catalogue enrichment extracts real directional image URLs.
-22. Nearest usable camera intersection is selected.
-23. All available usable directional views are fetched ephemerally.
-24. One multimodal inference analyzes those views.
-25. Camera output validates through Pydantic.
-26. GTFS Static powers bus/SkyTrain selection.
-27. Passenger-friendly transit directions derive from GTFS trip/headsign data.
-28. GTFS-Realtime Service Alerts decode successfully.
-29. Route/direction alert matching works deterministically.
-30. Stop-/trip-specific scope is preserved rather than treated as route-wide.
-31. Journey timeline is built from normalized relevant evidence.
-32. Journey briefing validates through Pydantic.
-33. `JourneyAnalysis` reaches the frontend.
-34. Partial source failures produce useful results.
-35. Stale structured caches can fall back safely.
-36. automated tests use fixtures/mocks for external sources.
-37. frontend and backend builds/tests succeed locally.
-
----
-
-# 140. Technical Mental Model
-
-The system should remain understandable as:
-
-```text
-INPUT
-origin / destination / mode
-optional transit services
-        ↓
-ROUTE CONTEXT
-approximate corridor
-        ↓
-INGESTION
-source-specific cached feeds
-        ↓
-VALIDATION + NORMALIZATION
-RouteLens models + provenance
-        ↓
-DETERMINISTIC RELEVANCE
-geometry + timing + identifiers
-        ↓
-OBSERVATION
-road + weather + camera + transit
-        ↓
-AI INTERPRETATION
-multi-view camera assessment
-+
-journey briefing
-        ↓
-PRESENTATION
-MapLibre map + journey panel
-```
-
-If implementation becomes substantially more complicated than this model, reconsider the architecture before adding infrastructure.
-
----
-
-# 141. Source Responsibility Summary
-
-| Source | Primary technical responsibility |
-|---|---|
-| Vancouver Webcams | Destination visual evidence |
-| Vancouver Road Ahead | Municipal construction / closure geometry + selective detail enrichment |
-| DriveBC Open511 | Regional active road-event context |
-| ECCC SWOB | Measured weather-station evidence |
-| OpenWeather | Coordinate-based current / near-term weather |
-| GTFS Static | Transit route/direction selection index |
-| GTFS-Realtime Service Alerts | Service-specific transit advisories |
-
-DriveBC cameras are deferred.
-
----
-
-# 142. Implementation Guidance
-
-This design should be implemented using vertical slices.
-
-Do not build every source, table, and frontend component before testing end-to-end behavior.
-
-Preferred pattern:
-
-```text
-one source/capability
-  ↓
-real input
-  ↓
-normalization
-  ↓
-deterministic relevance
-  ↓
-API output
-  ↓
-visible frontend result
-  ↓
-verification
-```
-
-Examples:
-
-```text
-Road Ahead feed
-→ geometry
-→ route matching
-→ detail enrichment
-→ map overlay
-→ journey card
-```
-
-or:
-
-```text
-GTFS Static
-→ service selector
-→ selected route_id/direction_id
-→ Service Alert matching
-→ transit briefing card
-```
-
-Then expand.
-
-The detailed phase order belongs in:
-
-> `docs/implementation-plan.md`
-
-The coding-agent execution rules belong in:
-
-> `docs/development-workflow.md`
-
-This document remains the architecture-level source of truth.

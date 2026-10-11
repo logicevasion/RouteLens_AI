@@ -12,7 +12,7 @@ RouteLens focuses on a different question:
 
 > What is happening around my journey that I should know before I leave?
 
-The product combines near-current visual, transportation, road, transit, and environmental information around an approximate journey corridor and destination, then presents the most relevant findings through an interactive map and concise AI-assisted journey briefing.
+The product combines near-current visual, road, and environmental information around an approximate journey corridor and destination, then presents the most relevant findings through an interactive map and concise AI-assisted journey briefing.
 
 RouteLens is designed as a **companion to existing navigation tools**, not a replacement for them.
 
@@ -28,7 +28,6 @@ The application should help answer questions such as:
 - Do recent Vancouver traffic-camera images show wet pavement or poor visibility?
 - Is there active construction near the route I plan to take?
 - Are there regional road incidents or closures that may affect the journey?
-- If I am taking transit, are there current service alerts relevant to the buses or SkyTrain lines I intend to use?
 - Are conditions expected to change materially in the near term?
 - Is there anything unusual enough that I should adjust my expectations before leaving?
 
@@ -49,7 +48,6 @@ Potential users include:
 - people travelling into Vancouver for appointments or events;
 - visitors already using another navigation application;
 - drivers;
-- transit riders.
 
 The primary first-user scenario is a local person preparing to leave for a destination in Vancouver and wanting a quick check of current conditions.
 
@@ -66,7 +64,6 @@ A traveller may separately check:
 - street cameras;
 - road-construction information;
 - regional road incident information;
-- transit alerts.
 
 RouteLens should reduce that fragmentation.
 
@@ -85,8 +82,6 @@ RouteLens does not need to reproduce the user's exact navigation route.
 Instead, it provides one or more approximate journey corridors and asks the user to select the option that most closely resembles the journey they already intend to take.
 
 That corridor is then used to prioritize geographic telemetry.
-
-For Transit mode, geographic route context is supplemented by explicit user-selected transit services so that service advisories can be matched using authoritative transit identifiers rather than geography alone.
 
 The user remains responsible for actual navigation through their preferred navigation application.
 
@@ -131,14 +126,34 @@ Journeys whose destination is outside Vancouver are explicitly unsupported in th
 
 # 7. Supported Travel Modes
 
-The MVP supports:
+The datathon MVP supports **Drive mode only**.
 
-- **Drive**
-- **Transit**
+Users select an approximate driving route into the City of Vancouver. That selected route provides geographic context for road events, weather conditions, and destination camera observations.
 
-Walking and cycling are out of scope.
+Transit, walking, and cycling modes are outside the MVP scope.
 
-The selected travel mode changes which sources and insights are emphasized.
+## 7.1 MVP Scope Decision — Driving Only
+
+**Decision date:** 2026-10-11
+
+Transit Mode, including TransLink GTFS Static and GTFS-Realtime Service Alerts, is deferred beyond the datathon MVP.
+
+Journey-specific transit relevance requires additional service, route, direction, stop, transfer, and timing context that the existing driving workflow does not provide. Implementing this capability would introduce a substantially different journey-analysis problem.
+
+The MVP instead prioritizes:
+
+- explicitly selected driving routes;
+- municipal Road Ahead construction and closures;
+- regional DriveBC Open511 road events;
+- current and near-term weather;
+- measured ECCC/SWOB observations;
+- Vancouver traffic camera imagery;
+- multimodal AI camera analysis;
+- source-grounded journey briefings.
+
+**Camera-based visual intelligence is the primary differentiating capability.**
+
+Transit remains a potential post-MVP extension and is excluded from current functional requirements, technical acceptance criteria, and demo expectations.
 
 ---
 
@@ -176,26 +191,15 @@ The MVP flow is:
 3. User selects a valid origin from autocomplete results.
 4. User enters a destination.
 5. User selects a valid Vancouver destination from autocomplete results.
-6. User selects:
-   - Drive
-   - Transit
-7. RouteLens generates an approximate journey corridor or candidate corridors.
-8. The user selects the corridor that most closely resembles their planned journey.
-9. If Transit mode is selected, the user adds the bus routes and/or SkyTrain lines they intend to use, in journey order, with direction where useful.
-10. RouteLens gathers relevant current telemetry.
-11. Deterministic application logic determines which data is geographically, temporally, or service-specifically relevant.
-12. RouteLens automatically selects the nearest usable Vancouver camera intersection to the destination.
-13. RouteLens retrieves all usable directional views from that intersection and performs one combined multimodal assessment.
-14. RouteLens presents:
-    - current destination conditions;
-    - route-related construction and closures;
-    - regional road incidents;
-    - Vancouver camera observations;
-    - measured weather observations;
-    - current and near-term forecast conditions;
-    - relevant transit service alerts when applicable;
-    - a concise AI-assisted journey briefing.
-15. User may manually explore nearby geographic telemetry on the map.
+6. RouteLens generates plausible driving-route candidates.
+7. The user explicitly selects the route that most closely resembles their planned journey.
+8. The user manually initiates journey analysis.
+9. RouteLens gathers relevant current and near-term telemetry.
+10. Deterministic logic identifies geographically and temporally relevant evidence.
+11. RouteLens automatically selects the nearest usable Vancouver camera intersection to the destination.
+12. RouteLens retrieves usable directional camera views and performs one combined multimodal assessment.
+13. RouteLens presents municipal and regional road context, weather observations and forecasts, camera-derived visual conditions, and a concise AI-assisted journey briefing.
+14. The user may manually inspect additional geographic telemetry on the interactive map.
 
 ---
 
@@ -267,111 +271,6 @@ Driving mode should place stronger emphasis on road-related disruptions.
 
 ---
 
-# 13. Transit Journey Behavior
-
-RouteLens does **not** attempt to reconstruct an exact transit itinerary.
-
-It does not need to tell the user:
-
-- which SkyTrain to board;
-- which bus to take;
-- where to transfer;
-- when to exit;
-- exact arrival times for each leg.
-
-Those functions remain the responsibility of dedicated navigation/transit applications.
-
-Instead, Transit mode uses two forms of context:
-
-## 13.1 Geographic Journey Context
-
-The approximate selected journey corridor is still used for:
-
-- road events;
-- construction;
-- weather;
-- destination camera conditions.
-
-This route is contextual and does not claim to reproduce the true transit itinerary.
-
-## 13.2 Transit Service Context
-
-The user explicitly selects the transit services they expect to use.
-
-These may include:
-
-- one or more bus routes;
-- one or more SkyTrain lines;
-- multiple ordered transit legs.
-
-Where useful, the user also selects a passenger-friendly direction or destination.
-
-RouteLens uses the corresponding official transit identifiers to determine whether realtime service alerts may apply.
-
-Core principle:
-
-> **Transit service relevance is determined primarily from GTFS identifiers, not from geographic route proximity alone.**
-
----
-
-# 14. Transit Service Selection
-
-The Transit-mode UI should allow users to build an ordered list of intended transit legs.
-
-Example:
-
-```text
-Leg 1
-R5 Hastings
-Toward Downtown Vancouver
-
-Leg 2
-Expo Line
-
-Leg 3
-Bus 172
-Selected destination/direction
-```
-
-The UI should favor human-readable labels such as:
-
-> Toward UBC
-
-rather than exposing raw transit identifiers or numeric direction IDs.
-
-Internally, RouteLens should preserve the official identifiers associated with each user selection.
-
-The MVP does not require users to select exact boarding or exiting stops.
-
----
-
-# 15. Transit Alert Scope
-
-The MVP uses **TransLink Service Alerts** as its realtime transit-disruption source.
-
-RouteLens should identify alerts that may apply to the user's selected services.
-
-Relevant alert scopes may include:
-
-- route-wide;
-- direction-specific;
-- stop-specific;
-- trip-specific.
-
-The application must preserve these distinctions.
-
-Examples:
-
-- an alert for a selected route and selected direction is strongly relevant;
-- an alert for a route without a direction restriction may apply to either direction;
-- an alert affecting only a specific stop must not automatically be described as a line-wide disruption;
-- an alert explicitly affecting only the opposite direction should not be treated as a match on that basis;
-- a trip-specific notice should not be assumed applicable unless RouteLens has enough information to establish that.
-
-RouteLens should not turn ambiguous service advisories into unsupported claims of delay.
-
----
-
 # 16. Route Visibility Principle
 
 The selected route only prioritizes automated geographic insights.
@@ -393,22 +292,22 @@ Core principle:
 
 > **The route guides prioritization; it does not restrict visibility.**
 
-Transit alert information is an exception to this map-centric model: it is primarily briefing information and does not require transit map overlays in the MVP.
-
 ---
 
 # 17. Core MVP Data Sources
 
-The MVP has six core external information-source groups:
+The driving-only MVP has five core external information-source groups:
 
 1. Vancouver Traffic Webcams
 2. Vancouver Road Ahead
 3. DriveBC Open511
 4. Environment and Climate Change Canada GeoMet / SWOB
-5. TransLink GTFS Static + GTFS-Realtime Service Alerts
-6. OpenWeather
+5. OpenWeather
 
-DriveBC Cameras are explicitly deferred from the MVP.
+TransLink GTFS Static and GTFS-Realtime Service Alerts are deferred
+beyond the MVP.
+
+DriveBC Cameras are also deferred.
 
 ---
 
@@ -535,7 +434,6 @@ In that case RouteLens should still provide:
 - OpenWeather current/near-term weather;
 - road incidents;
 - construction;
-- transit information when applicable;
 - general journey briefing.
 
 The UI should clearly indicate that no suitable visual observation was available.
@@ -831,6 +729,879 @@ RouteLens should acknowledge meaningful disagreement between sources rather than
 
 ---
 
+# 43. Destination Conditions
+
+Destination conditions are the highest-priority output of the product.
+
+The user should quickly be able to understand:
+
+> What does it appear to be like at my destination right now?
+
+Destination conditions should prioritize:
+
+1. selected Vancouver camera intersection imagery;
+2. structured multi-view camera analysis;
+3. current OpenWeather conditions;
+4. nearby useful ECCC/SWOB observations;
+5. near-term OpenWeather forecast;
+6. other highly relevant nearby telemetry.
+
+---
+
+# 44. Along-Route Conditions
+
+RouteLens should surface only noteworthy conditions along or around the selected journey.
+
+Potential findings include:
+
+- active construction;
+- road closures;
+- road incidents;
+- road advisories;
+- significant weather conditions;
+- relevant camera-derived destination conditions;
+
+The product should not repeat every matching source record in the automated journey summary.
+
+---
+
+# 45. Journey Relevance Principles
+
+Relevance should be established deterministically before information reaches the LLM.
+
+Three important rules apply.
+
+## 45.1 Geographic Proximity Is Not Proof of Impact
+
+A road event near the route may not affect the selected direction.
+
+A nearby weather station may not represent exact destination conditions.
+
+## 45.2 Structured Identifiers Take Precedence Where Appropriate
+
+## 45.3 Directly Applicable Events Must Not Be Lost to Candidate Limits
+
+Direct route overlaps should remain eligible even when many events exist.
+
+Candidate limits should primarily restrict supplemental nearby information.
+
+---
+
+# 46. Insight Density
+
+The automated journey experience should prioritize approximately:
+
+> **3–6 important findings maximum**
+
+This is a usability constraint.
+
+RouteLens should not become a wall of telemetry.
+
+Additional geographic data may remain accessible through the map.
+
+---
+
+# 47. Journey Timeline
+
+RouteLens should provide a compact journey timeline organized approximately as:
+
+```text
+START
+  │
+  ● noteworthy route issue
+  │
+  ● regional road condition
+  │
+  ● significant weather context
+  │
+DESTINATION
+  ● current destination conditions
+```
+
+The timeline should summarize only significant findings.
+
+It should not reproduce every map marker.
+
+---
+
+# 48. AI Journey Briefing
+
+Every completed journey analysis should produce a short human-readable briefing.
+
+The briefing should be concise and actionable.
+
+Example:
+
+> **Your journey looks mostly clear.**
+>
+> Roads near your destination appear wet in recent camera imagery. One construction restriction overlaps the selected route, while no major regional road incident was identified. Light rain remains possible near the destination.
+
+The briefing should not become a long conversational response.
+
+---
+
+# 49. AI Responsibilities
+
+AI has two primary product responsibilities.
+
+## 49.1 Multimodal Camera Interpretation
+
+Analyze the available directional images from one selected Vancouver camera intersection and convert visible evidence into structured observations.
+
+## 49.2 Journey Briefing
+
+Convert already-selected and normalized journey evidence into concise human-readable insight.
+
+---
+
+# 50. Deterministic Responsibilities
+
+AI should **not** perform first-pass data selection or matching.
+
+Conventional application logic should determine:
+
+- route corridor;
+- road-event geometry;
+- camera location;
+- nearest usable camera intersection;
+- source freshness;
+- event schedule applicability where deterministically available;
+- geographic proximity;
+- direct route intersection;
+- source identifiers;
+- which telemetry qualifies as a briefing candidate;
+- which sources should be queried for the selected journey.
+
+The LLM interprets selected evidence.
+
+It does not perform:
+
+- raw pagination;
+- geometry calculations;
+- source-data scraping;
+- first-pass event filtering.
+
+---
+
+# 51. Missing Information Policy
+
+RouteLens must not silently interpret missing values as normal conditions.
+
+Examples:
+
+- missing precipitation is not zero precipitation;
+- missing schedule information is not 24-hour applicability;
+- unavailable camera imagery is not evidence of clear conditions.
+
+Unknown values should remain unknown.
+
+---
+
+# 52. Journey Briefing When Nothing Is Wrong
+
+The journey briefing should always be generated.
+
+If no major issues exist, RouteLens should explicitly communicate that.
+
+Example:
+
+> **Your journey looks clear.**
+>
+> No significant construction or regional road incidents were identified. No major weather concern is apparent from the available evidence.
+
+Core principle:
+
+> **No news is good news.**
+
+RouteLens should not manufacture urgency simply because many sources were queried.
+
+---
+
+# 53. Interactive Map
+
+The map is a primary exploration surface.
+
+It should allow the user to see:
+
+- approximate selected journey corridor;
+- Vancouver traffic-camera locations where useful;
+- Vancouver Road Ahead road geometry;
+- DriveBC Open511 regional road events;
+- other relevant geographic telemetry.
+
+Users should be able to click relevant map items for more information where practical.
+
+The map should remain useful independently of the automated briefing.
+
+---
+
+# 54. Map and Panel Responsibilities
+
+The product should follow this principle:
+
+> **Map for exploration, panel for interpretation.**
+
+The map answers:
+
+> Where is everything?
+
+The journey panel answers:
+
+> What matters to this trip?
+
+---
+
+# 55. Main Desktop Layout
+
+The MVP is desktop-only.
+
+The primary screen should contain:
+
+## Top
+
+Journey controls:
+
+- origin;
+- destination;
+- mode;
+- analysis action.
+
+## Left, approximately 65%
+
+Interactive map.
+
+## Right, approximately 35%
+
+Journey intelligence panel.
+
+Conceptually:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ From [...] → To [...]   Mode [Drive]   [Analyze]        │
+├───────────────────────────────┬─────────────────────────┤
+│                               │ JOURNEY STATUS          │
+│                               │                         │
+│                               │ DESTINATION CONDITIONS  │
+│            MAP                │                         │
+│                               │ ALONG YOUR ROUTE        │
+│                               │                         │
+│                               │ JOURNEY TIMELINE        │
+│                               │                         │
+│                               │ AI BRIEFING             │
+│                               │                         │
+│                               │ SOURCES / FRESHNESS     │
+└───────────────────────────────┴─────────────────────────┘
+```
+
+---
+
+# 56. Right-Panel Information Hierarchy
+
+The locked visual priority is:
+
+1. destination camera / current conditions;
+2. overall journey status;
+3. route issues;
+5. supporting telemetry / provenance.
+
+The destination-condition experience should be one of the strongest visual elements in the product.
+
+---
+
+# 57. Journey Overview Panel
+
+The normal right-side panel should contain, in order:
+
+1. **Journey Status**
+2. **Destination Conditions**
+3. **Along Your Route**
+5. **Journey Timeline**
+6. **RouteLens AI Briefing**
+7. **Sources / Freshness**
+
+Exact grouping may be adjusted for visual clarity.
+
+---
+
+# 58. Camera Detail Presentation
+
+The destination-condition experience should make the selected camera intersection visually prominent.
+
+It should support:
+
+- available directional images;
+- intersection name/location;
+- image freshness where available;
+- structured AI visual observations;
+- relevant current weather context.
+
+A dedicated camera-detail state may still be used if helpful, but the MVP does not require alternative camera exploration as a core workflow.
+
+---
+
+# 59. Visual Style
+
+RouteLens should use a polished, dark **city intelligence** aesthetic.
+
+Desired characteristics:
+
+- dark charcoal / deep navy background;
+- subdued basemap;
+- high-contrast selected route;
+- restrained accent colors;
+- clean modern typography;
+- visually prominent camera images;
+- compact telemetry markers;
+- small source/freshness badges;
+- elevated or glass-like panels where appropriate;
+- minimal visual clutter.
+
+The interface should feel like a modern situational-awareness product rather than a municipal open-data dashboard.
+
+---
+
+# 60. Motion and Animation
+
+The MVP should include restrained animation for polish.
+
+Desired behavior includes:
+
+- route visually reveals after analysis;
+- result cards fade or slide into place;
+- camera panel transitions smoothly where applicable;
+- subtle live-status pulse;
+- small weather-state animation if straightforward.
+
+Motion should support comprehension rather than becoming decorative noise.
+
+---
+
+# 61. Desktop-Only Requirement
+
+Mobile responsiveness is explicitly out of scope.
+
+The product should be optimized for a large desktop/laptop viewport.
+
+Development effort should not be spent creating:
+
+- mobile navigation;
+- compact phone layouts;
+- touch-first interactions;
+- responsive redesigns
+
+unless necessary to prevent the desktop experience from breaking.
+
+---
+
+# 62. Data Freshness
+
+Because RouteLens focuses on current conditions, freshness must be visible to the user.
+
+Examples:
+
+```text
+Camera · image retrieved 4m ago
+ECCC · observed 8m ago
+DriveBC · updated 3m ago
+Road Ahead · dataset fetched 6h ago
+```
+
+Users should be able to distinguish:
+
+- recent observations;
+- cached source data;
+- stale fallback data;
+- forecast information.
+
+Stale data should not silently appear current.
+
+---
+
+# 63. Stale-Data Behavior
+
+Where appropriate, RouteLens may continue using the last valid cached source data after a refresh failure.
+
+When this happens:
+
+- the previous valid data may remain available;
+- its age must remain visible;
+- the application should identify the source as stale;
+- the failed refresh should not silently replace valid data with an invalid payload.
+
+Camera imagery follows its separate ephemeral policy.
+
+---
+
+# 64. Data Provenance
+
+The UI and normalized journey evidence should preserve enough provenance for the user and system to understand where important information came from.
+
+Examples:
+
+- City of Vancouver;
+- DriveBC;
+- ECCC;
+- OpenWeather;
+- camera AI inference.
+
+Normalized observations should preserve, where relevant:
+
+- source;
+- source record identifier;
+- event/observation timestamp;
+- retrieval timestamp.
+
+AI-derived observations should be distinguishable from authoritative source data.
+
+---
+
+# 65. Partial Success
+
+Every external data source should be treated as independently fallible.
+
+If one source fails, RouteLens should still return useful results from the remaining sources.
+
+Example:
+
+```text
+Vancouver Cameras   Available
+Road Ahead          Available
+DriveBC Open511     Available
+ECCC                Available
+OpenWeather         Available
+```
+
+One failed source must not cause the entire journey analysis to fail unless that failure truly prevents the basic workflow from continuing.
+
+---
+
+# 66. Error Handling
+
+Errors should be:
+
+- understandable;
+- localized;
+- non-catastrophic where possible.
+
+Examples include:
+
+- destination outside supported area;
+- no route corridor available;
+- no usable destination camera;
+- upstream API unavailable;
+- stale source information;
+- AI image analysis unavailable;
+
+The application should degrade gracefully.
+
+---
+
+# 67. Functional Requirements
+
+The MVP must allow the user to:
+
+## Journey Input
+
+- enter an origin;
+- select an origin from autocomplete;
+- enter a destination;
+- select a destination from autocomplete;
+- reject destinations outside Vancouver;
+- use Drive mode.
+
+## Route Context
+
+- generate an approximate journey corridor;
+- select/accept an approximate corridor;
+- view the selected route on the map;
+- understand that the corridor is for context rather than authoritative navigation.
+
+## Vancouver Cameras
+
+- select the nearest usable destination camera intersection automatically;
+- retrieve available directional images from that intersection;
+- receive one combined multimodal analysis across usable views;
+- see current visual-condition insight;
+- continue receiving a useful journey analysis if no usable camera is available.
+
+## Road Conditions
+
+- view Vancouver Road Ahead construction/closures;
+- view active regional DriveBC Open511 events;
+- inspect road events spatially on the map;
+- preserve directly overlapping road events as briefing candidates;
+- use enriched Road Ahead schedule/restriction detail where available.
+
+## Weather
+
+- see structured current and near-term OpenWeather information;
+- see relevant measured ECCC/SWOB observations;
+- see camera-derived visual weather evidence;
+- clearly distinguish measured, forecast/structured, and visually inferred evidence.
+
+## Insights
+
+- receive a concise overall journey status;
+- receive approximately 3–6 meaningful automated findings maximum;
+- receive a short AI journey briefing;
+- receive a “journey looks clear” result where appropriate;
+- see uncertainty or limitations when evidence is incomplete.
+
+## Exploration
+
+- inspect regional and route-adjacent geographic telemetry on the map;
+- inspect relevant source-derived details.
+
+## Reliability
+
+- receive partial results when individual upstream sources fail;
+- see stale-data warnings where cached fallback data is used.
+
+---
+
+# 68. Non-Functional Requirements
+
+## 68.1 Usability
+
+The main journey flow should be understandable without documentation.
+
+The user should quickly understand:
+
+- what to enter;
+- what route selection means;
+- what the map represents;
+- what conditions matter.
+
+## 68.2 Responsiveness
+
+The application should feel interactive enough for a near-departure check.
+
+Individual slow external sources should not unnecessarily block all useful results.
+
+## 68.3 Reliability
+
+External API failure should degrade the experience gracefully.
+
+## 68.4 Explainability
+
+Important findings should preserve:
+
+- source;
+- freshness;
+- applicability/relevance where useful;
+- distinction between observation, forecast, source-reported information, and AI inference.
+
+## 68.5 Information Density
+
+The product should prioritize concise useful insight rather than maximum data exposure.
+
+## 68.6 Visual Quality
+
+The MVP should look intentionally designed and presentation-ready.
+
+Visual polish is a product requirement, not merely post-MVP cleanup.
+
+## 68.7 Data Integrity
+
+Missing, stale, ambiguous, or unavailable values should not silently be converted into false certainty.
+
+---
+
+# 69. Success Criteria / Definition of Done
+
+The MVP is considered successful when a user can:
+
+1. Select a valid origin.
+2. Select a valid City of Vancouver destination.
+3. View plausible driving-route candidates.
+4. Explicitly select an approximate driving route.
+5. View the selected route on an interactive map.
+6. See relevant Vancouver Road Ahead construction and closure information.
+7. See regional DriveBC Open511 events and route-relevant findings.
+8. Inspect the selected destination camera intersection when usable imagery exists.
+9. Receive a multi-view camera-derived visual-condition assessment.
+10. See current and near-term OpenWeather information.
+11. See relevant measured ECCC/SWOB observations.
+12. Receive a concise, source-grounded AI journey briefing.
+13. See clear evidence, uncertainty, source attribution, and freshness information.
+14. Continue receiving useful partial results when individual sources fail.
+
+Transit Mode and TransLink Service Alerts are not required for MVP completion.
+
+---
+
+# 70. Explicit Non-Goals
+
+The MVP does not include:
+
+- exact Google Maps route reproduction;
+- turn-by-turn navigation;
+- route optimization;
+- authoritative route recommendations;
+- full transit itinerary reconstruction;
+- automatic transit transfer planning;
+- bus/train navigation instructions;
+- boarding-stop or exiting-stop selection;
+- exact transit trip selection;
+- GTFS-Realtime Trip Updates;
+- GTFS-Realtime Vehicle Positions;
+- realtime transit vehicle tracking;
+- transit network overlays;
+- transit station/stop map visualization;
+- natural-language transit itinerary parsing;
+- user accounts;
+- authentication;
+- saved trips;
+- persistent user profiles;
+- recurring monitoring;
+- push notifications;
+- current-location permissions;
+- mobile UI;
+- mobile responsiveness;
+- walking mode;
+- cycling mode;
+- historical city analytics;
+- historical camera archive;
+- camera time-series analysis;
+- multiple Vancouver camera intersections per journey;
+- camera-based traffic-speed inference;
+- AI image upscaling;
+- complex cross-source road-event deduplication;
+- weather-station interpolation;
+- neighborhood-level weather interpolation;
+- DriveBC camera integration;
+- citywide traffic simulation;
+- citywide digital-twin simulation;
+- general journeys whose destination is outside Vancouver;
+- Transit Mode, including GTFS Static and GTFS-Realtime Service Alerts;
+- long-range travel planning.
+
+---
+
+# 71. Deferred Data Source: DriveBC Cameras
+
+DriveBC camera imagery is explicitly removed from the MVP.
+
+It remains a possible future integration for:
+
+- highway weather context;
+- bridge approaches;
+- regional visual coverage;
+- trips beginning outside Vancouver.
+
+If added later, DriveBC cameras should reuse the existing camera-selection and multimodal-analysis architecture rather than creating a second vision pipeline.
+
+For the MVP, Vancouver cameras are sufficient to demonstrate the camera capability.
+
+---
+
+# 72. Product Boundaries
+
+The product should preserve the following division of responsibility:
+
+```text
+Navigation application
+→ How do I get there?
+
+RouteLens route corridor
+→ Approximately where is my journey happening?
+
+Public telemetry
+→ What is happening around that journey?
+
+Deterministic matching
+→ Which observations actually appear relevant?
+
+AI
+→ How can those selected observations be explained concisely?
+```
+
+Implementation should not drift toward making RouteLens a navigation or transit-planning replacement.
+
+---
+
+# 73. Evidence Model
+
+RouteLens should distinguish between different kinds of evidence.
+
+Examples:
+
+## Source-Reported
+
+- road closure;
+- construction;
+- Open511 incident.
+
+## Measured
+
+- SWOB temperature;
+- SWOB precipitation accumulation;
+- SWOB visibility.
+
+## Forecast / Structured Weather
+
+- OpenWeather forecast conditions;
+- predicted precipitation.
+
+## Visually Observed / AI-Derived
+
+- wet pavement visible;
+- falling precipitation possibly visible;
+- poor visibility;
+- camera image quality limitations.
+
+The final briefing should retain these distinctions whenever they affect confidence or interpretation.
+
+---
+
+# 74. MVP Product Summary
+
+RouteLens AI should provide a fast, visually polished answer to:
+
+> **What should I know about my journey into Vancouver before I leave?**
+
+The MVP succeeds by combining:
+
+- an approximate selected journey corridor;
+- municipal construction data;
+- regional road-event data;
+- one nearby multi-view Vancouver camera assessment;
+- structured weather;
+- measured weather observations.
+
+RouteLens then turns that fragmented information into a small number of understandable, evidence-backed journey insights.
+
+The product should remain:
+
+- Vancouver-specific;
+- near-current;
+- route-aware;
+- camera-centric at the destination;
+- deterministic before AI;
+- concise;
+- transparent about uncertainty;
+- transparent about provenance;
+- complementary to existing navigation applications.
+
+---
+
+# Appendix A — Deferred Transit Mode Design (Post-MVP)
+
+**Status:** Deferred as of 2026-10-11. Reference design only.
+
+The following sections document previously investigated transit
+requirements. They are not part of the datathon MVP and must not
+be treated as active implementation or acceptance requirements.
+
+Transit-specific implementation requires a separate product
+scope decision before work may resume.
+
+# 13. Transit Journey Behavior
+
+RouteLens does **not** attempt to reconstruct an exact transit itinerary.
+
+It does not need to tell the user:
+
+- which SkyTrain to board;
+- which bus to take;
+- where to transfer;
+- when to exit;
+- exact arrival times for each leg.
+
+Those functions remain the responsibility of dedicated navigation/transit applications.
+
+Instead, Transit mode uses two forms of context:
+
+## 13.1 Geographic Journey Context
+
+The approximate selected journey corridor is still used for:
+
+- road events;
+- construction;
+- weather;
+- destination camera conditions.
+
+This route is contextual and does not claim to reproduce the true transit itinerary.
+
+## 13.2 Transit Service Context
+
+The user explicitly selects the transit services they expect to use.
+
+These may include:
+
+- one or more bus routes;
+- one or more SkyTrain lines;
+- multiple ordered transit legs.
+
+Where useful, the user also selects a passenger-friendly direction or destination.
+
+RouteLens uses the corresponding official transit identifiers to determine whether realtime service alerts may apply.
+
+Core principle:
+
+> **Transit service relevance is determined primarily from GTFS identifiers, not from geographic route proximity alone.**
+
+---
+
+# 14. Transit Service Selection
+
+The Transit-mode UI should allow users to build an ordered list of intended transit legs.
+
+Example:
+
+```text
+Leg 1
+R5 Hastings
+Toward Downtown Vancouver
+
+Leg 2
+Expo Line
+
+Leg 3
+Bus 172
+Selected destination/direction
+```
+
+The UI should favor human-readable labels such as:
+
+> Toward UBC
+
+rather than exposing raw transit identifiers or numeric direction IDs.
+
+Internally, RouteLens should preserve the official identifiers associated with each user selection.
+
+The MVP does not require users to select exact boarding or exiting stops.
+
+---
+
+# 15. Transit Alert Scope
+
+The MVP uses **TransLink Service Alerts** as its realtime transit-disruption source.
+
+RouteLens should identify alerts that may apply to the user's selected services.
+
+Relevant alert scopes may include:
+
+- route-wide;
+- direction-specific;
+- stop-specific;
+- trip-specific.
+
+The application must preserve these distinctions.
+
+Examples:
+
+- an alert for a selected route and selected direction is strongly relevant;
+- an alert for a route without a direction restriction may apply to either direction;
+- an alert affecting only a specific stop must not automatically be described as a line-wide disruption;
+- an alert explicitly affecting only the opposite direction should not be treated as a match on that basis;
+- a trip-specific notice should not be assumed applicable unless RouteLens has enough information to establish that.
+
+RouteLens should not turn ambiguous service advisories into unsupported claims of delay.
+
+---
+
 # 37. TransLink GTFS Static
 
 GTFS Static provides reference data needed to turn user-friendly transit selections into authoritative service identifiers.
@@ -942,800 +1713,6 @@ The geographic map remains focused on:
 
 ---
 
-# 43. Destination Conditions
-
-Destination conditions are the highest-priority output of the product.
-
-The user should quickly be able to understand:
-
-> What does it appear to be like at my destination right now?
-
-Destination conditions should prioritize:
-
-1. selected Vancouver camera intersection imagery;
-2. structured multi-view camera analysis;
-3. current OpenWeather conditions;
-4. nearby useful ECCC/SWOB observations;
-5. near-term OpenWeather forecast;
-6. other highly relevant nearby telemetry.
-
----
-
-# 44. Along-Route Conditions
-
-RouteLens should surface only noteworthy conditions along or around the selected journey.
-
-Potential findings include:
-
-- active construction;
-- road closures;
-- road incidents;
-- road advisories;
-- significant weather conditions;
-- relevant camera-derived destination conditions;
-- transit service alerts in Transit mode.
-
-The product should not repeat every matching source record in the automated journey summary.
-
----
-
-# 45. Journey Relevance Principles
-
-Relevance should be established deterministically before information reaches the LLM.
-
-Three important rules apply.
-
-## 45.1 Geographic Proximity Is Not Proof of Impact
-
-A road event near the route may not affect the selected direction.
-
-A nearby weather station may not represent exact destination conditions.
-
 ## 45.2 Structured Identifiers Take Precedence Where Appropriate
 
 Transit alert matching should use official GTFS route/direction identifiers rather than an LLM's interpretation of route names or geographic proximity.
-
-## 45.3 Directly Applicable Events Must Not Be Lost to Candidate Limits
-
-Direct route overlaps should remain eligible even when many events exist.
-
-Candidate limits should primarily restrict supplemental nearby information.
-
----
-
-# 46. Insight Density
-
-The automated journey experience should prioritize approximately:
-
-> **3–6 important findings maximum**
-
-This is a usability constraint.
-
-RouteLens should not become a wall of telemetry.
-
-Additional geographic data may remain accessible through the map.
-
----
-
-# 47. Journey Timeline
-
-RouteLens should provide a compact journey timeline organized approximately as:
-
-```text
-START
-  │
-  ● noteworthy route issue
-  │
-  ● regional road condition
-  │
-  ● significant weather context
-  │
-DESTINATION
-  ● current destination conditions
-```
-
-Transit-specific service alerts may also appear where they are sufficiently relevant.
-
-The timeline should summarize only significant findings.
-
-It should not reproduce every map marker.
-
----
-
-# 48. AI Journey Briefing
-
-Every completed journey analysis should produce a short human-readable briefing.
-
-The briefing should be concise and actionable.
-
-Example:
-
-> **Your journey looks mostly clear.**
->
-> Roads near your destination appear wet in recent camera imagery. One construction restriction overlaps the selected route, while no major regional road incident was identified. Light rain remains possible near the destination.
-
-The briefing should not become a long conversational response.
-
----
-
-# 49. AI Responsibilities
-
-AI has two primary product responsibilities.
-
-## 49.1 Multimodal Camera Interpretation
-
-Analyze the available directional images from one selected Vancouver camera intersection and convert visible evidence into structured observations.
-
-## 49.2 Journey Briefing
-
-Convert already-selected and normalized journey evidence into concise human-readable insight.
-
----
-
-# 50. Deterministic Responsibilities
-
-AI should **not** perform first-pass data selection or matching.
-
-Conventional application logic should determine:
-
-- route corridor;
-- road-event geometry;
-- camera location;
-- nearest usable camera intersection;
-- source freshness;
-- event schedule applicability where deterministically available;
-- geographic proximity;
-- direct route intersection;
-- GTFS route and direction matching;
-- source identifiers;
-- which telemetry qualifies as a briefing candidate;
-- which mode-specific sources should be queried.
-
-The LLM interprets selected evidence.
-
-It does not perform:
-
-- raw pagination;
-- geometry calculations;
-- GTFS joins;
-- route-ID resolution;
-- source-data scraping;
-- first-pass event filtering.
-
----
-
-# 51. Missing Information Policy
-
-RouteLens must not silently interpret missing values as normal conditions.
-
-Examples:
-
-- missing precipitation is not zero precipitation;
-- missing transit direction is not a known direction;
-- missing schedule information is not 24-hour applicability;
-- missing delay information is not on-time service;
-- unavailable camera imagery is not evidence of clear conditions.
-
-Unknown values should remain unknown.
-
----
-
-# 52. Journey Briefing When Nothing Is Wrong
-
-The journey briefing should always be generated.
-
-If no major issues exist, RouteLens should explicitly communicate that.
-
-Example:
-
-> **Your journey looks clear.**
->
-> No significant construction, regional road incidents, or matching transit service alerts were identified. No major weather concern is apparent from the available evidence.
-
-Core principle:
-
-> **No news is good news.**
-
-RouteLens should not manufacture urgency simply because many sources were queried.
-
----
-
-# 53. Interactive Map
-
-The map is a primary exploration surface.
-
-It should allow the user to see:
-
-- approximate selected journey corridor;
-- Vancouver traffic-camera locations where useful;
-- Vancouver Road Ahead road geometry;
-- DriveBC Open511 regional road events;
-- other relevant geographic telemetry.
-
-Users should be able to click relevant map items for more information where practical.
-
-The map should remain useful independently of the automated briefing.
-
-Transit services do not require map visualization in the MVP.
-
----
-
-# 54. Map and Panel Responsibilities
-
-The product should follow this principle:
-
-> **Map for exploration, panel for interpretation.**
-
-The map answers:
-
-> Where is everything?
-
-The journey panel answers:
-
-> What matters to this trip?
-
----
-
-# 55. Main Desktop Layout
-
-The MVP is desktop-only.
-
-The primary screen should contain:
-
-## Top
-
-Journey controls:
-
-- origin;
-- destination;
-- mode;
-- Transit service selection when applicable;
-- analysis action.
-
-## Left, approximately 65%
-
-Interactive map.
-
-## Right, approximately 35%
-
-Journey intelligence panel.
-
-Conceptually:
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ From [...] → To [...]   Mode [Drive]   [Analyze]        │
-├───────────────────────────────┬─────────────────────────┤
-│                               │ JOURNEY STATUS          │
-│                               │                         │
-│                               │ DESTINATION CONDITIONS  │
-│            MAP                │                         │
-│                               │ ALONG YOUR ROUTE        │
-│                               │                         │
-│                               │ JOURNEY TIMELINE        │
-│                               │                         │
-│                               │ AI BRIEFING             │
-│                               │                         │
-│                               │ SOURCES / FRESHNESS     │
-└───────────────────────────────┴─────────────────────────┘
-```
-
----
-
-# 56. Right-Panel Information Hierarchy
-
-The locked visual priority is:
-
-1. destination camera / current conditions;
-2. overall journey status;
-3. route issues;
-4. transit alerts where applicable;
-5. supporting telemetry / provenance.
-
-The destination-condition experience should be one of the strongest visual elements in the product.
-
----
-
-# 57. Journey Overview Panel
-
-The normal right-side panel should contain, in order:
-
-1. **Journey Status**
-2. **Destination Conditions**
-3. **Along Your Route**
-4. **Transit Alerts** when applicable
-5. **Journey Timeline**
-6. **RouteLens AI Briefing**
-7. **Sources / Freshness**
-
-Exact grouping may be adjusted for visual clarity.
-
----
-
-# 58. Camera Detail Presentation
-
-The destination-condition experience should make the selected camera intersection visually prominent.
-
-It should support:
-
-- available directional images;
-- intersection name/location;
-- image freshness where available;
-- structured AI visual observations;
-- relevant current weather context.
-
-A dedicated camera-detail state may still be used if helpful, but the MVP does not require alternative camera exploration as a core workflow.
-
----
-
-# 59. Visual Style
-
-RouteLens should use a polished, dark **city intelligence** aesthetic.
-
-Desired characteristics:
-
-- dark charcoal / deep navy background;
-- subdued basemap;
-- high-contrast selected route;
-- restrained accent colors;
-- clean modern typography;
-- visually prominent camera images;
-- compact telemetry markers;
-- small source/freshness badges;
-- elevated or glass-like panels where appropriate;
-- minimal visual clutter.
-
-The interface should feel like a modern situational-awareness product rather than a municipal open-data dashboard.
-
----
-
-# 60. Motion and Animation
-
-The MVP should include restrained animation for polish.
-
-Desired behavior includes:
-
-- route visually reveals after analysis;
-- result cards fade or slide into place;
-- camera panel transitions smoothly where applicable;
-- subtle live-status pulse;
-- small weather-state animation if straightforward.
-
-Motion should support comprehension rather than becoming decorative noise.
-
----
-
-# 61. Desktop-Only Requirement
-
-Mobile responsiveness is explicitly out of scope.
-
-The product should be optimized for a large desktop/laptop viewport.
-
-Development effort should not be spent creating:
-
-- mobile navigation;
-- compact phone layouts;
-- touch-first interactions;
-- responsive redesigns
-
-unless necessary to prevent the desktop experience from breaking.
-
----
-
-# 62. Data Freshness
-
-Because RouteLens focuses on current conditions, freshness must be visible to the user.
-
-Examples:
-
-```text
-Camera · image retrieved 4m ago
-ECCC · observed 8m ago
-DriveBC · updated 3m ago
-Road Ahead · dataset fetched 6h ago
-Transit · updated 35s ago
-```
-
-Users should be able to distinguish:
-
-- recent observations;
-- cached source data;
-- stale fallback data;
-- forecast information.
-
-Stale data should not silently appear current.
-
----
-
-# 63. Stale-Data Behavior
-
-Where appropriate, RouteLens may continue using the last valid cached source data after a refresh failure.
-
-When this happens:
-
-- the previous valid data may remain available;
-- its age must remain visible;
-- the application should identify the source as stale;
-- the failed refresh should not silently replace valid data with an invalid payload.
-
-Camera imagery follows its separate ephemeral policy.
-
----
-
-# 64. Data Provenance
-
-The UI and normalized journey evidence should preserve enough provenance for the user and system to understand where important information came from.
-
-Examples:
-
-- City of Vancouver;
-- DriveBC;
-- ECCC;
-- TransLink;
-- OpenWeather;
-- camera AI inference.
-
-Normalized observations should preserve, where relevant:
-
-- source;
-- source record identifier;
-- event/observation timestamp;
-- retrieval timestamp.
-
-AI-derived observations should be distinguishable from authoritative source data.
-
----
-
-# 65. Partial Success
-
-Every external data source should be treated as independently fallible.
-
-If one source fails, RouteLens should still return useful results from the remaining sources.
-
-Example:
-
-```text
-Vancouver Cameras   Available
-Road Ahead          Available
-DriveBC Open511     Available
-ECCC                Available
-OpenWeather         Available
-TransLink           Unavailable
-```
-
-The user might see:
-
-> TransLink realtime information is currently unavailable. Other journey conditions are shown normally.
-
-One failed source must not cause the entire journey analysis to fail unless that failure truly prevents the basic workflow from continuing.
-
----
-
-# 66. Error Handling
-
-Errors should be:
-
-- understandable;
-- localized;
-- non-catastrophic where possible.
-
-Examples include:
-
-- destination outside supported area;
-- no route corridor available;
-- no usable destination camera;
-- upstream API unavailable;
-- stale source information;
-- AI image analysis unavailable;
-- transit alert feed unavailable.
-
-The application should degrade gracefully.
-
----
-
-# 67. Functional Requirements
-
-The MVP must allow the user to:
-
-## Journey Input
-
-- enter an origin;
-- select an origin from autocomplete;
-- enter a destination;
-- select a destination from autocomplete;
-- reject destinations outside Vancouver;
-- choose Drive or Transit.
-
-## Route Context
-
-- generate an approximate journey corridor;
-- select/accept an approximate corridor;
-- view the selected route on the map;
-- understand that the corridor is for context rather than authoritative navigation.
-
-## Vancouver Cameras
-
-- select the nearest usable destination camera intersection automatically;
-- retrieve available directional images from that intersection;
-- receive one combined multimodal analysis across usable views;
-- see current visual-condition insight;
-- continue receiving a useful journey analysis if no usable camera is available.
-
-## Road Conditions
-
-- view Vancouver Road Ahead construction/closures;
-- view active regional DriveBC Open511 events;
-- inspect road events spatially on the map;
-- preserve directly overlapping road events as briefing candidates;
-- use enriched Road Ahead schedule/restriction detail where available.
-
-## Weather
-
-- see structured current and near-term OpenWeather information;
-- see relevant measured ECCC/SWOB observations;
-- see camera-derived visual weather evidence;
-- clearly distinguish measured, forecast/structured, and visually inferred evidence.
-
-## Transit
-
-When Transit mode is selected:
-
-- add one or more bus routes and/or SkyTrain lines;
-- select passenger-friendly direction information where useful;
-- preserve resolved GTFS identifiers;
-- query TransLink Service Alerts;
-- match alerts deterministically to selected transit services;
-- distinguish route-wide, direction-specific, stop-specific, and trip-specific alert scope;
-- surface relevant service advisories without claiming unsupported delays.
-
-## Insights
-
-- receive a concise overall journey status;
-- receive approximately 3–6 meaningful automated findings maximum;
-- receive a short AI journey briefing;
-- receive a “journey looks clear” result where appropriate;
-- see uncertainty or limitations when evidence is incomplete.
-
-## Exploration
-
-- inspect regional and route-adjacent geographic telemetry on the map;
-- inspect relevant source-derived details.
-
-## Reliability
-
-- receive partial results when individual upstream sources fail;
-- see stale-data warnings where cached fallback data is used.
-
----
-
-# 68. Non-Functional Requirements
-
-## 68.1 Usability
-
-The main journey flow should be understandable without documentation.
-
-The user should quickly understand:
-
-- what to enter;
-- what route selection means;
-- what Transit service selection means;
-- what the map represents;
-- what conditions matter.
-
-## 68.2 Responsiveness
-
-The application should feel interactive enough for a near-departure check.
-
-Individual slow external sources should not unnecessarily block all useful results.
-
-## 68.3 Reliability
-
-External API failure should degrade the experience gracefully.
-
-## 68.4 Explainability
-
-Important findings should preserve:
-
-- source;
-- freshness;
-- applicability/relevance where useful;
-- distinction between observation, forecast, source-reported information, and AI inference.
-
-## 68.5 Information Density
-
-The product should prioritize concise useful insight rather than maximum data exposure.
-
-## 68.6 Visual Quality
-
-The MVP should look intentionally designed and presentation-ready.
-
-Visual polish is a product requirement, not merely post-MVP cleanup.
-
-## 68.7 Data Integrity
-
-Missing, stale, ambiguous, or unavailable values should not silently be converted into false certainty.
-
----
-
-# 69. Success Criteria / Definition of Done
-
-The MVP is considered successful when a user can:
-
-1. select a valid origin;
-2. select a valid Vancouver destination;
-3. choose Drive or Transit;
-4. select or accept an approximate journey corridor;
-5. see the route on an interactive map;
-6. see relevant Vancouver Road Ahead construction/closure information;
-7. see relevant regional DriveBC Open511 events;
-8. inspect a selected destination camera intersection when usable imagery exists;
-9. receive a multi-view camera-derived visual-condition assessment;
-10. see current and near-term OpenWeather information;
-11. see relevant measured ECCC/SWOB context;
-12. in Transit mode, select the bus routes/SkyTrain lines they intend to use;
-13. receive relevant TransLink Service Alerts when applicable;
-14. receive a concise journey briefing;
-15. see clear uncertainty/source context where appropriate;
-16. still receive useful partial results if an individual source fails.
-
-The route does not need to exactly reproduce Google Maps for the MVP to be successful.
-
----
-
-# 70. Explicit Non-Goals
-
-The MVP does not include:
-
-- exact Google Maps route reproduction;
-- turn-by-turn navigation;
-- route optimization;
-- authoritative route recommendations;
-- full transit itinerary reconstruction;
-- automatic transit transfer planning;
-- bus/train navigation instructions;
-- boarding-stop or exiting-stop selection;
-- exact transit trip selection;
-- GTFS-Realtime Trip Updates;
-- GTFS-Realtime Vehicle Positions;
-- realtime transit vehicle tracking;
-- transit network overlays;
-- transit station/stop map visualization;
-- natural-language transit itinerary parsing;
-- user accounts;
-- authentication;
-- saved trips;
-- persistent user profiles;
-- recurring monitoring;
-- push notifications;
-- current-location permissions;
-- mobile UI;
-- mobile responsiveness;
-- walking mode;
-- cycling mode;
-- historical city analytics;
-- historical camera archive;
-- camera time-series analysis;
-- multiple Vancouver camera intersections per journey;
-- camera-based traffic-speed inference;
-- AI image upscaling;
-- complex cross-source road-event deduplication;
-- weather-station interpolation;
-- neighborhood-level weather interpolation;
-- DriveBC camera integration;
-- citywide traffic simulation;
-- citywide digital-twin simulation;
-- general journeys whose destination is outside Vancouver;
-- long-range travel planning.
-
----
-
-# 71. Deferred Data Source: DriveBC Cameras
-
-DriveBC camera imagery is explicitly removed from the MVP.
-
-It remains a possible future integration for:
-
-- highway weather context;
-- bridge approaches;
-- regional visual coverage;
-- trips beginning outside Vancouver.
-
-If added later, DriveBC cameras should reuse the existing camera-selection and multimodal-analysis architecture rather than creating a second vision pipeline.
-
-For the MVP, Vancouver cameras are sufficient to demonstrate the camera capability.
-
----
-
-# 72. Product Boundaries
-
-The product should preserve the following division of responsibility:
-
-```text
-Navigation application
-→ How do I get there?
-
-RouteLens route corridor
-→ Approximately where is my journey happening?
-
-Transit service selection
-→ Which buses / SkyTrain lines am I planning to use?
-
-Public telemetry
-→ What is happening around that journey or those services?
-
-Deterministic matching
-→ Which observations actually appear relevant?
-
-AI
-→ How can those selected observations be explained concisely?
-```
-
-Implementation should not drift toward making RouteLens a navigation or transit-planning replacement.
-
----
-
-# 73. Evidence Model
-
-RouteLens should distinguish between different kinds of evidence.
-
-Examples:
-
-## Source-Reported
-
-- road closure;
-- construction;
-- transit service alert;
-- Open511 incident.
-
-## Measured
-
-- SWOB temperature;
-- SWOB precipitation accumulation;
-- SWOB visibility.
-
-## Forecast / Structured Weather
-
-- OpenWeather forecast conditions;
-- predicted precipitation.
-
-## Visually Observed / AI-Derived
-
-- wet pavement visible;
-- falling precipitation possibly visible;
-- poor visibility;
-- camera image quality limitations.
-
-The final briefing should retain these distinctions whenever they affect confidence or interpretation.
-
----
-
-# 74. MVP Product Summary
-
-RouteLens AI should provide a fast, visually polished answer to:
-
-> **What should I know about my journey into Vancouver before I leave?**
-
-The MVP succeeds by combining:
-
-- an approximate selected journey corridor;
-- municipal construction data;
-- regional road-event data;
-- one nearby multi-view Vancouver camera assessment;
-- structured weather;
-- measured weather observations;
-- and, when Transit is selected, service-specific TransLink alerts.
-
-RouteLens then turns that fragmented information into a small number of understandable, evidence-backed journey insights.
-
-The product should remain:
-
-- Vancouver-specific;
-- near-current;
-- route-aware;
-- service-aware in Transit mode;
-- camera-centric at the destination;
-- deterministic before AI;
-- concise;
-- transparent about uncertainty;
-- transparent about provenance;
-- complementary to existing navigation applications.

@@ -8,7 +8,9 @@ Its central question is:
 
 **What is happening around my journey that I should know before I leave?**
 
-RouteLens combines road events, construction, destination cameras, weather, and transit advisories into an interactive map and concise AI-assisted journey briefing.
+RouteLens combines municipal and regional road events, construction, destination cameras, and weather into an interactive map and concise AI-assisted journey briefing.
+
+The datathon MVP supports driving journeys exclusively. Multimodal AI camera analysis is its primary differentiating capability.
 
 Core product principle:
 
@@ -29,27 +31,33 @@ This document defines the approved intended MVP system. It does not indicate whi
 
 ### Travel Modes
 
-The MVP supports:
+The datathon MVP supports **Drive mode only**.
 
-- **Drive** — geographic route context and stronger emphasis on road conditions.
-- **Transit** — approximate geographic journey context plus explicitly selected transit services.
+Users explicitly select an approximate driving route into the City of Vancouver. The selected route provides geographic context for road events, weather, and destination camera observations.
 
-Walking and cycling are excluded.
+**Scope decision (2026-10-11):** Transit Mode, including TransLink GTFS Static and GTFS-Realtime Service Alerts, is deferred beyond the datathon MVP. Transit requires additional service, direction, stop, transfer, and timing context that is outside the existing driving workflow.
+
+Walking and cycling are also excluded.
+
+Camera-based visual intelligence remains the MVP's primary differentiating capability. Transit is preserved as a potential post-MVP extension, not an active implementation or acceptance requirement.
 
 ### Core User Workflow
 
 1. User manually selects an origin through place autocomplete.
 2. User selects a destination through autocomplete.
 3. Application validates that the destination is inside Vancouver.
-4. User selects Drive or Transit.
-5. Application generates approximate journey corridor candidates.
-6. User selects the corridor closest to their intended journey.
-7. In Transit mode, user selects ordered bus/SkyTrain services and directions where useful.
-8. Application gathers current and near-term telemetry.
-9. Deterministic logic identifies geographically, temporally, and service-specifically relevant evidence.
-10. Application selects the nearest usable Vancouver camera intersection and retrieves available directional images.
-11. Multimodal AI interprets those camera views together.
-12. Application presents the map, destination conditions, journey-specific findings, source statuses, and AI briefing.
+4. Application generates approximate driving-route candidates.
+5. User explicitly selects the candidate closest to their intended journey.
+6. User manually initiates journey analysis.
+7. Application gathers current and near-term road and weather evidence.
+8. Deterministic logic identifies geographically and temporally relevant evidence.
+9. Application selects the nearest usable Vancouver camera intersection and retrieves available directional images.
+10. Multimodal AI interprets those camera views together.
+11. Application presents the map, destination conditions, journey-specific findings, source statuses, and AI briefing.
+
+The selected route provides geographic context; RouteLens does not provide authoritative navigation or route optimization.
+
+Analysis remains on-demand and does not automatically rerun when the selected route changes.
 
 ### Usage Model
 
@@ -81,7 +89,6 @@ Responsibilities include:
 
 - journey input and validation feedback;
 - candidate route selection;
-- transit-service selection;
 - interactive map and telemetry overlays;
 - destination-camera presentation;
 - journey intelligence panel;
@@ -108,7 +115,7 @@ Responsibilities include:
 - validation and normalization;
 - routing/geocoding coordination;
 - source-specific caching;
-- deterministic geospatial and transit relevance;
+- deterministic geospatial and temporal relevance;
 - camera catalogue enrichment and image handling;
 - AI inference and structured-output validation;
 - journey analysis orchestration;
@@ -125,7 +132,8 @@ Additional lightweight libraries are permitted where justified by a current-phas
 | openrouteservice | Approximate journey route candidates |
 | OpenRouter | Camera multimodal inference and journey briefing |
 | OpenWeather | Structured current and near-term weather |
-| TransLink | GTFS Static and realtime Service Alerts |
+
+TransLink GTFS Static and GTFS-Realtime Service Alerts are deferred beyond the datathon MVP.
 
 OpenRouter model identifiers are configurable rather than permanently fixed.
 
@@ -148,10 +156,9 @@ The application operates on RouteLens-owned normalized models. External provider
 ### Journey and Routing
 
 - `Location` — canonical selected place with coordinates and identifying information.
-- `Trip` — origin, destination, travel mode, and associated journey context.
+- `Trip` — canonical origin, Vancouver destination, Drive mode, and explicitly selected driving route.
 - `RouteCandidate` — approximate route geometry and descriptive information.
 - `SelectedRoute` — user-chosen corridor used for geographic relevance.
-- `TransitLeg` — ordered, user-selected transit service with authoritative identifiers and optional direction context.
 
 ### City Telemetry
 
@@ -161,8 +168,6 @@ The application operates on RouteLens-owned normalized models. External provider
 - `CameraObservation` — structured assessment of available directional views at one intersection.
 - `WeatherObservation` — measured weather evidence, including source, location, time, and measurement semantics.
 - `WeatherForecast` — structured forecast evidence for an appropriate location and future interval.
-- `TransitAlert` — normalized GTFS-Realtime service advisory with affected-entity and temporal context.
-- `TransitAlertMatch` — deterministic result describing applicability and specificity against user-selected transit services.
 
 ### Evidence and Analysis
 
@@ -194,7 +199,7 @@ Normal automated tests should use representative fixtures rather than relying on
 
 ## 6. MVP Data-Source Contracts
 
-The MVP has six external information-source groups.
+The driving-only MVP has five external information-source groups: Vancouver Traffic Webcams, Vancouver Road Ahead, DriveBC Open511, ECCC GeoMet/SWOB, and OpenWeather.
 
 ### 6.1 Vancouver Traffic Webcams
 
@@ -313,40 +318,6 @@ OpenWeather provides the structured weather foundation; SWOB contributes measure
 
 These three evidence types must retain separate provenance even when synthesized into one briefing.
 
-### 6.6 TransLink GTFS Static + GTFS-Realtime
-
-Purpose: allow users to select intended transit services and identify applicable service advisories.
-
-**GTFS Static**
-
-- Build route lookup from official GTFS identifiers and passenger-friendly names.
-- Support bus routes and SkyTrain lines.
-- Derive direction/headsign options using relevant trip information.
-- Preserve route identifiers and selected direction context.
-- Do not interpret numeric `direction_id` values as universal compass directions.
-- Allow users to construct an ordered list of intended transit legs.
-
-**GTFS-Realtime**
-
-The MVP uses **Service Alerts only**.
-
-- Fetch and decode the official Protocol Buffer alert feed.
-- Normalize affected entities, time periods, and advisory content.
-- Match alerts deterministically against selected GTFS identifiers.
-- Preserve the specificity of route-wide, direction-specific, stop-specific, and trip-specific selectors.
-- Exclude alerts explicitly applicable only to the opposite selected direction.
-- Do not promote stop-specific notices into route-wide disruptions.
-- Do not assume trip-specific applicability without sufficient journey information.
-- Respect active periods and temporal uncertainty.
-
-Matching should distinguish confirmed applicability from possible or unresolved relevance.
-
-Do not infer exact delays, arrival times, or service reliability when the source does not support those claims.
-
-Trip Updates, Vehicle Positions, exact trip resolution, and realtime vehicle tracking are outside MVP scope.
-
-Transit advisories primarily appear in the journey intelligence panel; transit network map overlays are not required.
-
 ## 7. Deterministic Journey Relevance
 
 Deterministic application logic owns source discovery, normalization, filtering, and relevance.
@@ -368,19 +339,12 @@ Use Shapely and appropriate coordinate projection for distance-based calculation
 - Do not treat missing schedules as continuous active restrictions.
 - Distinguish current, future, expired, stale, and uncertain evidence where supported.
 
-### Transit Relevance
-
-Transit service matching uses official GTFS identifiers, selector specificity, user-selected direction, and temporal applicability.
-
-Geographic proximity is not a substitute for transit-service matching.
-
 ### Map Visibility vs Briefing Relevance
 
 These are separate concerns:
 
 - The map may expose broadly relevant regional telemetry.
 - The automated briefing should receive only selected, journey-relevant evidence.
-- Transit advisories may qualify for the briefing without corresponding geographic map overlays.
 
 The selected corridor prioritizes interpretation; it must not unnecessarily suppress nearby map exploration.
 
@@ -435,8 +399,6 @@ The LLM must not perform first-pass:
 - source pagination or event discovery;
 - camera intersection selection;
 - camera directional-view discovery;
-- GTFS route/direction resolution;
-- transit alert selector matching;
 - source freshness determination;
 - missing-data substitution;
 - deterministic webpage extraction.
@@ -464,7 +426,7 @@ AI-generated findings must not erase underlying evidence provenance.
 
 **Missing means unknown.**
 
-Do not interpret missing measurements, absent transit updates, unavailable images, or failed API responses as evidence of normal conditions.
+Do not interpret missing measurements, unavailable images, missing road-event details, or failed API responses as evidence of normal conditions.
 
 When evidence conflicts, preserve the differing sources and express appropriate uncertainty rather than arbitrarily declaring certainty.
 
@@ -505,7 +467,7 @@ The MVP is desktop-only.
 
 Primary layout:
 
-- **Top:** origin, destination, travel mode, relevant transit selections, and analysis action.
+- **Top:** origin, destination, driving-route selection, and manual analysis action.
 - **Left (~65%):** interactive MapLibre map.
 - **Right (~35%):** journey intelligence panel.
 
@@ -520,8 +482,7 @@ Prioritize:
 1. Destination camera/current conditions.
 2. Overall journey status.
 3. Route-related issues.
-4. Transit advisories where applicable.
-5. Supporting telemetry, provenance, and source freshness.
+4. Supporting telemetry, provenance, and source freshness.
 
 The panel may present a journey overview, destination conditions, along-route findings, timeline, and AI briefing.
 
@@ -567,16 +528,18 @@ Camera metadata and image assets have distinct rights considerations.
 
 Ephemeral use reduces retention exposure but does not independently establish unrestricted display, proxying, AI processing, or commercialization rights.
 
-### TransLink and OpenWeather
+### OpenWeather
 
-These sources have additional contractual and attribution considerations.
+OpenWeather has provider-specific contractual and attribution considerations.
 
-- Keep their provider-specific handling isolated.
+- Keep provider-specific handling isolated.
 - Respect API access and usage limits.
 - Preserve applicable attribution.
 - Avoid assuming unrestricted redistribution or commercialization rights.
 
-Do not build a separately redistributed weather database or transit data product as part of the MVP.
+Do not build a separately redistributed weather database as part of the MVP.
+
+TransLink licensing and access considerations remain documented separately for the deferred Transit Mode.
 
 ### Deployment Boundary
 
@@ -590,11 +553,12 @@ Detailed research and unresolved legal questions remain in `docs/data-licensing-
 
 Do not implement the following without an approved scope change:
 
-**Navigation and transit planning**
+**Navigation and travel modes**
 - Turn-by-turn navigation or authoritative route optimization.
 - Exact Google Maps route reproduction.
-- Full transit itinerary planning, automatic transfers, exact boarding/alighting stops, or exact trip prediction.
-- Vehicle Positions, Trip Updates, or realtime vehicle tracking.
+- Transit Mode, including TransLink GTFS Static and GTFS-Realtime Service Alerts.
+- Transit itinerary planning, automatic transfers, exact boarding/alighting stops, or exact trip prediction.
+- Transit Vehicle Positions, Trip Updates, and realtime vehicle tracking.
 - Transit network/stop map overlays.
 
 **Accounts and product expansion**
