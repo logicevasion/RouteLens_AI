@@ -1,8 +1,15 @@
 """Focused geocoding and destination validation endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 
 from app.analysis import JourneyAnalysis, Trip, analyze_journey
+from app.camera_images import (
+    CameraImageConfigurationError,
+    DestinationCameraRequest,
+    DestinationCameraResult,
+    DestinationCameraService,
+)
 from app.geocoding import (
     GeocodingConfigurationError,
     GeocodingError,
@@ -22,6 +29,14 @@ from app.routing import (
 )
 
 router = APIRouter(prefix="/api")
+camera_service: DestinationCameraService | None = None
+
+
+def _camera_service() -> DestinationCameraService:
+    global camera_service
+    if camera_service is None:
+        camera_service = DestinationCameraService()
+    return camera_service
 
 
 @router.get("/geocoding/search", response_model=list[Location])
@@ -107,3 +122,43 @@ async def analyze_trip(trip: Trip) -> JourneyAnalysis:
             status_code=422,
             detail={"code": "invalid_journey", "message": str(error)},
         ) from None
+
+
+@router.post("/cameras/nearest", response_model=DestinationCameraResult)
+async def nearest_destination_camera(request: DestinationCameraRequest) -> DestinationCameraResult:
+    """Retrieve current validated camera views for a canonical Vancouver destination."""
+    try:
+        return await _camera_service().nearest(request.destination)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "unsupported_destination", "message": str(error)},
+        ) from None
+    except CameraImageConfigurationError:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "camera_configuration_invalid", "message": "Camera retrieval is unavailable."},
+        ) from None
+
+
+@router.get("/cameras/images/{image_reference}")
+async def get_camera_image(image_reference: str):
+    """Serve only a verified current frame mapped to an accepted catalogue view."""
+    service = _camera_service()
+    catalogue = await service.catalogue_store.get_catalogue()
+    frame = service.image_store.get_by_reference(catalogue, image_reference)
+    if frame is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "camera_image_unavailable", "message": "Camera image is unavailable."},
+        )
+    metadata, body = frame
+    return Response(
+        content=body,
+        media_type=metadata.content_type,
+        headers={
+            "Cache-Control": "private, max-age=60, must-revalidate",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Length": str(len(body)),
+        },
+    )

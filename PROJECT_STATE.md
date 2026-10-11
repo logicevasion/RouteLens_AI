@@ -4,10 +4,10 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7B catalogue enrichment
-**Phase status:** Phase 6 and Assignment 7A are complete and human accepted. Assignment 7B is implemented and pending human acceptance; Phase 7 remains in progress.
-**Human review:** Assignment 7B catalogue, URL discovery, cache, and verification evidence pending review.
-**Next assignment:** Assignment 7C may begin only as a separate authorized assignment after human acceptance of 7B and the applicable image-use decisions.
+**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7C destination selection and image retrieval
+**Phase status:** Assignments 7A and 7B are complete, human accepted, and committed. Assignment 7C is implemented and pending human acceptance; Phase 7 remains in progress.
+**Human review:** Assignment 7C backend selection, image retrieval/cache, API contract, and bounded live evidence pending review.
+**Next assignment:** Assignment 7D requires separate authorization after human acceptance of 7C. Phase 8 remains unauthorized.
 **Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
@@ -1062,6 +1062,30 @@ Raw official HTML verified `.camera` blocks with source labels and `<img src>` t
 
 **Next assignment:** Phase 7C — Nearest usable camera intersection selection, bounded multi-view image retrieval, ephemeral image caching, and backend camera API integration. Phase 7C requires separate authorization. No Phase 7D frontend integration or Phase 8 AI vision inference is authorized by this acceptance.
 
-**Git status:** Assignment 7B implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
+**Git status:** Assignment 7B implementation and evidence are committed as `a208f28`.
 
 **Review status:** Human review complete; Assignment 7B accepted on 2026-10-11. Phase 7 remains in progress.
+
+## 32. Assignment 7C — Destination Camera Selection and Current Frames
+
+**Assignment status:** Assignment 7C implemented, verified, and accepted by the human developer on 2026-10-11. Phase 7 remains in progress; Assignment 7D and Phase 8 have not started.
+
+`backend/app/camera_images.py` reuses the accepted 7B catalogue and normalized intersection/view identities. It validates canonical City of Vancouver destinations, ranks candidates by WGS84 geodesic distance, retrieves and decodes bounded image responses, selects the nearest intersection with at least one fresh usable view, retains all usable directional views from that intersection, and stores one latest frame per stable intersection/view key. Initial search bounds are 12 candidates within 2 km and 24 upstream image requests per selection. Image TTL is configurable from 60–900 seconds (default 300); stale fallback is explicitly labeled and capped at 900 seconds.
+
+The backend exposes `POST /api/cameras/nearest` for destination-based camera selection and `GET /api/cameras/images/{reference}` for serving validated cached frames through opaque image references. These endpoints preserve the existing journey-analysis contract and manual Analyze Journey behavior. The camera service enforces bounded requests, official-source validation, image decoding and dimension checks, safe image delivery, and ephemeral current-frame retention without historical archiving. Contract and source evidence are recorded in `docs/integration-notes/vancouver-cameras-phase-7c.md`.
+
+**Verification:** Focused 7C camera tests — Passed (16). Full backend pytest regression — Passed (328). Ruff across backend application and tests — Passed. Backend import/compile smoke — Passed; existing `GET /api/health` test — Passed. Bounded live sample — Passed: one fresh catalogue snapshot, one selected intersection, four image requests, four usable JPEG views, repeat selection with zero additional upstream requests, and successful backend image delivery. `git diff --check`, `.env` and current-frame cache ignore checks, and changed-artifact secret scan — Passed. No frontend or browser verification was run or required for this backend-only assignment.
+
+**Observed live contract:** `trafficcams.vancouver.ca` returned HTTP 200 `image/jpeg` responses for the selected Hornby St and Robson St intersection, approximately 79.6 metres from the sample destination. The four East, North, South, and West views decoded as 800×464 JPEGs with payloads between 324,574 and 391,413 bytes. No redirects were observed. One manually inspected frame showed the City/intersection overlay and an in-image timestamp; the API did not parse that timestamp, so `source_capture_at` remains unknown. The live sample did not establish source refresh cadence, all-camera availability, or provider placeholder patterns. The City's page and catalogue publish differing approximate image-update intervals.
+
+**Current-frame cache:** The camera-image cache uses a configurable 300-second default freshness TTL, atomic replacement of validated frames, and a maximum 900-second stale fallback. Frames are keyed by stable intersection/view identity, with no background polling or historical image archive. Stale images are distinguished from fresh usable evidence, and invalid replacements do not silently overwrite valid cached frames. Runtime images remain Git-ignored.
+
+**Known limitations:** The 2 km candidate radius, 12-candidate cap, and 24-request ceiling are conservative initial defaults because no approved numeric radius was found. Catalogue coordinates are approximate, and source direction labels do not establish exact camera bearings. Image retrieval timestamps must not be represented as source capture timestamps. No evidence-backed placeholder fingerprint was available. Live error and timeout cases were covered through offline mocks rather than deliberately triggering provider failures. Existing image-rights uncertainty remains documented under Assignment 7A; the developer's private, noncommercial MVP development decision is unchanged. No images were sent to an AI provider.
+
+**Human acceptance:** The destination-based nearest usable intersection selection, directional image retrieval and validation, partial-view tolerance, bounded fallback, ephemeral image caching, backend API contracts, security controls, and regression coverage are accepted. The successful live sample confirms that the pipeline can retrieve, validate, cache, and serve real Vancouver camera frames without modifying accepted road, weather, or journey-analysis functionality.
+
+**Next assignment:** Phase 7D — Destination Camera Frontend Integration and Human Visual Acceptance. Integrate the selected camera intersection and its directional views into the existing destination-conditions experience, preserving manual Analyze Journey, existing road/weather functionality, stale-response protection, and source-status clarity. Assignment 7D requires separate authorization. Phase 8 multimodal camera analysis has not started.
+
+**Git status:** Assignment 7C implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
+
+**Review status:** Human review complete; Assignment 7C accepted on 2026-10-11. Phase 7 remains in progress.
