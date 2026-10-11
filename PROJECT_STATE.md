@@ -4,10 +4,10 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7A research gate
-**Phase status:** Phase 6 is complete and human accepted. Assignment 7A research is completed, pending human review; Phase 7 implementation has not started.
-**Human review:** Assignment 7A camera source and rights findings pending review.
-**Next assignment:** Assignment 7B requires separate human authorization after the source-identity and image-rights decisions recorded in `docs/integration-notes/vancouver-cameras-phase-7a.md`.
+**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7B catalogue enrichment
+**Phase status:** Phase 6 and Assignment 7A are complete and human accepted. Assignment 7B is implemented and pending human acceptance; Phase 7 remains in progress.
+**Human review:** Assignment 7B catalogue, URL discovery, cache, and verification evidence pending review.
+**Next assignment:** Assignment 7C may begin only as a separate authorized assignment after human acceptance of 7B and the applicable image-use decisions.
 **Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
@@ -1039,3 +1039,29 @@ The dataset metadata is covered by OGL-Vancouver with attribution. Current City 
 **Next assignment:** Phase 7B — Vancouver camera catalogue ingestion, directional-view discovery/enrichment, validated approximately 24-hour catalogue caching, sanitized fixtures, and offline regression tests. Assignment 7B does not authorize the Phase 7C runtime image retrieval/cache service, Phase 7D frontend integration, or Phase 8 AI vision analysis.
 
 **Git status:** Assignment 7A implementation did not stage, commit, push, or modify Git history. Human Git checkpoint pending.
+
+## 31. Assignment 7B — Vancouver Camera Catalogue Enrichment
+
+**Assignment status:** Assignment 7B implemented, verified, and accepted by the human developer on 2026-10-11. Phase 7 remains in progress; Assignments 7C–7D and Phase 8 have not started.
+
+`backend/app/vancouver_cameras.py` retrieves and validates complete paginated metadata from the official Vancouver `web-cam-url-links` endpoint, reconciles stable source-aware intersection identities, inspects official intersection HTML with bounded concurrency, validates discovered directional URL metadata, and provides a standalone CLI plus 24-hour atomic JSON cache with partial/stale status and last-good fallback. No image bytes, journey camera API, frontend, or vision inference were implemented. Usage and evidence are recorded in `docs/integration-notes/vancouver-cameras-phase-7b.md`.
+
+The bounded live run retrieved 219 rows over pages of 100, 100, and 19; all totals agreed. The complete row-level scan found 219 unique `mapid`s, page URLs, and approximate points, with no repeated IDs. The earlier 7A aggregate discrepancy (219 rows / 213 distinct IDs) was not reproduced. It remains an unreconciled historical aggregate-query result, not evidence of current duplicated rows. Deterministic synthetic tests cover future same-location duplicate rows and ambiguous same-ID/different-location rows.
+
+Raw official HTML verified `.camera` blocks with source labels and `<img src>` targets. Relative and absolute HTTPS URL extraction is restricted to the verified `trafficcams.vancouver.ca` host. The five-view Main St and Kingsway page confirmed composite source labels including `South - Main St` and `South - Kingsway`; labels are preserved verbatim. The full enrichment run inspected 219/219 pages with no failures or unrecognized structures, discovering 844 directional image URLs across 219 intersections.
+
+**Directional-view distribution:** 193 intersections expose four URLs, 19 expose three, four expose two, two expose one, and one exposes five. All 844 discovered URL hosts passed validation. No intersection lacked a discovered URL. URL discovery and validation do not establish successful image retrieval or frame usability.
+
+**Catalogue cache:** The validated enriched catalogue uses a 24-hour TTL, schema-versioned cache identity, atomic replacement, and last-good stale fallback. Partial enrichment failures retain appropriate degraded status. A subsequent CLI invocation confirmed fresh-cache reuse without repeating the full catalogue enrichment.
+
+**Verification:** Focused camera tests — Passed (19). Full backend pytest regression — Passed (312). Ruff across backend application and tests — Passed. Backend module import smoke — Passed. Bounded live catalogue pagination and official-page enrichment — Passed. Validated-cache reuse — Passed. `git diff --check`, fixture syntax/provenance, environment/cache ignore rules, and credential checks — Passed. Frontend/browser verification was not required for this backend-only assignment.
+
+**Known limitations:** No image bytes were retrieved. Live URL checks covered syntax, HTTPS, and the verified official host only; actual HTTP image responses, content types, redirects, frame freshness, decoding, and usable-view availability remain unverified. Source direction labels do not establish precise camera bearings. Catalogue coordinates remain approximate. The historical 219/213 aggregate discrepancy remains unexplained, although the current complete row-level dataset contains 219 unique map IDs. Existing camera-image rights uncertainty remains documented under Assignment 7A; the developer's private MVP development decision is unchanged.
+
+**Human acceptance:** The official catalogue ingestion, identity reconciliation, source-grounded directional-view enrichment, validated catalogue caching, failure handling, and offline regression coverage are accepted. The accepted 7B implementation establishes the metadata foundation for subsequent camera-image functionality without claiming that discovered URLs have been validated as working images.
+
+**Next assignment:** Phase 7C — Nearest usable camera intersection selection, bounded multi-view image retrieval, ephemeral image caching, and backend camera API integration. Phase 7C requires separate authorization. No Phase 7D frontend integration or Phase 8 AI vision inference is authorized by this acceptance.
+
+**Git status:** Assignment 7B implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
+
+**Review status:** Human review complete; Assignment 7B accepted on 2026-10-11. Phase 7 remains in progress.

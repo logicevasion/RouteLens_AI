@@ -1,0 +1,33 @@
+{
+  "provenance": "Synthetic regression cases based on the verified Explore API v2.1 fields; not live City records.",
+  "records": [
+    {
+      "mapid": "TEST-REPEAT",
+      "name": "Example Ave and Main St",
+      "url": "https://trafficcams.vancouver.ca/repeat.htm",
+      "geo_point_2d": {"lon": -123.1, "lat": 49.25},
+      "geo_local_area": "Example"
+    },
+    {
+      "mapid": "TEST-REPEAT",
+      "name": "Main St and Example Ave",
+      "url": "https://trafficcams.vancouver.ca/repeat.htm",
+      "geo_point_2d": {"lon": -123.1, "lat": 49.25},
+      "geo_local_area": "Example"
+    },
+    {
+      "mapid": "TEST-AMBIGUOUS",
+      "name": "Example Ave at Main St",
+      "url": "https://trafficcams.vancouver.ca/example.htm",
+      "geo_point_2d": {"lon": -123.1, "lat": 49.25},
+      "geo_local_area": "Example"
+    },
+    {
+      "mapid": "TEST-AMBIGUOUS",
+      "name": "Example Ave at 2nd St",
+      "url": "https://trafficcams.vancouver.ca/example2.htm",
+      "geo_point_2d": {"lon": -123.11, "lat": 49.26},
+      "geo_local_area": "Example"
+    }
+  ]
+}
