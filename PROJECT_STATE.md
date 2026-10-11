@@ -1173,3 +1173,35 @@ Headless Chrome verification was limited by the map loading overlay, so interact
 **Git status:** Assignment 7E changes and its build-plan amendment were left uncommitted by Codex. Human acceptance is complete; Git checkpoint pending.
 
 **Review status:** Human review complete. Assignment 7E and Phase 7 accepted on 2026-10-11.
+
+## 35. Assignment 8A — Camera Vision Contract and Provider Validation
+
+**Assignment status:** Assignment 8A research, contract design, and human review completed and accepted on 2026-10-11. Phase 8 remains in progress. Assignment 8B has not started.
+
+**Research and evidence:** Reviewed the original Phase 0D OpenRouter experiments and sanitized fixtures, accepted Phase 7A–7E camera implementation and integration notes, and official OpenRouter, DeepInfra, City licensing, and City terms documentation. Phase 0D demonstrated a two-image synthetic multimodal request with strict-schema output using `google/gemma-4-31b-it` through DeepInfra. A 240-token truncation required a corrected request; the experiment established preliminary feasibility but not real-camera accuracy or current DeepInfra FP8 compatibility. Current endpoint research identified higher FP8 pricing than the previously tested DeepInfra Turbo route.
+
+**Accepted observation contract:** Approved a strict, compact per-view `CameraObservation` schema covering road-surface appearance, visual scene visibility, qualitative vehicle activity, controlled visible-condition tags, qualitative uncertainty, short notes, and an optional evidence-linked intersection summary. Model-generated fields are strictly validated. Authoritative identities, timestamps, model/provider information, source attribution, and camera location context remain backend-controlled.
+
+**Geographic provenance:** The observation's backend provenance will include the selected camera intersection's official street names and `distance_from_destination_metres`, derived from the canonical destination and accepted Phase 7 camera selection. The future AI Journey Briefing should identify the specific intersection and its approximate distance when explaining camera-derived conditions, without generalizing those conditions to the entire journey.
+
+**Model and provider decision:** Retain `google/gemma-4-31b-it` through OpenRouter, targeting the currently listed DeepInfra FP8 endpoint. Require explicit provider routing, compatible structured outputs, denied data collection, and disabled automatic provider fallbacks. Verify the exact endpoint, synthetic multi-image compatibility, ZDR eligibility, and relevant account privacy configuration before relying on the route. No silent provider substitution or automatic relaxation of privacy requirements is authorized.
+
+**Accepted image and inference limits:** One selected intersection, up to 12 eligible directional views, 2 MiB per frame, 10 MiB total raw image bytes, a proposed 16,000-token input guard, 1,024 output tokens, and a 30-second timeout. No automatic resizing, background inference, or billable corrective retries. One upstream inference attempt per explicit manual analysis, with defensive ceilings of 50 attempts per rolling hour and 100 attempts per UTC day.
+
+**Budget decision:** Target less than US$5 total OpenRouter spending across development, testing, and demo-video preparation, including future AI Journey Briefing calls. Use an approximately US$1/day soft development guard, available provider usage reporting, and practical request limits rather than introducing elaborate billing infrastructure. The attempt limits are safety ceilings, not spending targets.
+
+**Reuse and failure handling:** Approved identical-snapshot result reuse for up to 300 seconds, never beyond the underlying frame freshness, using intersection ID, ordered frame identities/digests, model/provider configuration, prompt version, and schema version. Reject invalid output rather than silently repairing it. Missing frames, provider failure, budget exhaustion, timeouts, and insufficient visual evidence resolve to explicit controlled states without disrupting the existing camera gallery, routing, Road Ahead, DriveBC, or weather functionality.
+
+**Internal telemetry direction:** Phase 8 produces validated machine-readable camera observations for later journey synthesis. No dedicated Camera AI Observation card or raw JSON display is required. Phase 9 will organize relevant evidence, and Phase 10 will produce the primary user-facing AI Journey Briefing at the top of Journey Intelligence, with camera imagery and other source panels available as supporting evidence.
+
+**Privacy and licensing boundary:** Human acceptance of 8A does not authorize sending real City of Vancouver camera images to OpenRouter or DeepInfra. Image rights and third-party transfer remain unresolved and require separate authorization. Assignment 8B may perform a small, explicitly bounded live compatibility test using synthetic or developer-owned images only, subject to the accepted provider and budget controls. Public/commercial deployment requires separate review.
+
+**Verification:** Original 8A documentation and research verification passed, including `git diff --check`, whitespace, changed-file, secret, and artifact checks. No OpenRouter call, image submission, production code modification, configuration change, or Git history operation was performed by Codex. Backend/frontend runtime suites were not run because 8A made no runtime changes. Detailed research, schema definitions, examples, limits, sources, and acceptance decisions are recorded in `docs/integration-notes/camera-vision-phase-8a.md`.
+
+**Remaining verification gates:** Exact DeepInfra FP8 routing identifier and current compatibility; synthetic multi-image strict-schema test; applicable provider privacy/ZDR configuration; observed usage costs; and explicit real City camera-image transfer authorization before any such transmission.
+
+**Next assignment:** Assignment 8B — Backend OpenRouter Vision Adapter. Requires separate bounded Codex authorization. No journey API integration, frontend AI presentation, or Phase 9–10 briefing development is authorized by this acceptance.
+
+**Git status:** Assignment 8A research note and project-state update are ready for a human-controlled documentation checkpoint. No Git history operations were performed by Codex.
+
+**Review status:** Assignment 8A human accepted on 2026-10-11. Phase 8 implementation has not begun; Assignment 8B is next.
