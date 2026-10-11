@@ -1,0 +1,18 @@
+{
+  "source": "City of Vancouver Open Data Portal",
+  "dataset_id": "web-cam-url-links",
+  "dataset_url": "https://opendata.vancouver.ca/explore/dataset/web-cam-url-links/",
+  "api_url": "https://opendata.vancouver.ca/api/explore/v2.1/catalog/datasets/web-cam-url-links/records?select=mapid%2Cname%2Curl%2Cgeo_point_2d&where=mapid%20IN%20(%27TCM200%27)&limit=1&offset=0",
+  "retrieved_on": "2026-10-11",
+  "license": "Open Government Licence - Vancouver",
+  "attribution": "Contains information licensed under the Open Government Licence - Vancouver.",
+  "record": {
+    "mapid": "TCM200",
+    "name": "Burrard St and W Pender St",
+    "url": "https://trafficcams.vancouver.ca/burrardpender.htm",
+    "geo_point_2d": {
+      "lon": -123.117829,
+      "lat": 49.286589
+    }
+  }
+}

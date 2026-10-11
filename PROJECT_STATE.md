@@ -4,10 +4,10 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 6 — Current + Near-Term Weather
-**Phase status:** Complete — Assignments 6A–6D accepted by the human developer on 2026-10-11.
-**Human review:** Phase 6 implementation and interactive browser experience accepted.
-**Next phase:** Phase 7 — Vancouver Camera Pipeline, pending separate authorization.
+**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7A research gate
+**Phase status:** Phase 6 is complete and human accepted. Assignment 7A research is completed, pending human review; Phase 7 implementation has not started.
+**Human review:** Assignment 7A camera source and rights findings pending review.
+**Next assignment:** Assignment 7B requires separate human authorization after the source-identity and image-rights decisions recorded in `docs/integration-notes/vancouver-cameras-phase-7a.md`.
 **Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
@@ -1020,4 +1020,22 @@ push, or Git history modification was performed.
 
 **Known limitations:** ECCC station coverage is sparse; readings represent specific stations rather than exact destination conditions. OpenWeather forecasts retain their native uncertainty and actual coverage. Existing documented provider, cache, and budget restrictions remain in effect.
 
-**Phase status:** Complete and human accepted. Phase 7 has not started.
+**Phase status:** Phase 6 is complete and human accepted. No Phase 7 production implementation had started at the close of Assignment 6D.
+
+## 30. Assignment 7A — Vancouver Camera Source and Rights Validation
+
+**Assignment status:** Research completed and accepted by the human developer on 2026-10-11. Phase 7 remains in progress; Assignments 7B–7D and Phase 8 have not started.
+
+The official Vancouver `web-cam-url-links` catalogue was queried through its public Explore API v2.1. Metadata reports 219 records and the expected fields for map ID, name, page URL, approximate point/geometry, and local area. Aggregate checks reported 219 populated map IDs but 213 distinct values; the grouped query did not reconcile this, so map ID uniqueness requires a complete row-level check before 7B uses it as a key. Five linked official intersection pages exposed four labeled view slots each (North, East, South, West), but the image source URLs, serving host, live usability, and HTML/JavaScript discovery mechanism remain unverified.
+
+The dataset metadata is covered by OGL-Vancouver with attribution. Current City website terms do not clearly establish RouteLens rights for automated image retrieval, temporary caching, in-app display/proxy, retained visual observations, or third-party AI processing. No image bytes or HTML fixtures were retained. One minimal metadata fixture is at `fixtures/vancouver_cameras/catalogue_metadata_sample.json`; full evidence is in `docs/integration-notes/vancouver-cameras-phase-7a.md`.
+
+**Human rights decision:** The developer has elected to defer further image-rights investigation until after completion of the private, noncommercial hobbyist MVP. Phase 7 technical development may proceed using publicly accessible official camera interfaces, subject to applicable access restrictions, bounded requests, and existing security and ephemeral-retention requirements. This decision does not establish image reuse permissions or authorize bypassing access controls. Public deployment, redistribution, and third-party processing of real camera images require separate review before those uses are enabled. Existing licensing findings remain documented.
+
+**Verification:** Live metadata API access passed; camera pages were inspected via the official City index. Full pagination, row-level identity validation, image-response checks, HTML source inspection, application tests/build, and browser checks were not run. `git diff --check` and fixture JSON validation are recorded in the 7A completion report.
+
+**Outstanding technical validation:** Reconcile the catalogue's 219 records against its 213 reported distinct map IDs through complete row-level inspection. Establish the actual directional image URL discovery mechanism, official image hosts, view availability, and relevant response characteristics during subsequent authorized assignments. These are technical validation tasks, not reasons to repeat the general image-rights investigation during private MVP development.
+
+**Next assignment:** Phase 7B — Vancouver camera catalogue ingestion, directional-view discovery/enrichment, validated approximately 24-hour catalogue caching, sanitized fixtures, and offline regression tests. Assignment 7B does not authorize the Phase 7C runtime image retrieval/cache service, Phase 7D frontend integration, or Phase 8 AI vision analysis.
+
+**Git status:** Assignment 7A implementation did not stage, commit, push, or modify Git history. Human Git checkpoint pending.
