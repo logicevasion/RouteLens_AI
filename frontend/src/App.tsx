@@ -4,6 +4,9 @@ import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
 import RoadAheadPanel from './RoadAheadPanel';
 import DestinationWeatherPanel from './DestinationWeatherPanel';
+import DestinationCameraPanel from './DestinationCameraPanel';
+import { fetchDestinationCamera, isCurrentCameraRequest } from './cameras';
+import type { CameraState } from './cameras';
 import { buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
 import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
 import {
@@ -30,6 +33,11 @@ const intelligenceSections = [
     message: 'Conditions will appear here',
   },
   {
+    title: 'Destination cameras',
+    icon: 'camera',
+    message: '',
+  },
+  {
     title: 'Road and route context',
     icon: 'route',
     message: 'Road context available after journey selection',
@@ -38,11 +46,6 @@ const intelligenceSections = [
     title: 'Transit context',
     icon: 'transit',
     message: 'Service alerts available after journey selection',
-  },
-  {
-    title: 'Camera observations',
-    icon: 'camera',
-    message: 'Camera observations are not yet available',
   },
   {
     title: 'AI journey briefing',
@@ -290,11 +293,12 @@ type IntelligencePanelProps = {
   routeState: RouteRequestState;
   onSelectRoute: (route: RouteCandidate) => void;
   analysisState: AnalysisState;
+  cameraState: CameraState;
   selectedEventId: string | null;
   onSelectFinding: (eventId: string) => void;
 };
 
-function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
+function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -364,6 +368,8 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, selectedE
       <div className="intelligence-sections">
         {intelligenceSections.map((section) => section.title === 'Destination conditions' ? (
           <DestinationWeatherPanel key={section.title} analysis={analysisState} />
+        ) : section.title === 'Destination cameras' ? (
+          <DestinationCameraPanel key={section.title} camera={cameraState} />
         ) : section.title === 'Road and route context' ? (
           <RoadAheadPanel key={section.title} analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
         ) : (
@@ -388,6 +394,7 @@ export default function App() {
   const [origin, setOrigin] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [analysisState, setAnalysisState] = useState<AnalysisState>(initialAnalysisState);
+  const [cameraState, setCameraState] = useState<CameraState>({ status: 'idle' });
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const routingSequence = useRef(0);
   const routingController = useRef<AbortController | null>(null);
@@ -395,6 +402,9 @@ export default function App() {
   const analysisSequence = useRef(0);
   const analysisController = useRef<AbortController | null>(null);
   const activeAnalysisKey = useRef<string | null>(null);
+  const cameraSequence = useRef(0);
+  const cameraController = useRef<AbortController | null>(null);
+  const activeCameraKey = useRef<string | null>(null);
 
   const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
   const selectedRoute = routeState.status === 'ready' ? routeState.selectedRoute : null;
@@ -405,6 +415,11 @@ export default function App() {
     analysisController.current?.abort();
     analysisController.current = null;
     activeAnalysisKey.current = null;
+    cameraSequence.current += 1;
+    cameraController.current?.abort();
+    cameraController.current = null;
+    activeCameraKey.current = null;
+    setCameraState({ status: 'idle' });
     setAnalysisState(initialAnalysisState);
     setSelectedEventId(null);
   }
@@ -488,8 +503,29 @@ export default function App() {
     const controller = new AbortController();
     analysisController.current = controller;
     activeAnalysisKey.current = requestKey;
+    cameraSequence.current += 1;
+    cameraController.current?.abort();
+    const cameraRequestId = cameraSequence.current;
+    const cameraDisplayKey = `${requestKey}:${cameraRequestId}`;
+    const cameraControllerValue = new AbortController();
+    cameraController.current = cameraControllerValue;
+    activeCameraKey.current = requestKey;
+    setCameraState({ status: 'loading', requestKey: cameraDisplayKey });
     setAnalysisState({ status: 'loading', result: null, error: null });
     setSelectedEventId(null);
+
+    void fetchDestinationCamera(destination, cameraControllerValue.signal).then((result) => {
+      if (!isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) return;
+      setCameraState({ status: 'success', requestKey: cameraDisplayKey, result });
+    }).catch(() => {
+      if (cameraControllerValue.signal.aborted || !isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) return;
+      setCameraState({ status: 'error', requestKey: cameraDisplayKey });
+    }).finally(() => {
+      if (isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) {
+        cameraController.current = null;
+        activeCameraKey.current = null;
+      }
+    });
 
     try {
       const response = await fetch('/api/trips/analyze', {
@@ -519,6 +555,7 @@ export default function App() {
   useEffect(() => () => {
     routingController.current?.abort();
     analysisController.current?.abort();
+    cameraController.current?.abort();
   }, []);
 
   useEffect(() => {
@@ -586,7 +623,7 @@ export default function App() {
             onSelectEvent={setSelectedEventId}
           />
         </div>
-        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} selectedEventId={selectedEventId} onSelectFinding={setSelectedEventId} />
+        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} selectedEventId={selectedEventId} onSelectFinding={setSelectedEventId} />
       </div>
     </main>
   );

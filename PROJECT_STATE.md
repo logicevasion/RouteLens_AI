@@ -1089,3 +1089,31 @@ The backend exposes `POST /api/cameras/nearest` for destination-based camera sel
 **Git status:** Assignment 7C implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
 
 **Review status:** Human review complete; Assignment 7C accepted on 2026-10-11. Phase 7 remains in progress.
+
+## 33. Assignment 7D — Destination Camera Frontend Integration
+
+**Assignment status:** Assignment 7D implemented, verified, and accepted by the human developer on 2026-10-11. Phase 7 remains in progress pending Assignment 7E; Phase 8 has not started.
+
+The frontend calls the accepted `POST /api/cameras/nearest` endpoint alongside the existing manual `POST /api/trips/analyze` action. Camera selection uses the canonical destination and does not alter the journey-analysis contract. Camera loading has independent state and cancellation plus request-key/sequence guards. Origin or destination edits, route regeneration, selected-route changes, a new analysis, and unmount invalidate camera content. Camera failures do not replace road or weather results.
+
+The Destination Cameras section is placed next to Destination Weather. It presents the selected intersection, approximate distance, nearby-intersection context, official City camera-page link, backend source/licence attribution, all returned views from that intersection, source direction labels, backend retrieval times and elapsed cache age. It distinguishes stale-only frames and partial search results, validates opaque image references against the accepted backend path/token format, lazy-loads backend-served images, and handles individual image failures in place. Source capture time remains unavailable unless explicitly supplied by the API. No original City image URLs are constructed in the browser.
+
+**Verification:** Focused frontend API/panel tests passed (14 tests); the full frontend suite passed (5 test files); TypeScript typecheck and production Vite build passed with the existing large-bundle advisory. Frontend lint was not run because no lint script is configured. Focused backend camera API regression passed (16 tests); backend code and contracts were unchanged. Local backend/frontend health checks, camera selection, and opaque image delivery through the Vite `/api` proxy passed. A bounded live selection returned Hornby St and Robson St at approximately 79.6 m with four usable views. One opaque image reference returned HTTP 200 `image/jpeg` (800×464) with `private, max-age=60, must-revalidate` and `nosniff` headers.
+
+Headless Chrome captured desktop and narrow-viewport initial-shell screenshots; the idle camera placeholder appeared without camera images. The map remained on its loading overlay during automated browser inspection, so Codex did not complete an interactive journey or populated-gallery browser test. These limitations were subsequently addressed through human browser testing.
+
+**Human visual acceptance (2026-10-11):** The developer completed manual browser testing and confirmed that the Destination Cameras experience works correctly. Real directional camera images displayed successfully, together with the expected intersection metadata, directional labels, retrieval information, and official source links. The camera gallery presentation was considered satisfactory, and no blocking camera-display defects were identified. Assignment 7D's camera frontend functionality is accepted.
+
+**Deferred verification:** Manual camera failure-isolation testing was not performed and is explicitly deferred for the MVP. Automated tests covering camera error handling and independent analysis state passed. This acceptance does not claim that the failure-isolation scenario was manually exercised, nor that every responsive or stale-response scenario was individually verified in the browser.
+
+**Additional findings:** During human review, the developer observed that selecting a Road Ahead event bolds its associated route geometry, but changing the origin or destination can leave the old highlight active. The developer also approved a small camera-map enhancement showing up to four nearby camera intersections after manual Analyze Journey, with clickable markers linking to official City camera pages. These changes are assigned to the separately authorized Assignment 7E and are not considered defects in the accepted 7D camera gallery.
+
+**Known limitations:** Camera catalogue locations are approximate, and image retrieval times are not confirmed source capture times. Existing image-rights uncertainty and ephemeral-cache boundaries remain documented and unchanged. No camera images were sent to an AI provider. The existing Vite large-bundle advisory remains nonblocking.
+
+**Files changed:** `frontend/src/App.tsx`, `frontend/src/cameras.ts`, `frontend/src/DestinationCameraPanel.tsx`, `frontend/src/styles.css`, `frontend/tests/cameras.test.mjs`, `frontend/tests/cameraPanel.test.mjs`, this project-state entry, and `docs/integration-notes/vancouver-cameras-phase-7d.md`.
+
+**Next assignment:** Phase 7E — Nearby Camera Map Markers and Road Ahead Selection Reset. Correct obsolete Road Ahead highlighting on journey invalidation and add up to four destination-nearby camera markers without expanding the existing single-intersection gallery. Assignment 7E requires its own implementation and human acceptance. Phase 8 AI vision analysis remains unauthorized.
+
+**Git status:** Assignment 7D implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
+
+**Review status:** Human review complete; Assignment 7D accepted on 2026-10-11. Phase 7 remains in progress pending Assignment 7E.
