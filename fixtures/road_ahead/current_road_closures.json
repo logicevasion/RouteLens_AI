@@ -1,0 +1,27 @@
+{
+  "total_count": 1,
+  "results": [
+    {
+      "recordid": "closure-row-001",
+      "project": "Utility work",
+      "street": "Main Street",
+      "location": "Main Street between 1st Avenue and 2nd Avenue",
+      "comp_date": "2027-03-15",
+      "url_link": "http://vanmapp1.vancouver.ca/roadahead/events/details/14a078dc-e00d-4cd5-b930-770b52c1513d",
+      "geom": {
+        "type": "Feature",
+        "geometry": {
+          "type": "GeometryCollection",
+          "geometries": [
+            {"type": "LineString", "coordinates": [[-123.1, 49.25], [-123.101, 49.251]]},
+            {"type": "MultiLineString", "coordinates": [[[-123.11, 49.24], [-123.12, 49.241]]]},
+            {"type": "LineString", "coordinates": [[-123.13, 49.23], [-123.14, 49.231]]},
+            {"type": "Polygon", "coordinates": [[[-123.2, 49.2], [-123.21, 49.2], [-123.21, 49.21], [-123.2, 49.2]]]}
+          ]
+        },
+        "properties": {}
+      },
+      "geo_point_2d": {"lat": 49.2505, "lon": -123.1005}
+    }
+  ]
+}

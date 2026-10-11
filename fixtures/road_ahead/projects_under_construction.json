@@ -1,0 +1,23 @@
+{
+  "total_count": 1,
+  "results": [
+    {
+      "recordid": "construction-row-002",
+      "project": "",
+      "location": "Cambie Street near West 10th Avenue",
+      "url_link": "http://vanmapp1.vancouver.ca/roadahead/events/details/0a4e0683-e652-49af-b3ef-d40722ba1732",
+      "geom": {
+        "type": "Feature",
+        "geometry": {
+          "type": "MultiLineString",
+          "coordinates": [
+            [[-123.115, 49.26], [-123.116, 49.261], [-123.117, 49.262]],
+            [[-123.118, 49.263], [-123.119, 49.264]]
+          ]
+        },
+        "properties": {}
+      },
+      "geo_point_2d": {"lat": 49.262, "lon": -123.116}
+    }
+  ]
+}

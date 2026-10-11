@@ -213,6 +213,10 @@ node_modules/
 dist/
 frontend/dist/
 
+# Runtime source-data caches
+data/cache/
+backend/data/cache/
+
 # PyPI configuration file
 .pypirc
 
