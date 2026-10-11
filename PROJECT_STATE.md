@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 5 — Regional Road Context: DriveBC Open511
-**Phase status:** In progress — Assignment 5A accepted; Assignment 5B implemented and human review completed; 5C–5D not started
-**Human review:** Phase 4 and Assignment 5A accepted by the human developer; Assignment 5B review pending
-**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B changes are uncommitted
+**Phase status:** In progress — Assignments 5A–5B accepted and committed; Assignment 5C implemented and human reviewed; 5D not started
+**Human review:** Phase 4 and Assignments 5A–5B accepted by the human developer; Assignment 5C reviewed by human
+**Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A provides the accepted regional Open511 adapter, normalization, and validated cache; its evidence is recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`. Assignment 5B implements selected-route relevance as recorded in Section 24.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignments 3A–3C delivered and verified driving routes and explicit route selection; Phase 3 was accepted on 2026-10-10. Phase 4 Assignments 4A–4D are accepted and committed. Assignment 5A provides the accepted regional Open511 adapter, normalization, and validated cache; its evidence is recorded in Section 23 and `docs/integration-notes/open511-5a-evidence.md`. Assignment 5B implements selected-route relevance as recorded in Section 24. Assignment 5C integrates the two road-event pipelines through the existing journey-analysis endpoint; see Section 25.
 
 ## 2. Established Planning Artifacts
 
@@ -33,7 +33,7 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 and Assignment 5A accepted. Assignment 5B is implemented and ready for human review; see Section 24.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 and Assignments 5A–5B accepted; Assignment 5C ready for human review; see Section 25.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -718,7 +718,7 @@ The adapter follows documented `limit`/`offset` and `pagination.next_url`, valid
 
 ## 24. Assignment 5B — DriveBC Open511 Route Relevance
 
-**Status:** Accepted by the human developer on 2026-10-11. Assignment 5B is complete. Phase 5 remains in progress; Assignments 5C–5D have not started.
+**Status:** Accepted by the human developer on 2026-10-11. Assignment 5B is complete. Phase 5 remains in progress; current Assignment 5C state is recorded in Section 25.
 
 `backend/app/drivebc_relevance.py` exposes `match_drivebc_events(route_geometry, events, *, linestring_nearby_distance_meters=500, point_nearby_distance_meters=250, nearby_limit=10)`. It reuses Phase 4's selected-route validation and EPSG:4326-to-EPSG:26910 projector. Results contain ordered `DriveBCEventMatch` values with the original `CityEvent`, classification, measured distance, geometry basis, and typed source evidence; `unmatchable_events` carry reason codes; `excluded_events` retain identities and measured distances for usable but distant events. Duplicate source identities are returned once, with a canonical payload chosen if duplicate identity records differ. The regional collection itself is not modified.
 
@@ -732,10 +732,32 @@ The original normalized event remains intact, including geography, source identi
 
 **Regression and verification:** Complete backend pytest — Passed, 222 tests. Ruff (`backend/app backend/tests`) — Passed. Frontend tests — Passed, 9 tests. Frontend TypeScript and production build — Passed; Vite reported the existing large-chunk advisory. `git diff --check` and final status/scope inspection — Passed. No browser test was run because this assignment is backend-only. No dependencies were added.
 
-**Known limitations:** Direction and temporal applicability are preserved as unknown for later interpretation; the matcher does not determine whether an ACTIVE record applies at evaluation time. Thresholds are configurable MVP defaults and have not been calibrated against broader source snapshots. The saved-route sanity evidence uses the existing sanitized two-event sample, not live source data. Assignments 5C analysis integration and 5D map/UI work remain pending separate authorization.
+**Known limitations:** Direction and temporal applicability are preserved as unknown for later interpretation; the matcher does not determine whether an ACTIVE record applies at evaluation time. Thresholds are configurable MVP defaults and have not been calibrated against broader source snapshots. The saved-route sanity evidence uses the existing sanitized two-event sample, not live source data. Assignment 5C integration is recorded in Section 25; 5D map/UI work remains pending.
 
 **Deviations:** None. Assignment 5B does not modify Road Ahead matching behavior, `CityEvent`, the analysis response, ingestion/cache behavior, authoritative planning documents, or frontend functionality.
 
-**Project state:** Assignment 5B was accepted by the human developer on 2026-10-11. The matcher preserves direct LineString intersections, treats Point events as proximity evidence, and retains direction, schedule, severity, and provenance without inferring current traffic impact. Deterministic tests include positive matching against all three accepted ORS route fixtures. Assignment 5C — Multi-Source Analysis Integration — is next.
+**Project state:** Assignment 5B was accepted by the human developer on 2026-10-11. The matcher preserves direct LineString intersections, treats Point events as proximity evidence, and retains direction, schedule, severity, and provenance without inferring current traffic impact. Deterministic tests include positive matching against all three accepted ORS route fixtures. Assignment 5C integration is recorded in Section 25.
 
-**Git status:** Assignment 5B accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.
+**Git status:** Assignment 5B is included in human commit `18aa6b8`. Codex did not stage, commit, push, or modify Git history.
+
+## 25. Assignment 5C — Multi-Source Journey Analysis Integration
+
+**Status:** Accepted by the human developer on 2026-10-11. Assignment 5C is complete. Phase 5 remains in progress; Assignment 5D has not started.
+
+`POST /api/trips/analyze` retains its existing request and the accepted route validation. The orchestrator concurrently calls `get_road_ahead_data()` and `get_drivebc_open511_data()`, then applies the accepted Road Ahead and DriveBC matchers to the same explicitly selected route. Adapter-level expected failures become source-specific unavailable results; unexpected programming exceptions still propagate. Road Ahead matching and selective detail enrichment remain unchanged.
+
+The legacy `findings` field remains Road Ahead-only and retains its required detail representation. DriveBC matches are exposed separately in typed `drivebc_findings`, with original `CityEvent`, classification, measured distance, geometry basis, provider event/status/severity/subtype/road/schedule evidence, uncertainty markers, and `enrichment_applicability: not_applicable`. The full normalized Open511 snapshot is separately exposed as `regional_events`; distant records remain available for later map rendering without entering journey findings. `source_statuses` reports the two Road Ahead datasets and Open511. `unmatchable_events` adds source and dataset identity to each matcher diagnostic.
+
+Overall status counts the three dataset statuses: all available yields `available`, a mixture yields `partial`, and none yields `unavailable`. Valid stale snapshots remain available and retain stale/cache metadata. The deterministic summary separates Road Ahead from regional DriveBC direct and nearby counts, reports partial coverage, and does not infer current physical impact. No frontend source was changed. The current frontend normalizer continues to consume only Road Ahead `findings` and ignores the additive DriveBC and regional fields; Assignment 5D must present combined source status and summary under a multi-source UI before claiming accurate multi-source display.
+
+**Verification:** Focused analysis API tests — Passed, 18 tests, fully mocked/fixture-backed. Complete backend pytest — Passed, 229 tests. Ruff — Passed. Frontend tests — Passed, 9 tests. Frontend TypeScript and production build — Passed; Vite reported the existing large-chunk advisory. `.env` ignore and backend-only credential scan — Passed. `git diff --check` — Passed. No live provider or browser check was run. No dependencies were added.
+
+**Known limitations:** No live end-to-end analysis was performed. Frontend display of DriveBC findings, regional events, source status, and combined summary remains Assignment 5D work. The existing frontend's Road Ahead panel interprets the legacy summary/status area as Road Ahead-only, so its display requires 5D integration before combined response content is presented to users.
+
+**Deviations:** None. No source adapter/matcher, frontend file, API request field, routing behavior, authoritative planning document, 5D feature, or Phase 6 feature was changed.
+
+**Git status:** Assignment 5C accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.
+
+**Review status:** Human review completed and Assignment 5C accepted. The backend multi-source response contract is approved. Assignment 5D must update the frontend to distinguish the combined journey summary and overall source status from Road Ahead-only findings, and render regional DriveBC events independently of route relevance.
+
+**Assignment 5D handoff:** The existing frontend continues to normalize and render `findings` as Road Ahead-only while ignoring additive `drivebc_findings` and `regional_events`. The backend `summary` and `status` now describe all three source datasets. Assignment 5D must introduce accurate multi-source presentation, preserve provider-specific geometry and attribution, render all normalized regional Open511 events independently of selected-route relevance, and avoid displaying DriveBC Point proximity as confirmed route overlap. The current frontend presentation is a known transitional limitation until 5D is accepted.

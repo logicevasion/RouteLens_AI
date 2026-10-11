@@ -99,7 +99,7 @@ async def get_driving_routes(request: DrivingRouteRequest) -> DrivingRoutesRespo
 
 @router.post("/trips/analyze", response_model=JourneyAnalysis)
 async def analyze_trip(trip: Trip) -> JourneyAnalysis:
-    """Analyze Road Ahead evidence against the explicitly selected driving route."""
+    """Analyze municipal and regional road evidence against the selected route."""
     try:
         return await analyze_journey(trip)
     except ValueError as error:

@@ -1,18 +1,22 @@
-"""Synchronous Road Ahead journey-analysis orchestration."""
+"""Multi-source journey analysis for an explicitly selected driving route."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.detail_enrichment import DetailEnrichment, RoadAheadDetailEnricher
+from app.drivebc_open511 import Open511Error, Open511Result, get_drivebc_open511_data
+from app.drivebc_relevance import DriveBCEventEvidence, match_drivebc_events
 from app.geography import validate_destination
 from app.models import Location
 from app.road_ahead import (
+    DATASETS,
     CityEvent,
     RoadAheadError,
     RoadAheadResult,
@@ -22,6 +26,8 @@ from app.road_ahead import (
 from app.route_relevance import UnmatchableEvent, match_route_events
 
 MAX_ROUTE_COORDINATES = 20_000
+ANALYSIS_SOURCE_NAME = "DriveBC Open511"
+ANALYSIS_DATASET_ID = "drivebc-open511-active-unavailable"
 
 
 class SelectedRoute(BaseModel):
@@ -91,6 +97,8 @@ class Trip(BaseModel):
 
 
 class AnalysisFinding(BaseModel):
+    """Legacy Road Ahead finding contract, including its selective enrichment."""
+
     model_config = ConfigDict(extra="forbid")
 
     event: CityEvent
@@ -99,69 +107,188 @@ class AnalysisFinding(BaseModel):
     detail: DetailEnrichment
 
 
+class DriveBCAnalysisEvidence(BaseModel):
+    """Source evidence and uncertainty qualified by the accepted 5B matcher."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_type: str
+    status: str | None
+    severity: str | None
+    event_subtypes: list[Any]
+    roads: list[dict[str, Any]]
+    schedule: Any = None
+    schedule_text: str | None
+    direction_assessment: Literal["undetermined"]
+    temporal_applicability: Literal["unknown"]
+    current_impact: Literal["not_established"]
+
+    @classmethod
+    def from_matcher(cls, evidence: DriveBCEventEvidence) -> DriveBCAnalysisEvidence:
+        return cls(
+            event_type=evidence.event_type,
+            status=evidence.status,
+            severity=evidence.severity,
+            event_subtypes=list(evidence.event_subtypes),
+            roads=list(evidence.roads),
+            schedule=evidence.schedule,
+            schedule_text=evidence.schedule_text,
+            direction_assessment=evidence.direction_assessment,
+            temporal_applicability=evidence.temporal_applicability,
+            current_impact=evidence.current_impact,
+        )
+
+
+class DriveBCAnalysisFinding(BaseModel):
+    """Regional journey match with no inapplicable Road Ahead detail object."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event: CityEvent
+    classification: Literal["direct_overlap", "nearby"]
+    distance_meters: float
+    geometry_basis: Literal[
+        "linestring_intersection", "linestring_proximity", "point_proximity"
+    ]
+    enrichment_applicability: Literal["not_applicable"] = "not_applicable"
+    source_evidence: DriveBCAnalysisEvidence
+
+
+class AnalysisUnmatchableEvent(BaseModel):
+    """Matcher diagnostic scoped to a source dataset and original event identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: str
+    reason: Literal[
+        "missing_geometry", "invalid_structure", "empty_geometry", "invalid_topology", "projection_failure"
+    ]
+    source: str
+    dataset_id: str
+
+
 class JourneyAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     trip: Trip
     status: Literal["available", "partial", "unavailable"]
     findings: list[AnalysisFinding]
-    unmatchable_events: list[UnmatchableEvent]
+    drivebc_findings: list[DriveBCAnalysisFinding] = Field(default_factory=list)
+    regional_events: list[CityEvent] = Field(default_factory=list)
+    unmatchable_events: list[AnalysisUnmatchableEvent]
     source_statuses: list[SourceStatus]
     summary: str
     analyzed_at: datetime
 
 
-def summarize(statuses: list[SourceStatus], direct_count: int, nearby_count: int) -> tuple[str, Literal["available", "partial", "unavailable"]]:
+def _unavailable_road_ahead() -> RoadAheadResult:
+    return RoadAheadResult(
+        events=[],
+        source_statuses=[
+            SourceStatus(
+                source="City of Vancouver Road Ahead",
+                dataset_id=dataset.dataset_id,
+                success=False,
+                available=False,
+                error="Road Ahead is temporarily unavailable.",
+            )
+            for dataset in DATASETS
+        ],
+    )
+
+
+def _unavailable_open511() -> Open511Result:
+    return Open511Result(
+        events=[],
+        source_status=SourceStatus(
+            source=ANALYSIS_SOURCE_NAME,
+            dataset_id=ANALYSIS_DATASET_ID,
+            success=False,
+            available=False,
+            error="DriveBC Open511 is temporarily unavailable.",
+        ),
+    )
+
+
+def _source_result(result: Any, fallback: Any, expected_errors: tuple[type[Exception], ...]) -> Any:
+    if isinstance(result, BaseException):
+        if isinstance(result, expected_errors):
+            return fallback
+        raise result
+    return result
+
+
+def summarize(
+    statuses: list[SourceStatus],
+    road_ahead_findings: list[AnalysisFinding],
+    drivebc_findings: list[DriveBCAnalysisFinding],
+) -> tuple[str, Literal["available", "partial", "unavailable"]]:
     available_count = sum(status.available for status in statuses)
     if available_count == 0:
-        return "Road Ahead data is unavailable for this analysis.", "unavailable"
+        return "Road event analysis is unavailable because no source datasets could be retrieved.", "unavailable"
 
     overall: Literal["available", "partial", "unavailable"] = (
         "available" if available_count == len(statuses) else "partial"
     )
-    prefix = ""
+    coverage = ""
     if overall == "partial":
-        prefix = "Road Ahead results are partially available; one dataset could not be retrieved. "
-    if direct_count == 0 and nearby_count == 0:
-        return prefix + "No Road Ahead events were identified near the selected route in the available datasets.", overall
+        coverage = f"Coverage is partial; {len(statuses) - available_count} of {len(statuses)} datasets are unavailable. "
+
+    if not road_ahead_findings and not drivebc_findings:
+        return coverage + "No route-relevant road events were identified from the available datasets.", overall
+
     parts: list[str] = []
-    if direct_count:
-        parts.append(f"{direct_count} Road Ahead event{'s' if direct_count != 1 else ''} intersect the selected route")
-    if nearby_count:
-        parts.append(f"{nearby_count} additional event{'s' if nearby_count != 1 else ''} {'are' if nearby_count != 1 else 'is'} nearby")
-    return prefix + ". ".join(parts) + ".", overall
+    ra_direct = sum(item.classification == "direct_overlap" for item in road_ahead_findings)
+    ra_nearby = len(road_ahead_findings) - ra_direct
+    bc_direct = sum(item.classification == "direct_overlap" for item in drivebc_findings)
+    bc_nearby = len(drivebc_findings) - bc_direct
+    if ra_direct:
+        parts.append(f"Road Ahead reports {ra_direct} event{'s' if ra_direct != 1 else ''} intersecting the selected route")
+    if ra_nearby:
+        parts.append(f"Road Ahead identifies {ra_nearby} additional event{'s' if ra_nearby != 1 else ''} nearby")
+    if bc_direct:
+        parts.append(f"DriveBC reports {bc_direct} regional LineString event{'s' if bc_direct != 1 else ''} intersecting the selected route")
+    if bc_nearby:
+        parts.append(f"DriveBC identifies {bc_nearby} regional event{'s' if bc_nearby != 1 else ''} nearby")
+    return coverage + ". ".join(parts) + ".", overall
+
+
+def _diagnostic(event: UnmatchableEvent, *, source: str, dataset_id: str) -> AnalysisUnmatchableEvent:
+    return AnalysisUnmatchableEvent(
+        event_id=event.event_id,
+        reason=event.reason,
+        source=source,
+        dataset_id=dataset_id,
+    )
 
 
 async def analyze_journey(trip: Trip, *, enricher: RoadAheadDetailEnricher | None = None) -> JourneyAnalysis:
-    """Load accepted Road Ahead data, match the selected geometry, then enrich matches."""
+    """Acquire both source snapshots independently and match each with its accepted rules."""
     destination_result = validate_destination(trip.destination)
     if not destination_result.valid:
         raise ValueError(destination_result.reason or "Destination is outside the supported area.")
-    try:
-        road_data: RoadAheadResult = await get_road_ahead_data()
-    except (RoadAheadError, OSError):
-        # The source adapter normally isolates per-dataset failures. This fallback
-        # covers unexpected adapter-level outages without leaking exception text.
-        from app.road_ahead import DATASETS
 
-        road_data = RoadAheadResult(
-            events=[],
-            source_statuses=[
-                SourceStatus(
-                    source="City of Vancouver Road Ahead",
-                    dataset_id=dataset.dataset_id,
-                    success=False,
-                    available=False,
-                    error="Road Ahead is temporarily unavailable.",
-                )
-                for dataset in DATASETS
-            ],
-        )
+    road_result, open511_result = await asyncio.gather(
+        get_road_ahead_data(),
+        get_drivebc_open511_data(),
+        return_exceptions=True,
+    )
+    road_data: RoadAheadResult = _source_result(
+        road_result,
+        _unavailable_road_ahead(),
+        (RoadAheadError, OSError, TimeoutError),
+    )
+    open511_data: Open511Result = _source_result(
+        open511_result,
+        _unavailable_open511(),
+        (Open511Error, OSError, TimeoutError),
+    )
 
-    matches = match_route_events(trip.selected_route.geometry, road_data.events)
+    road_matches = match_route_events(trip.selected_route.geometry, road_data.events)
+    drivebc_matches = match_drivebc_events(trip.selected_route.geometry, open511_data.events)
 
     detail_enricher = enricher or RoadAheadDetailEnricher()
-    details = await detail_enricher.enrich_many([match.event for match in matches.matches])
+    details = await detail_enricher.enrich_many([match.event for match in road_matches.matches])
     findings = [
         AnalysisFinding(
             event=match.event,
@@ -169,17 +296,39 @@ async def analyze_journey(trip: Trip, *, enricher: RoadAheadDetailEnricher | Non
             distance_meters=match.distance_meters,
             detail=detail,
         )
-        for match, detail in zip(matches.matches, details, strict=True)
+        for match, detail in zip(road_matches.matches, details, strict=True)
     ]
-    direct_count = sum(finding.classification == "direct_overlap" for finding in findings)
-    nearby_count = len(findings) - direct_count
-    summary, overall_status = summarize(road_data.source_statuses, direct_count, nearby_count)
+    drivebc_findings = [
+        DriveBCAnalysisFinding(
+            event=match.event,
+            classification=match.classification,
+            distance_meters=match.distance_meters,
+            geometry_basis=match.geometry_basis,
+            source_evidence=DriveBCAnalysisEvidence.from_matcher(match.evidence),
+        )
+        for match in drivebc_matches.matches
+    ]
+    statuses = [*road_data.source_statuses, open511_data.source_status]
+    unmatchable = [
+        *(
+            _diagnostic(event, source="City of Vancouver Road Ahead", dataset_id=event.event_id.partition(":")[0])
+            for event in road_matches.unmatchable_events
+        ),
+        *(
+            _diagnostic(event, source=ANALYSIS_SOURCE_NAME, dataset_id=open511_data.source_status.dataset_id)
+            for event in drivebc_matches.unmatchable_events
+        ),
+    ]
+    unmatchable.sort(key=lambda item: (item.source, item.dataset_id, item.event_id))
+    summary, overall_status = summarize(statuses, findings, drivebc_findings)
     return JourneyAnalysis(
         trip=trip,
         status=overall_status,
         findings=findings,
-        unmatchable_events=list(matches.unmatchable_events),
-        source_statuses=road_data.source_statuses,
+        drivebc_findings=drivebc_findings,
+        regional_events=open511_data.events,
+        unmatchable_events=unmatchable,
+        source_statuses=statuses,
         summary=summary,
         analyzed_at=datetime.now(timezone.utc),
     )
