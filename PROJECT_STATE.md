@@ -4,9 +4,9 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 5 — DriveBC Open511 Regional Road Events
-**Phase status:** Complete — Assignments 5A–5D accepted by the human developer on 2026-10-11.
-**Human review:** Phase 5 implementation and browser experience accepted.
+**Current phase:** Phase 6 — Current and Near-Term Weather
+**Phase status:** Assignment 6B implemented and pending human acceptance; Phase 6 remains in progress.
+**Human review:** Phase 5 accepted. Assignment 6A evidence/product decision accepted; Assignment 6B awaits review.
 **Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
@@ -34,7 +34,7 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–4 and Assignments 5A–5C accepted; Assignment 5D ready for human review; see Section 26.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A–3C implemented; Phases 1–5 accepted; Assignment 6B implemented, pending human acceptance; see Sections 26–27.**
 
 The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3C implement backend route-candidate retrieval, frontend route selection, and map rendering. Assignment 4D adds explicit journey analysis and Road Ahead presentation; see Section 22 for current verification and limitations.
 
@@ -807,3 +807,47 @@ The frontend now normalizes additive `drivebc_findings` and `regional_events` wh
 **Project state:** Assignment 5D was accepted by the human developer on 2026-10-11 following successful manual browser testing. Route selection, manual analysis, multi-source findings, regional map layers, event selection and focus, source statuses, and existing Road Ahead functionality were visually verified. No outstanding Phase 5 acceptance blockers remain.
 
 **Git status:** Assignment 5D accepted; awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or Git history modification.
+
+## 27. Assignment 6B — OpenWeather One Call 4.0 Adapter
+
+**Assignment 6B status:** Accepted by the human developer on 2026-10-11.
+
+The OpenWeather One Call 4.0 backend adapter, independent current and
+forecast caches, three-hour forecast normalization, and persistent
+100-request/day application budget have passed human review.
+
+The missing-budget-state correction was verified with 29 focused tests
+and 258 passing backend tests.
+
+The known limitation involving deletion of both local budget-state
+files is accepted for the datathon MVP.
+
+Assignment 6C remains separately authorized and has not started.
+
+**Files changed:** Added `backend/app/openweather.py` and `backend/tests/test_openweather.py`; updated `.env.example`, `docs/integration-notes/openweather-phase-6a.md`, and this state record. No dependency, frontend, journey-analysis, SWOB, camera, or AI integration files changed.
+
+`OpenWeatherClient.get_weather(latitude, longitude, evaluation_time=...)` returns separate `CurrentWeatherResult` and `ForecastWeatherResult`, each with an independent `WeatherSourceStatus`. The typed current evidence preserves requested/provider coordinates, UTC observation and fetch times, Celsius temperatures, condition, humidity, wind in m/s, visibility in metres, and only supplied precipitation amounts. Timeline intervals preserve UTC target/fetch times, nullable metric evidence, and precipitation probability as a percentage without inferring amount or observed precipitation. The callable requires a timezone-aware evaluation time when supplied and rejects out-of-range destination coordinates; it does not duplicate Vancouver-boundary validation.
+
+The adapter uses only the approved One Call 4.0 current and 15-minute timeline HTTPS endpoints. It sends canonical destination coordinates, metric units, and the configured `OPENWEATHER_API_KEY`, rejects redirects, caps responses at 1 MB, and uses bounded connect/read/overall timeouts. Timeline handling uses only the initial page, windows evidence to three hours from evaluation time, and reports actual interval bounds, expected slots, gaps, duplicates, malformed records, and continuity. Current and forecast retrieval, cache validity, fallback, and statuses are independent.
+
+Each product has a separate 600-second cache keyed by product, response parameters, metric units, and coordinates rounded to four decimals. Normalized evidence retains source request coordinates; cache-key rounding is only a deduplication key. Timeline cache entries omit pagination metadata and are re-windowed when reused at another evaluation time. Typed validation and atomic replacement protect prior valid cache data; stale fallback reports age and refresh failure. A fresh valid empty timeline reports successful retrieval with no forecast availability and explicit coverage metadata.
+
+The persistent request guard defaults to 100 upstream attempts per UTC day and accepts `OPENWEATHER_DAILY_REQUEST_LIMIT` from 1 through 100. It records before network I/O, uses `flock` across local processes and atomic mode-restricted state replacement, resets on UTC date change, and fails closed on invalid/unreadable state. Budget exhaustion prevents outbound calls and uses valid stale cache when available. This local application safeguard does not account for calls from other applications or API keys and does not authorize using the account's separate 500-request daily allowance.
+
+**Verification:** Focused OpenWeather tests — Passed, 27 tests. Full backend pytest — Passed, 256 tests. Ruff across `backend/app` and `backend/tests` — Passed. Backend import smoke — Passed. `git diff --check` — Passed. `.env` ignore and runtime cache ignore checks — Passed. Configured OpenWeather key scan across changed artifacts — Passed; the key was not printed or changed. Tests used mocks and sanitized fixtures. Live OpenWeather and frontend checks — Not run; neither is required or claimed for this adapter assignment.
+
+**Known limitations:** The daily guard is local application defense-in-depth; it cannot observe account calls made elsewhere. Provider subscription, terms, and billing settings remain outside these offline tests. The adapter is not connected to `POST /api/trips/analyze`; Assignment 6D owns that integration.
+
+**Deviations:** None. The implementation follows the human-approved 6A One Call 4.0 products and the bounded 6B assignment.
+
+**Git status:** Only the five files listed above are changed/untracked for this assignment. No staging, commit, push, or Git history operation was performed.
+
+**Review status:** Ready for human review; pending acceptance.
+
+### Assignment 6B budget guard correction
+
+The guard now persists a separate initialization marker at `<budget-state-path>.initialized` under the existing interprocess lock. A valid pre-marker state is migrated without resetting its count. Once the marker exists, a missing state file, corrupt marker/state, or failed atomic write blocks upstream attempts; a missing state cannot be treated as a new UTC day. The marker is persisted before first state creation, so interruption during first initialization also fails closed on retry. `test_missing_budget_state_after_initialization_fails_closed_even_on_day_rollover` and `test_unwritable_budget_state_fails_closed` cover fail-closed behavior; `test_concurrent_budget_attempts_cannot_exceed_limit` covers separate processes.
+
+**Correction verification:** Focused OpenWeather tests — Passed, 29 tests. Full backend pytest — Passed, 258 tests. Ruff — Passed. `git diff --check` and credential/cache-ignore checks — Passed. No live API request was made.
+
+**Correction limitation:** If both the budget state and its initialization marker are deleted (for example, by removing their entire cache directory), the local guard cannot distinguish that from genuine first initialization. Recovering from a marker-without-state condition requires local operator intervention after reconciling usage; no automatic allowance reset is provided.
