@@ -88,6 +88,27 @@ test('selects only the matching Road Ahead event for the dedicated map highlight
   assert.equal(cleared.features.every((feature) => feature.properties.selected === false), true);
 });
 
+test('selection is valid only while its finding belongs to the active analysis context', () => {
+  const selected = 'road-ahead-current-road-closures:direct';
+  const current = [finding('direct', 'direct_overlap', line)];
+  assert.equal(roadAhead.activeSelectedEventId(selected, current, [], []), selected);
+  assert.equal(roadAhead.activeSelectedEventId(selected, [], [], []), null);
+  assert.equal(roadAhead.activeSelectedEventId(selected, [finding('replacement', 'nearby', line)], [], []), null);
+  assert.equal(roadAhead.activeSelectedEventId(selected, [], [], []), null);
+  const normal = roadAhead.roadAheadGeoJson(current, null);
+  assert.equal(normal.features[0].properties.selected, false);
+});
+
+test('origin, destination, selected-route changes, and new analysis invalidate old highlight identity', () => {
+  const previous = [finding('previous', 'direct_overlap', line)];
+  const selected = 'road-ahead-current-road-closures:previous';
+  for (const invalidatedContext of ['origin changed', 'destination changed', 'route changed', 'new analysis']) {
+    assert.equal(roadAhead.activeSelectedEventId(selected, [], [], []), null, invalidatedContext);
+  }
+  assert.equal(roadAhead.roadAheadGeoJson(previous, selected).features[0].properties.selected, true);
+  assert.equal(roadAhead.roadAheadGeoJson([], selected).features.length, 0);
+});
+
 test('computes map bounds across polygon and collection coordinates and ignores unusable geometry', () => {
   assert.deepEqual(roadAhead.eventBounds({ type: 'GeometryCollection', geometries: [line, polygon] }),
     [[-123.12, 49.27], [-123.11, 49.28]]);

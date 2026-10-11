@@ -102,6 +102,19 @@ export function sourceScopedEventId(event: Pick<CityEvent, 'source_dataset_id' |
   return `${event.source_dataset_id}:${event.source_record_id}`;
 }
 
+export function activeSelectedEventId(
+  selectedEventId: string | null,
+  findings: AnalysisFinding[],
+  drivebcFindings: DriveBCAnalysisFinding[],
+  regionalEvents: RegionalEvent[],
+): string | null {
+  if (!selectedEventId) return null;
+  const present = findings.some((finding) => sourceScopedEventId(finding.event) === selectedEventId) ||
+    drivebcFindings.some((finding) => sourceScopedEventId(finding.event) === selectedEventId) ||
+    regionalEvents.some((event) => sourceScopedEventId(event) === selectedEventId);
+  return present ? selectedEventId : null;
+}
+
 export function regionalGeometry(value: unknown): RegionalGeometry | null {
   if (!isRecord(value)) return null;
   if (value.type === 'Point' && validPosition(value.coordinates)) return value as RegionalGeometry;

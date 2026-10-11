@@ -5,9 +5,9 @@ import type { DestinationValidation, Location } from './locationTypes';
 import RoadAheadPanel from './RoadAheadPanel';
 import DestinationWeatherPanel from './DestinationWeatherPanel';
 import DestinationCameraPanel from './DestinationCameraPanel';
-import { fetchDestinationCamera, isCurrentCameraRequest } from './cameras';
-import type { CameraState } from './cameras';
-import { buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
+import { fetchDestinationCamera, fetchNearbyCameras, isCurrentCameraRequest, isCurrentNearbyCameraRequest, shouldRequestSelectedCameraMarker } from './cameras';
+import type { CameraState, NearbyCameraState } from './cameras';
+import { activeSelectedEventId, buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
 import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
 import {
   routeColor,
@@ -395,6 +395,7 @@ export default function App() {
   const [destination, setDestination] = useState<Location | null>(null);
   const [analysisState, setAnalysisState] = useState<AnalysisState>(initialAnalysisState);
   const [cameraState, setCameraState] = useState<CameraState>({ status: 'idle' });
+  const [nearbyCameraState, setNearbyCameraState] = useState<NearbyCameraState>({ status: 'idle' });
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const routingSequence = useRef(0);
   const routingController = useRef<AbortController | null>(null);
@@ -405,10 +406,16 @@ export default function App() {
   const cameraSequence = useRef(0);
   const cameraController = useRef<AbortController | null>(null);
   const activeCameraKey = useRef<string | null>(null);
+  const nearbyCameraSequence = useRef(0);
+  const selectedGalleryIntersectionId = useRef<string | null>(null);
+  const nearbyCameraResult = useRef<{ requestKey: string; cameras: string[] } | null>(null);
 
   const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
   const selectedRoute = routeState.status === 'ready' ? routeState.selectedRoute : null;
   const canAnalyze = isAnalysisReady(origin, destination, selectedRoute) && analysisState.status !== 'loading';
+  const activeSelectedEvent = analysisState.status === 'success'
+    ? activeSelectedEventId(selectedEventId, analysisState.result.findings, analysisState.result.drivebc_findings, analysisState.result.regional_events)
+    : null;
 
   function invalidateAnalysis() {
     analysisSequence.current += 1;
@@ -416,10 +423,14 @@ export default function App() {
     analysisController.current = null;
     activeAnalysisKey.current = null;
     cameraSequence.current += 1;
+    nearbyCameraSequence.current += 1;
     cameraController.current?.abort();
     cameraController.current = null;
     activeCameraKey.current = null;
     setCameraState({ status: 'idle' });
+    setNearbyCameraState({ status: 'idle' });
+    selectedGalleryIntersectionId.current = null;
+    nearbyCameraResult.current = null;
     setAnalysisState(initialAnalysisState);
     setSelectedEventId(null);
   }
@@ -496,7 +507,8 @@ export default function App() {
 
   async function analyzeJourney() {
     if (!origin || !destination || !selectedRoute || !canAnalyze || analysisController.current) return;
-    const request = buildAnalysisRequest(origin, destination, selectedRoute);
+    const analyzedDestination = destination;
+    const request = buildAnalysisRequest(origin, analyzedDestination, selectedRoute);
     const requestKey = JSON.stringify(request);
     analysisSequence.current += 1;
     const requestId = analysisSequence.current;
@@ -514,17 +526,41 @@ export default function App() {
     setAnalysisState({ status: 'loading', result: null, error: null });
     setSelectedEventId(null);
 
-    void fetchDestinationCamera(destination, cameraControllerValue.signal).then((result) => {
+    selectedGalleryIntersectionId.current = null;
+    nearbyCameraResult.current = null;
+
+    function loadNearbyCameras(selectedIntersectionId: string | null, preserveAvailableResult = false) {
+      nearbyCameraSequence.current += 1;
+      const nearbyRequestId = nearbyCameraSequence.current;
+      void fetchNearbyCameras(analyzedDestination, selectedIntersectionId, cameraControllerValue.signal).then((result) => {
+        if (!isCurrentNearbyCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current, nearbyRequestId, nearbyCameraSequence.current)) return;
+        setNearbyCameraState({ status: 'success', requestKey: cameraDisplayKey, result });
+        nearbyCameraResult.current = { requestKey: cameraDisplayKey, cameras: result.cameras.map((camera) => camera.intersection_id) };
+        const selectedId = selectedGalleryIntersectionId.current;
+        if (selectedIntersectionId === null && shouldRequestSelectedCameraMarker(selectedId, nearbyCameraResult.current.cameras)) {
+          loadNearbyCameras(selectedId, true);
+        }
+      }).catch(() => {
+        if (cameraControllerValue.signal.aborted || !isCurrentNearbyCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current, nearbyRequestId, nearbyCameraSequence.current)) return;
+        if (!preserveAvailableResult) setNearbyCameraState({ status: 'error', requestKey: cameraDisplayKey });
+      });
+    }
+
+    setNearbyCameraState({ status: 'loading', requestKey: cameraDisplayKey });
+    loadNearbyCameras(null);
+
+    void fetchDestinationCamera(analyzedDestination, cameraControllerValue.signal).then((result) => {
       if (!isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) return;
       setCameraState({ status: 'success', requestKey: cameraDisplayKey, result });
+      const selectedId = result.intersection?.intersection_id ?? null;
+      selectedGalleryIntersectionId.current = selectedId;
+      const markers = nearbyCameraResult.current;
+      if (markers?.requestKey === cameraDisplayKey && shouldRequestSelectedCameraMarker(selectedId, markers.cameras)) {
+        loadNearbyCameras(selectedId, true);
+      }
     }).catch(() => {
       if (cameraControllerValue.signal.aborted || !isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) return;
       setCameraState({ status: 'error', requestKey: cameraDisplayKey });
-    }).finally(() => {
-      if (isCurrentCameraRequest(requestKey, activeCameraKey.current, cameraRequestId, cameraSequence.current)) {
-        cameraController.current = null;
-        activeCameraKey.current = null;
-      }
     });
 
     try {
@@ -556,6 +592,9 @@ export default function App() {
     routingController.current?.abort();
     analysisController.current?.abort();
     cameraController.current?.abort();
+    cameraSequence.current += 1;
+    nearbyCameraSequence.current += 1;
+    activeCameraKey.current = null;
   }, []);
 
   useEffect(() => {
@@ -619,11 +658,13 @@ export default function App() {
             findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
             drivebcFindings={analysisState.status === 'success' ? analysisState.result.drivebc_findings : noDriveBCFindings}
             regionalEvents={analysisState.status === 'success' ? analysisState.result.regional_events : noRegionalEvents}
-            selectedEventId={selectedEventId}
+            selectedEventId={activeSelectedEvent}
             onSelectEvent={setSelectedEventId}
+            cameraMarkers={nearbyCameraState.status === 'success' ? nearbyCameraState.result.cameras : []}
+            selectedCameraId={cameraState.status === 'success' ? cameraState.result.intersection?.intersection_id ?? null : null}
           />
         </div>
-        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} selectedEventId={selectedEventId} onSelectFinding={setSelectedEventId} />
+        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
       </div>
     </main>
   );

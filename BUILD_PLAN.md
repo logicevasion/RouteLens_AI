@@ -89,6 +89,66 @@ Phase 7 comprises four **separately authorized** Codex assignments. Completion o
 
 **Assignment rule:** Each assignment is a bounded reviewed unit. Do not add speculative architectures merely because work is phased. Codex must stop after the authorized assignment and leave all Git history operations to the human developer.
 
+## Assignment 7E — Nearby Camera Map Markers and Road Ahead Selection Reset
+
+**Assignment status:** Authorized for implementation after human review of Assignment 7D. This assignment is a limited Phase 7 acceptance amendment.
+
+### Objective
+
+Complete two focused usability improvements before closing Phase 7:
+
+1. Fix the existing Road Ahead map-highlight state so that selecting or resetting a journey cannot leave obsolete road segments highlighted.
+2. Display up to four nearby Vancouver camera-intersection markers on the map after the user manually runs Analyze Journey.
+
+### Scope
+
+**Road Ahead state cleanup**
+
+- Clear selected Road Ahead event and associated highlighted route geometry whenever the origin, canonical destination, route candidates, selected route, or journey-analysis context is invalidated.
+- Ensure stale asynchronous results cannot restore an obsolete selection.
+- Preserve normal route styling and other independent map layers.
+- Add focused regression coverage.
+
+**Nearby camera map markers**
+
+- Reuse the accepted 7B normalized camera catalogue and its existing 24-hour cache.
+- Return up to four nearest camera intersections to the canonical City of Vancouver destination, including the selected gallery intersection when it is within the approved nearby search radius.
+- Use the established 2 km camera search radius unless the accepted application architecture requires a stricter bound.
+- Show markers only after an explicit Analyze Journey action.
+- Distinguish the selected gallery intersection from other nearby cameras through a modest visual treatment.
+- Clicking a marker opens a small map popup containing the official intersection name and a link to its official City camera webpage.
+- Additional markers are metadata-only: do not retrieve, cache, decode, or display their camera images.
+- Marker presence must not imply confirmed image availability.
+- Clear markers on journey-context invalidation and protect against stale responses.
+- Preserve the existing single-intersection multi-view Destination Cameras gallery without an additional camera list.
+
+### Design boundaries
+
+- Maximum four map markers per analyzed destination.
+- No citywide camera-marker layer, clustering, image previews, new source ingestion, automatic background polling, or extra frontend filters.
+- No changes to accepted weather, routing, Road Ahead/DriveBC source ingestion, or Phase 8 AI vision behavior.
+- Prefer a narrow, catalogue-backed metadata API or a backward-compatible response extension, whichever best preserves accepted backend contracts.
+- Use established map-marker, popup, layering, styling, and source-attribution conventions.
+- Preserve existing manual Analyze Journey behavior.
+
+### Verification and human acceptance
+
+Require focused backend/frontend tests as applicable, complete relevant regression checks, frontend TypeScript validation and production build, and repository hygiene checks.
+
+Human acceptance requires:
+
+1. Road Ahead highlighting resets correctly after origin, destination, or selected-route changes.
+2. A normal analyzed journey displays no more than four nearby camera markers.
+3. Marker popups show correct intersection names and working official-page links.
+4. The gallery-selected camera is visually distinguishable when represented on the map.
+5. Changing or clearing the journey removes obsolete camera markers and Road Ahead highlights.
+6. Existing destination camera gallery, weather, road findings, and route interactions remain functional.
+7. No unnecessary image retrieval or automated polling occurs for additional markers.
+
+Assignment 7E is not accepted merely because automated tests pass. Human visual verification is required before Phase 7 is marked complete.
+
+Do not begin Phase 8 during 7E.
+
 ---
 
 ## 3. Established Accepted Baseline

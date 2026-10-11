@@ -9,6 +9,7 @@ import pytest
 from PIL import Image
 
 from app import camera_images as images
+from app import vancouver_cameras as catalogue_module
 from app.main import app
 from app.models import Location
 from app.vancouver_cameras import (
@@ -297,6 +298,119 @@ def test_outside_city_destination_is_rejected_before_catalogue_load():
     with pytest.raises(ValueError, match="inside the City"):
         asyncio.run(service.nearest(Location(name="Richmond", latitude=49.1666, longitude=-123.1336)))
     assert catalogue.calls == 0
+
+
+def test_nearby_catalogue_markers_are_ranked_bounded_and_image_free():
+    # All points are near the canonical destination; marker eligibility does not depend on views.
+    items = [
+        intersection("fifth", 49.2827, -123.1170),
+        intersection("third", 49.2827, -123.1217),
+        intersection("first", 49.2827, -123.1208, count=0),
+        intersection("second", 49.2827, -123.1210),
+        intersection("fourth", 49.2827, -123.1220),
+    ]
+    catalogue = FakeCatalogueStore(catalogue_result(items))
+    service = images.DestinationCameraService(catalogue_store=catalogue)
+    result = asyncio.run(service.nearby(DESTINATION))
+    assert result.status == "available"
+    assert len(result.cameras) == 4
+    assert [camera.intersection_id for camera in result.cameras] == ["first", "second", "third", "fourth"]
+    assert all(camera.distance_metres <= images.MAX_CANDIDATE_DISTANCE_METRES for camera in result.cameras)
+    assert catalogue.calls == 1
+    assert service.image_store.upstream_requests == 0
+
+
+def test_nearby_reserves_selected_gallery_intersection_inside_four_marker_cap():
+    items = [
+        intersection("near-a", 49.2827, -123.12071),
+        intersection("near-b", 49.2827, -123.12072),
+        intersection("near-c", 49.2827, -123.12073),
+        intersection("near-d", 49.2827, -123.12074),
+        intersection("gallery", 49.2827, -123.12120, count=0),
+    ]
+    service = images.DestinationCameraService(catalogue_store=FakeCatalogueStore(catalogue_result(items)))
+    result = asyncio.run(service.nearby(DESTINATION, "gallery"))
+    assert len(result.cameras) == 4
+    assert "gallery" in {camera.intersection_id for camera in result.cameras}
+    assert "near-d" not in {camera.intersection_id for camera in result.cameras}
+    assert service.image_store.upstream_requests == 0
+
+
+def test_nearby_handles_fewer_candidates_missing_selection_and_outside_radius():
+    items = [intersection("near", 49.2827, -123.1208), intersection("far", 49.2827, -123.17)]
+    catalogue = FakeCatalogueStore(catalogue_result(items))
+    service = images.DestinationCameraService(catalogue_store=catalogue)
+    result = asyncio.run(service.nearby(DESTINATION, "missing"))
+    assert result.status == "available"
+    assert [camera.intersection_id for camera in result.cameras] == ["near"]
+    empty = images.DestinationCameraService(catalogue_store=FakeCatalogueStore(catalogue_result([items[1]])))
+    assert asyncio.run(empty.nearby(DESTINATION)).status == "unavailable"
+    with pytest.raises(ValueError, match="inside the City"):
+        asyncio.run(service.nearby(Location(name="Richmond", latitude=49.1666, longitude=-123.1336)))
+    assert catalogue.calls == 1
+
+
+def test_nearby_rejects_official_page_link_that_is_not_allowlisted():
+    invalid = intersection("bad-link", 49.2827, -123.1208).model_copy(
+        update={"official_page_url": "https://example.com/camera.htm"}
+    )
+    service = images.DestinationCameraService(catalogue_store=FakeCatalogueStore(catalogue_result([invalid])))
+    result = asyncio.run(service.nearby(DESTINATION))
+    assert result.status == "unavailable"
+    assert result.cameras == []
+
+
+def test_nearby_distance_ties_use_stable_intersection_id_order():
+    same_point = [intersection("tie-b", 49.2827, -123.1208), intersection("tie-a", 49.2827, -123.1208)]
+    service = images.DestinationCameraService(catalogue_store=FakeCatalogueStore(catalogue_result(same_point)))
+    assert [camera.intersection_id for camera in asyncio.run(service.nearby(DESTINATION)).cameras] == ["tie-a", "tie-b"]
+
+
+def test_nearby_reuses_the_validated_7b_catalogue_cache(tmp_path):
+    records = [{
+        "mapid": "cached-camera", "name": "Cached St and Robson St",
+        "url": "https://trafficcams.vancouver.ca/cached.htm",
+        "geo_point_2d": {"lon": -123.1208, "lat": 49.2827}, "geo_local_area": "Downtown",
+    }]
+    intersections, diagnostics = catalogue_module.normalize_catalogue_records(records, fetched_at=NOW)
+    diagnostics = diagnostics.model_copy(update={"source_total_count": 1})
+    catalogue = CameraCatalogue(
+        source_total_count=1, source_fetched_at=NOW, catalogue_updated_at=NOW,
+        enrichment_completed_at=NOW, enrichment_complete=False, intersections=intersections,
+        diagnostics=diagnostics,
+    )
+    cache_path = tmp_path / "catalogue.json"
+    catalogue_module._cache_write(cache_path, catalogue, NOW)
+    store = catalogue_module.VancouverCameraCatalogueStore(
+        cache_path=cache_path,
+        now=lambda: NOW + timedelta(minutes=1),
+        transport=httpx.MockTransport(lambda request: pytest.fail(f"unexpected source request: {request.url.host}")),
+    )
+    service = images.DestinationCameraService(catalogue_store=store)
+    result = asyncio.run(service.nearby(DESTINATION))
+    assert result.status == "available"
+    assert result.cameras[0].intersection_id == intersections[0].intersection_id
+
+
+def test_nearby_api_validates_destination_and_reports_catalogue_failure(monkeypatch):
+    unavailable = FakeCatalogueStore(CatalogueResult(catalogue=None, available=False, success=False))
+    service = images.DestinationCameraService(catalogue_store=unavailable)
+    monkeypatch.setattr("app.routes.camera_service", service)
+
+    async def request():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            failed = await client.post("/api/cameras/nearby", json={"destination": DESTINATION.model_dump()})
+            outside = await client.post("/api/cameras/nearby", json={
+                "destination": Location(name="Richmond", latitude=49.1666, longitude=-123.1336).model_dump()
+            })
+            return failed, outside
+
+    failed, outside = asyncio.run(request())
+    assert failed.status_code == 200
+    assert failed.json()["status"] == "unavailable"
+    assert failed.json()["cameras"] == []
+    assert outside.status_code == 422
+    assert unavailable.calls == 1
 
 
 def test_api_contract_and_image_endpoint(monkeypatch, tmp_path):

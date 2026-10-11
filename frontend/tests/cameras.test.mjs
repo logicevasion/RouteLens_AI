@@ -29,6 +29,9 @@ const result = (overrides = {}) => ({
     fallback_used: false, catalogue_stale: false, failures: [] },
   ...overrides,
 });
+const marker = (id, overrides = {}) => ({ intersection_id: id, name: `Street ${id} and Avenue`, latitude: 49.2827,
+  longitude: -123.1207, distance_metres: 100, official_page_url: `https://trafficcams.vancouver.ca/${id}.htm`,
+  source: 'City of Vancouver Open Data Portal', attribution: 'Contains City open data.', ...overrides });
 
 test('sends the canonical destination to the application camera API and normalizes the response', async () => {
   const originalFetch = globalThis.fetch;
@@ -79,6 +82,9 @@ test('guards destination changes, route changes, and repeated analysis request i
   assert.equal(cameras.isCurrentCameraRequest(a, null, 1, 1), false);
   assert.equal(cameras.isCurrentCameraImageEvent(`${a}:1`, `${a}:2`), false);
   assert.equal(cameras.isCurrentCameraImageEvent(`${a}:2`, `${a}:2`), true);
+  assert.equal(cameras.isCurrentNearbyCameraRequest(a, a, 1, 1, 4, 4), true);
+  assert.equal(cameras.isCurrentNearbyCameraRequest(a, a, 1, 1, 3, 4), false);
+  assert.equal(cameras.isCurrentNearbyCameraRequest(a, b, 1, 2, 4, 4), false);
 });
 
 test('handles an image load error only for the active gallery request', () => {
@@ -93,4 +99,78 @@ test('formats backend retrieval age without implying source capture time', () =>
   assert.equal(cameras.formatCameraAge(180), 'about 3 minutes ago');
   assert.equal(cameras.formatCameraAge(0), 'less than a minute ago');
   assert.equal(cameras.formatRetrievedAt('invalid'), 'time unavailable');
+});
+
+test('requests nearby metadata only from the explicit call with canonical destination and selected gallery identity', async () => {
+  const originalFetch = globalThis.fetch;
+  const records = [marker('camera-a')];
+  let request;
+  globalThis.fetch = async (...args) => {
+    request = args;
+    return { ok: true, json: async () => ({ destination, status: 'available', cameras: records }) };
+  };
+  try {
+    const value = await cameras.fetchNearbyCameras(destination, 'camera-a', new AbortController().signal);
+    assert.equal(request[0], '/api/cameras/nearby');
+    assert.deepEqual(JSON.parse(request[1].body), { destination, selected_intersection_id: 'camera-a' });
+    assert.equal(value.cameras[0].intersection_id, 'camera-a');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('accepts fewer-than-four metadata records and typed unavailable state', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ destination, status: 'unavailable', cameras: [] }) });
+  try { assert.deepEqual(await cameras.fetchNearbyCameras(destination, null, new AbortController().signal), { cameras: [] }); }
+  finally { globalThis.fetch = originalFetch; }
+});
+
+test('rejects an invalid official link and responses above the marker cap', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ destination, status: 'available', cameras: [marker('bad', { official_page_url: 'https://example.com/camera' })] }) });
+  try { await assert.rejects(cameras.fetchNearbyCameras(destination, null, new AbortController().signal)); }
+  finally { globalThis.fetch = originalFetch; }
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ destination, status: 'available', cameras: Array.from({ length: 5 }, (_, index) => marker(`camera-${index}`)) }) });
+  try { await assert.rejects(cameras.fetchNearbyCameras(destination, null, new AbortController().signal)); }
+  finally { globalThis.fetch = originalFetch; }
+});
+
+test('camera marker clicks open only validated City pages directly and stop map propagation', () => {
+  let prevented = false;
+  let stopped = false;
+  const opened = [];
+  const event = {
+    preventDefault() { prevented = true; },
+    stopPropagation() { stopped = true; },
+  };
+  const url = 'https://trafficcams.vancouver.ca/hornbyrobson.htm';
+  assert.equal(cameras.openOfficialCameraPage(event, url, (...args) => opened.push(args)), true);
+  assert.equal(prevented, true);
+  assert.equal(stopped, true);
+  assert.deepEqual(opened, [[url, '_blank', 'noopener,noreferrer']]);
+});
+
+test('camera marker click rejects deceptive, credentialed, and non-HTTPS page URLs', () => {
+  for (const url of [
+    'https://trafficcams.vancouver.ca.example.com/camera.htm',
+    'https://trafficcams.vancouver.ca@evil.example/camera.htm',
+    'http://trafficcams.vancouver.ca/camera.htm',
+    'https://user@trafficcams.vancouver.ca/camera.htm',
+    'https://trafficcams.vancouver.ca:444/camera.htm',
+  ]) {
+    assert.equal(cameras.validatedOfficialCameraPageUrl(url), null, url);
+  }
+  let openCount = 0;
+  cameras.openOfficialCameraPage({ preventDefault() {}, stopPropagation() {} }, 'javascript:alert(1)', () => { openCount += 1; });
+  assert.equal(openCount, 0);
+});
+
+test('limits rendered metadata to four and marks the gallery intersection by stable ID', () => {
+  const markers = Array.from({ length: 5 }, (_, index) => marker(`camera-${index}`));
+  const rendered = cameras.cameraMarkersForMap(markers, 'camera-3');
+  assert.equal(rendered.length, 4);
+  assert.equal(rendered.filter((item) => item.selected).length, 1);
+  assert.equal(rendered.find((item) => item.selected).camera.intersection_id, 'camera-3');
+  assert.equal(cameras.shouldRequestSelectedCameraMarker('camera-4', rendered.map((item) => item.camera.intersection_id)), true);
+  assert.equal(cameras.shouldRequestSelectedCameraMarker('camera-3', rendered.map((item) => item.camera.intersection_id)), false);
+  assert.equal(cameras.shouldRequestSelectedCameraMarker(null, []), false);
 });

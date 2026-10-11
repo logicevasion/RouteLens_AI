@@ -46,6 +46,60 @@ export type CameraState =
   | { status: 'success'; requestKey: string; result: DestinationCamera }
   | { status: 'error'; requestKey: string };
 
+export type NearbyCameraMarker = {
+  intersection_id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  distance_metres: number;
+  official_page_url: string;
+  source: string;
+  attribution: string;
+};
+
+export function cameraMarkersForMap(cameras: NearbyCameraMarker[], selectedCameraId: string | null) {
+  return cameras.slice(0, 4).map((camera) => ({
+    camera,
+    selected: camera.intersection_id === selectedCameraId,
+  }));
+}
+
+export function validatedOfficialCameraPageUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname !== 'trafficcams.vancouver.ca' ||
+        (url.port && url.port !== '443') || url.username || url.password || url.hash) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export type CameraMarkerClickEvent = Pick<Event, 'preventDefault' | 'stopPropagation'>;
+
+export function openOfficialCameraPage(
+  event: CameraMarkerClickEvent,
+  pageUrl: string,
+  openWindow: (url: string, target: string, features: string) => unknown,
+): boolean {
+  event.preventDefault();
+  event.stopPropagation();
+  const url = validatedOfficialCameraPageUrl(pageUrl);
+  if (!url) return false;
+  openWindow(url, '_blank', 'noopener,noreferrer');
+  return true;
+}
+
+export function shouldRequestSelectedCameraMarker(selectedId: string | null, cameraIds: string[]): boolean {
+  return selectedId !== null && !cameraIds.includes(selectedId);
+}
+
+export type NearbyCameraState =
+  | { status: 'idle' }
+  | { status: 'loading'; requestKey: string }
+  | { status: 'success'; requestKey: string; result: { cameras: NearbyCameraMarker[] } }
+  | { status: 'error'; requestKey: string };
+
 type RecordValue = Record<string, unknown>;
 const isRecord = (value: unknown): value is RecordValue => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -127,8 +181,56 @@ export async function fetchDestinationCamera(destination: Location, signal: Abor
   return result;
 }
 
+function normalizeNearbyCamera(value: unknown): NearbyCameraMarker | null {
+  if (!isRecord(value) || !isText(value.intersection_id) || !isText(value.name) ||
+      !isFiniteNumber(value.latitude) || value.latitude < -90 || value.latitude > 90 ||
+      !isFiniteNumber(value.longitude) || value.longitude < -180 || value.longitude > 180 ||
+      !isFiniteNumber(value.distance_metres) || value.distance_metres < 0 ||
+      !isText(value.official_page_url) || typeof value.source !== 'string' || typeof value.attribution !== 'string') return null;
+  let url: URL;
+  try { url = new URL(value.official_page_url); } catch { return null; }
+  if (url.protocol !== 'https:' || url.hostname !== 'trafficcams.vancouver.ca' ||
+      url.username || url.password || url.port && url.port !== '443' || url.hash) return null;
+  return { ...value, official_page_url: url.href } as NearbyCameraMarker;
+}
+
+export async function fetchNearbyCameras(
+  destination: Location,
+  selectedIntersectionId: string | null,
+  signal: AbortSignal,
+): Promise<{ cameras: NearbyCameraMarker[] }> {
+  const response = await fetch('/api/cameras/nearby', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ destination, selected_intersection_id: selectedIntersectionId }), signal,
+  });
+  if (!response.ok) throw new Error('Nearby camera metadata unavailable');
+  const value: unknown = await response.json();
+  if (!isRecord(value) || !['available', 'stale', 'unavailable'].includes(String(value.status)) ||
+      !isRecord(value.destination) || value.destination.latitude !== destination.latitude ||
+      value.destination.longitude !== destination.longitude || !Array.isArray(value.cameras) || value.cameras.length > 4) {
+    throw new Error('Nearby camera metadata unreadable');
+  }
+  const cameras = value.cameras.map(normalizeNearbyCamera);
+  if (cameras.some((camera) => !camera) || new Set(cameras.map((camera) => camera?.intersection_id)).size !== cameras.length) {
+    throw new Error('Nearby camera metadata unreadable');
+  }
+  return { cameras: cameras as NearbyCameraMarker[] };
+}
+
 export function isCurrentCameraRequest(requestKey: string, activeRequestKey: string | null, requestId: number, activeRequestId: number): boolean {
   return requestKey === activeRequestKey && requestId === activeRequestId;
+}
+
+export function isCurrentNearbyCameraRequest(
+  requestKey: string,
+  activeRequestKey: string | null,
+  cameraRequestId: number,
+  activeCameraRequestId: number,
+  nearbyRequestId: number,
+  activeNearbyRequestId: number,
+): boolean {
+  return isCurrentCameraRequest(requestKey, activeRequestKey, cameraRequestId, activeCameraRequestId) &&
+    nearbyRequestId === activeNearbyRequestId;
 }
 
 export function isCurrentCameraImageEvent(imageRequestKey: string, activeRequestKey: string): boolean {

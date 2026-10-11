@@ -4,10 +4,10 @@
 
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
-**Current phase:** Phase 7 — Vancouver Camera Pipeline, Assignment 7C destination selection and image retrieval
-**Phase status:** Assignments 7A and 7B are complete, human accepted, and committed. Assignment 7C is implemented and pending human acceptance; Phase 7 remains in progress.
-**Human review:** Assignment 7C backend selection, image retrieval/cache, API contract, and bounded live evidence pending review.
-**Next assignment:** Assignment 7D requires separate authorization after human acceptance of 7C. Phase 8 remains unauthorized.
+**Current phase:** Phase 7 — Vancouver Camera Pipeline (complete and human accepted); Phase 8 — Multi-View Camera AI Analysis pending.
+**Phase status:** Assignments 7A–7E are complete and human accepted as of 2026-10-11. Phase 7 implementation and human visual acceptance are complete, with documented nonblocking MVP limitations. Phase 8 has not started.
+**Human review:** The developer confirmed nearby camera markers are visible and look good, direct marker clicks open official City pages, marker hover shows intersection names, and the Destination Cameras gallery works. The remaining Road Ahead highlight behavior is accepted as a nonblocking MVP limitation and is documented below. Assignment 7E remains pending human acceptance.
+**Next assignment:** Complete Assignment 7E human visual acceptance before considering Phase 7 complete. Phase 8 remains unauthorized.
 **Git checkpoint:** Phase 4 committed as `3c2600a`; Phase 5 plan committed as `c7c31f2`; Assignment 5A committed as `1ff1a6d`; Assignment 5B committed as `18aa6b8`; Assignment 5C committed as `a2c7a69`; Assignment 6B committed as `5dcfaaa`; Assignment 6C committed by the human developer (hash not recorded here).
 **Repository baseline:** Inspected for Assignment 0A
 **MVP scope decision (2026-10-11):** RouteLens AI is driving-only for the datathon. Transit Mode is deferred beyond the MVP. Remaining active phases are Weather (6), Camera Pipeline (7), Camera AI (8), Journey Relevance/Timeline (9), AI Briefing (10), Integration Hardening (11), and Presentation/Demo Polish (12).
@@ -1117,3 +1117,33 @@ Headless Chrome captured desktop and narrow-viewport initial-shell screenshots; 
 **Git status:** Assignment 7D implementation and evidence were left unstaged and uncommitted by Codex. Human Git checkpoint pending.
 
 **Review status:** Human review complete; Assignment 7D accepted on 2026-10-11. Phase 7 remains in progress pending Assignment 7E.
+
+## 34. Assignment 7E — Nearby Camera Map Markers and Road Ahead Selection Reset
+
+**Assignment status:** Assignment 7E implemented, verified, and accepted by the human developer on 2026-10-11. Phase 7 — Vancouver Camera Pipeline is complete and human accepted. Phase 8 has not started.
+
+**Scope:** Add up to four nearby camera-intersection map markers after manual Analyze Journey, backed by the existing enriched Vancouver camera catalogue, and improve Road Ahead event-highlight invalidation. The gallery-selected camera intersection is distinguished on the map. Clicking camera markers opens official City of Vancouver camera webpages directly. Additional marker locations do not trigger image retrieval.
+
+**Implementation:** Added `POST /api/cameras/nearby`, which validates canonical City of Vancouver destinations, ranks catalogue intersections within 2 km by WGS84 distance and stable intersection ID, and returns at most four metadata records. The frontend starts metadata loading with manual analysis and uses the stable gallery intersection ID to reserve a slot when that intersection is absent from the initial four. Nearby markers use small MapLibre DOM camera icons, retain hover intersection names, and distinguish the gallery-selected intersection. Clicking a marker validates its official City URL, prevents unrelated map-click propagation, and opens the corresponding webpage in a new tab using `noopener,noreferrer`.
+
+Road Ahead selection uses GeoJSON `selected` properties and dedicated MapLibre highlight layers. The empty-findings synchronization path removes the Road Ahead source and its five layers while preserving route and DriveBC layers. This improved map-state cleanup but did not fully eliminate the browser-observed highlight persistence. The remaining behavior is accepted as a nonblocking MVP limitation.
+
+**Map visual cleanup:** Completely removed the bottom-left map legend and its unused styles at the developer's request. Identified the unwanted bottom-right white horizontal bar as MapLibre's expanded attribution row, previously configured with `compact: false`. The control now uses compact attribution, retaining access to map-provider credits without the persistent expanded row. Removed obsolete popup-related CSS. Both unwanted visual elements were confirmed absent during human browser testing.
+
+**Verification:** Focused backend nearby-camera tests, marker URL/navigation tests, Road Ahead selection and map-layer lifecycle tests passed. The original 7E full backend regression passed (335 tests), with Ruff and API-route smoke checks passing. The final frontend suite passed (6 test files), along with TypeScript typechecking, the Vite production build, and `git diff --check`. The existing large MapLibre bundle advisory remains nonblocking. Backend tests were not repeated during the frontend-only corrective passes.
+
+Headless Chrome verification was limited by the map loading overlay, so interactive map behavior could not be fully exercised by Codex. Subsequent human browser testing confirmed camera marker visibility, hover intersection labels, direct official-page navigation, the removal of unwanted map decorations, and continued operation of the existing camera experience.
+
+**Human acceptance (2026-10-11):** The developer confirmed the nearby camera markers are visually appropriate and function correctly. Marker clicks open the corresponding official City camera webpages. The existing Destination Cameras multi-view gallery remains functional. The unwanted map legend and white horizontal bar have been removed. The remaining Road Ahead highlight behavior was reviewed and explicitly accepted as a minor MVP limitation. Assignment 7E is accepted without further corrective iterations.
+
+**Known MVP limitation:** A selected Road Ahead event's bold route styling may persist after changing journey inputs or regenerating routes. The highlight clears when Analyze Journey is executed again. Further correction is deferred to avoid unnecessary implementation complexity and regression risk.
+
+**Deferred verification:** Manual camera failure-isolation testing from Assignment 7D remains deferred; automated error-handling coverage passed. A separate comprehensive narrow-screen review was not reported as completed. These items are recorded as nonblocking MVP verification gaps rather than completed human checks.
+
+**Phase 7 completion:** Assignments 7A–7E are complete and human accepted. RouteLens now supports official Vancouver camera catalogue ingestion and enrichment, verified directional image discovery, nearest usable intersection selection, bounded real-image retrieval, ephemeral current-frame caching, destination-camera gallery presentation, and nearby clickable camera map markers. Existing routing, road findings, regional incidents, and destination weather functionality remain in place. No Phase 8 AI vision interpretation was implemented.
+
+**Next phase:** Phase 8 — Multi-View Camera AI Analysis. Begin only after the human Git checkpoint and approval of the Phase 8 build plan. Preserve the Phase 7 camera pipeline as the accepted baseline.
+
+**Git status:** Assignment 7E changes and its build-plan amendment were left uncommitted by Codex. Human acceptance is complete; Git checkpoint pending.
+
+**Review status:** Human review complete. Assignment 7E and Phase 7 accepted on 2026-10-11.

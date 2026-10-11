@@ -354,6 +354,10 @@ button, input { font: inherit; }
 .maplibregl-ctrl-attrib { background: rgb(12 17 23 / 88%) !important; color: #b8c4ce !important; font-size: 10px !important; }
 .maplibregl-ctrl-attrib a { color: #d0dbe3 !important; }
 .maplibregl-ctrl-bottom-right { z-index: 4; }
+.camera-map-marker { display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; border: 1px solid rgb(219 232 239 / 78%); border-radius: 50%; color: #edf7fa; background: #263946; box-shadow: 0 2px 8px rgb(0 0 0 / 48%); cursor: pointer; }
+.camera-map-marker svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.camera-map-marker:hover, .camera-map-marker:focus-visible { outline: 2px solid #d9f6ff; outline-offset: 2px; }
+.camera-map-marker-selected { border: 2px solid #56d8ce; color: #08211f; background: #72e4d8; }
 
 .multi-source-panel { padding-top: 14px; }
 .multi-source-panel .analysis-summary { padding: 8px 9px; border-left: 2px solid #65c6bd; border-radius: 0 5px 5px 0; background: rgb(86 200 194 / 5%); }
@@ -369,16 +373,6 @@ button, input { font: inherit; }
 .provider-attribution { color: #6d7e89; font-size: 7px; }
 .regional-selection { display: grid; gap: 5px; margin-top: 12px; padding: 9px; border: 1px solid rgb(255 226 157 / 35%); border-radius: 6px; background: rgb(255 226 157 / 5%); color: #d6e0e5; font-size: 8px; }
 .regional-selection small { color: #a69c7d; line-height: 1.45; }
-.map-legend { position: absolute; z-index: 3; bottom: 34px; left: 12px; display: grid; gap: 6px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 7px; background: rgb(10 16 22 / 87%); color: #b8c4cd; font-size: 8px; pointer-events: none; }
-.map-legend span { display: flex; align-items: center; gap: 7px; }
-.map-legend i { display: inline-block; width: 13px; height: 3px; border-radius: 3px; }
-.legend-route { background: #51d5cc; }
-.legend-road-ahead-direct { background: #ee7966; }
-.legend-road-ahead-nearby { background: #e5ba70; }
-.legend-drivebc-point { width: 8px !important; height: 8px !important; margin: 0 2px; border: 1px solid #d4e3ef; border-radius: 50% !important; background: #8099b0; }
-.legend-drivebc-line { height: 2px !important; background: repeating-linear-gradient(90deg, #8c9cae 0 3px, transparent 3px 5px); }
-.legend-selected-event { background: #fff06a; }
-
 @media (max-width: 1050px) {
   .topbar { padding-right: 20px; padding-left: 20px; }
   .journey-controls { padding-right: 20px; padding-left: 20px; }

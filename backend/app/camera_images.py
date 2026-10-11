@@ -44,6 +44,7 @@ MIN_IMAGE_WIDTH = 160
 MIN_IMAGE_HEIGHT = 120
 MAX_CANDIDATES = 12
 MAX_CANDIDATE_DISTANCE_METRES = 2_000
+MAX_NEARBY_MARKERS = 4
 MAX_VIEWS_PER_INTERSECTION = 12
 MAX_VIEW_REQUESTS_PER_SELECTION = 24
 MAX_REDIRECTS = 2
@@ -124,6 +125,34 @@ class DestinationCameraRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     destination: Location
+
+
+class NearbyCameraRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    destination: Location
+    selected_intersection_id: str | None = Field(default=None, max_length=128)
+
+
+class NearbyCameraMarker(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    intersection_id: str = Field(min_length=1, max_length=128)
+    name: str = Field(min_length=1, max_length=256)
+    latitude: float
+    longitude: float
+    distance_metres: float
+    official_page_url: str = Field(min_length=1, max_length=2048)
+    source: str = Field(default=SOURCE_NAME, max_length=128)
+    attribution: str = Field(default=ATTRIBUTION, max_length=256)
+
+
+class NearbyCameraResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    destination: Location
+    status: Literal["available", "stale", "unavailable"]
+    cameras: list[NearbyCameraMarker] = Field(default_factory=list, max_length=MAX_NEARBY_MARKERS)
 
 
 class StoredFrame(BaseModel):
@@ -564,3 +593,53 @@ class DestinationCameraService:
                 diagnostics=diagnostics,
             )
         return DestinationCameraResult(destination=destination, status="unavailable", diagnostics=diagnostics)
+
+    async def nearby(self, destination: Location, selected_intersection_id: str | None = None) -> NearbyCameraResult:
+        """Return bounded catalogue locations without consulting the image store."""
+        if not validate_destination(destination).valid:
+            raise ValueError("Destination must be inside the City of Vancouver municipal boundary.")
+        catalogue_result = await self.catalogue_store.get_catalogue()
+        if catalogue_result.catalogue is None:
+            return NearbyCameraResult(destination=destination, status="unavailable")
+
+        ranked: list[tuple[CameraIntersection, float]] = []
+        for intersection in catalogue_result.catalogue.intersections:
+            if (
+                not _safe_coordinates(intersection)
+                or not intersection.intersection_id
+                or len(intersection.intersection_id) > 128
+                or not intersection.name
+                or len(intersection.name) > 256
+            ):
+                continue
+            official_url = _official_url(intersection.official_page_url, hosts=IMAGE_HOSTS)
+            if official_url is None:
+                continue
+            distance = _distance_metres(
+                destination.latitude, destination.longitude, intersection.latitude, intersection.longitude
+            )
+            if distance <= MAX_CANDIDATE_DISTANCE_METRES:
+                ranked.append((intersection, distance))
+        ranked.sort(key=lambda pair: (pair[1], pair[0].intersection_id))
+
+        selected = next((pair for pair in ranked if pair[0].intersection_id == selected_intersection_id), None)
+        chosen = ranked[:MAX_NEARBY_MARKERS]
+        if selected is not None and all(pair[0].intersection_id != selected[0].intersection_id for pair in chosen):
+            chosen = [*chosen[: MAX_NEARBY_MARKERS - 1], selected]
+            chosen.sort(key=lambda pair: (pair[1], pair[0].intersection_id))
+
+        return NearbyCameraResult(
+            destination=destination,
+            status=("stale" if catalogue_result.stale else "available") if chosen else "unavailable",
+            cameras=[
+                NearbyCameraMarker(
+                    intersection_id=item.intersection_id,
+                    name=item.name,
+                    latitude=item.latitude,
+                    longitude=item.longitude,
+                    distance_metres=distance,
+                    official_page_url=item.official_page_url,
+                )
+                for item, distance in chosen
+            ],
+        )

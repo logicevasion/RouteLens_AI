@@ -9,6 +9,8 @@ from app.camera_images import (
     DestinationCameraRequest,
     DestinationCameraResult,
     DestinationCameraService,
+    NearbyCameraRequest,
+    NearbyCameraResult,
 )
 from app.geocoding import (
     GeocodingConfigurationError,
@@ -138,6 +140,20 @@ async def nearest_destination_camera(request: DestinationCameraRequest) -> Desti
         raise HTTPException(
             status_code=503,
             detail={"code": "camera_configuration_invalid", "message": "Camera retrieval is unavailable."},
+        ) from None
+
+
+@router.post("/cameras/nearby", response_model=NearbyCameraResult)
+async def nearby_destination_cameras(request: NearbyCameraRequest) -> NearbyCameraResult:
+    """Return nearby official camera catalogue metadata without fetching images."""
+    try:
+        return await _camera_service().nearby(
+            request.destination, request.selected_intersection_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "unsupported_destination", "message": str(error)},
         ) from None
 
 

@@ -3,6 +3,7 @@ import {
   AttributionControl,
   LngLatBounds,
   Map as MapLibreMap,
+  Marker,
   NavigationControl,
   setWorkerUrl,
   type ErrorEvent,
@@ -13,7 +14,9 @@ import type { FeatureCollection, LineString } from 'geojson';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { routeColor, type RouteCandidate } from './routeTypes';
 import type { AnalysisFinding, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
+import { cameraMarkersForMap, openOfficialCameraPage, type NearbyCameraMarker } from './cameras';
 import { eventBounds, regionalEventsGeoJson, roadAheadGeoJson, sourceScopedEventId, type RoadAheadFeatureCollection } from './roadAhead';
+import { roadAheadSourceId, syncRoadAheadSource } from './roadAheadMap';
 
 type MapStatus = 'loading' | 'ready' | 'error';
 type RouteProperties = { routeId: string; selected: boolean; color: string };
@@ -27,12 +30,13 @@ type VancouverMapProps = {
   regionalEvents: RegionalEvent[];
   selectedEventId: string | null;
   onSelectEvent: (eventId: string) => void;
+  cameraMarkers: NearbyCameraMarker[];
+  selectedCameraId: string | null;
 };
 
 const vancouverCenter: [number, number] = [-123.1207, 49.2827];
 const styleUrl = 'https://api.maptiler.com/maps/streets-v4-dark/style.json';
 const routeSourceId = 'routelens-routes';
-const roadAheadSourceId = 'routelens-road-ahead';
 const regionalSourceId = 'routelens-drivebc-regional';
 
 setWorkerUrl(maplibreWorkerUrl);
@@ -167,9 +171,8 @@ function syncRoadAhead(
   selectedEventId: string | null,
 ) {
   const data = roadAheadGeoJson(findings, selectedEventId) as RoadAheadFeatureCollection;
-  const source = map.getSource(roadAheadSourceId);
-  if (source?.type === 'geojson') (source as GeoJSONSource).setData(data);
-  else if (!source) map.addSource(roadAheadSourceId, { type: 'geojson', data });
+  syncRoadAheadSource(map, data);
+  if (data.features.length === 0) return;
   ensureRoadAheadLayers(map);
   for (const layer of ['routelens-drivebc-selected-line-casing', 'routelens-drivebc-selected-line', 'routelens-drivebc-selected-point']) {
     if (map.getLayer(layer)) map.moveLayer(layer);
@@ -222,12 +225,49 @@ function focusSelectedEvent(map: MapLibreMapType, findings: AnalysisFinding[], d
   } else map.fitBounds(new LngLatBounds(bounds[0], bounds[1]), { padding: 84, maxZoom: 15.5, duration: 450 });
 }
 
-export default function VancouverMap({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent }: VancouverMapProps) {
+function cameraMarkerElement(camera: NearbyCameraMarker, selected: boolean): HTMLButtonElement {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = `camera-map-marker${selected ? ' camera-map-marker-selected' : ''}`;
+  element.setAttribute('aria-label', `${camera.name}${selected ? ', selected gallery camera' : ''}`);
+  element.title = camera.name;
+  const namespace = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(namespace, 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  const body = document.createElementNS(namespace, 'path');
+  body.setAttribute('d', 'M8 6.5 9.5 4h5L16 6.5h2.5A2.5 2.5 0 0 1 21 9v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V9a2.5 2.5 0 0 1 2.5-2.5H8Z');
+  const lens = document.createElementNS(namespace, 'circle');
+  lens.setAttribute('cx', '12');
+  lens.setAttribute('cy', '13');
+  lens.setAttribute('r', '3.1');
+  icon.append(body, lens);
+  element.append(icon);
+  return element;
+}
+
+function syncCameraMarkers(map: MapLibreMapType, cameras: NearbyCameraMarker[], selectedCameraId: string | null) {
+  const markers: Marker[] = [];
+  for (const { camera, selected } of cameraMarkersForMap(cameras, selectedCameraId)) {
+    const element = cameraMarkerElement(camera, selected);
+    const marker = new Marker({ element, anchor: 'bottom' })
+      .setLngLat([camera.longitude, camera.latitude])
+      .addTo(map);
+    markers.push(marker);
+    element.addEventListener('click', (event) => {
+      openOfficialCameraPage(event, camera.official_page_url, (url, target, features) => window.open(url, target, features));
+    });
+  }
+  return () => markers.forEach((marker) => marker.remove());
+}
+
+export default function VancouverMap({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent, cameraMarkers, selectedCameraId }: VancouverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMapType | null>(null);
+  const cameraMarkerCleanup = useRef<(() => void) | null>(null);
   const lastFitKey = useRef(0);
-  const routeProps = useRef({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent });
-  routeProps.current = { routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent };
+  const routeProps = useRef({ routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent, cameraMarkers, selectedCameraId });
+  routeProps.current = { routes, selectedRouteId, fitKey, findings, drivebcFindings, regionalEvents, selectedEventId, onSelectEvent, cameraMarkers, selectedCameraId };
   const [status, setStatus] = useState<MapStatus>('loading');
   const apiKey = import.meta.env.VITE_MAPTILER_API_KEY?.trim();
 
@@ -252,7 +292,7 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
       return;
     }
     mapRef.current = map;
-    map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
     map.addControl(new NavigationControl({ showCompass: true }), 'top-right');
 
     let sawResourceError = false;
@@ -265,6 +305,8 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
       syncRoutes(map, current.routes, current.selectedRouteId, current.fitKey, lastFitKey);
       syncRegional(map, current.regionalEvents, current.selectedEventId);
       syncRoadAhead(map, current.findings, current.selectedEventId);
+      cameraMarkerCleanup.current?.();
+      cameraMarkerCleanup.current = syncCameraMarkers(map, current.cameraMarkers, current.selectedCameraId);
       focusSelectedEvent(map, current.findings, current.drivebcFindings, current.regionalEvents, current.selectedEventId);
       const selectRegionalFeature = (event: { features?: Array<{ properties?: Record<string, unknown> }> }) => {
         const id = event.features?.[0]?.properties?.eventId;
@@ -301,6 +343,8 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
       map.off('error', handleError);
       if (failureTimer) clearTimeout(failureTimer);
       map.remove();
+      cameraMarkerCleanup.current?.();
+      cameraMarkerCleanup.current = null;
       mapRef.current = null;
     };
   }, [apiKey]);
@@ -320,17 +364,24 @@ export default function VancouverMap({ routes, selectedRouteId, fitKey, findings
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
+    cameraMarkerCleanup.current?.();
+    const cleanup = syncCameraMarkers(map, cameraMarkers, selectedCameraId);
+    cameraMarkerCleanup.current = cleanup;
+    return () => {
+      cleanup();
+      if (cameraMarkerCleanup.current === cleanup) cameraMarkerCleanup.current = null;
+    };
+  }, [cameraMarkers, selectedCameraId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (map?.isStyleLoaded()) focusSelectedEvent(map, routeProps.current.findings, routeProps.current.drivebcFindings, routeProps.current.regionalEvents, selectedEventId);
   }, [selectedEventId]);
 
   return (
     <section className="map-frame" aria-label="Interactive map of Vancouver">
       <div className="map-canvas" ref={containerRef} />
-      {status === 'ready' && <div className="map-legend" aria-label="Map layers">
-        <span><i className="legend-route" />Selected route</span><span><i className="legend-road-ahead-direct" />Road Ahead intersection</span><span><i className="legend-road-ahead-nearby" />Road Ahead nearby</span>
-        <span><i className="legend-drivebc-point" />DriveBC regional Point</span><span><i className="legend-drivebc-line" />DriveBC regional LineString</span>
-        <span><i className="legend-selected-event" />Focused event</span>
-      </div>}
       {!apiKey ? (
         <div className="map-message" role="status">
           <h2>Map configuration required</h2>
