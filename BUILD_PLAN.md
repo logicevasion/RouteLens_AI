@@ -2,958 +2,495 @@
 
 ## 1. Current Phase
 
-**Phase:** 4 — Vancouver Road Ahead Vertical Slice
-**Status:** Planned — authorized for implementation through separately approved bounded assignments; not yet verified
-**Source:** `docs/implementation-plan.md`, Phase 4
-**Previous phase:** Phase 3 — Drive Route Candidates + Selection, accepted by the human developer on 2026-10-10
+**Phase:** 5 — Regional Road Context: DriveBC Open511  
+**Status:** Planned — pending human approval and Git planning checkpoint; implementation requires separately authorized bounded assignments  
+**Source:** `docs/implementation-plan.md`, Phase 5; `docs/technical-design.md`, DriveBC Open511 sections  
+**Previous phase:** Phase 4 — Vancouver Road Ahead Vertical Slice, human accepted on 2026-10-11 and committed
 
 ### Objective
 
-Implement the first complete real-world journey-intelligence vertical slice using the City of Vancouver's Road Ahead datasets.
+Extend RouteLens from Vancouver municipal Road Ahead evidence to **regional, source-attributed road incidents and advisories** through DriveBC Open511.
 
-Phase 4 establishes:
-
-**Selected driving route → real municipal road events → deterministic route relevance → useful journey context.**
-
-Integrate both:
-
-- Road Ahead — Current Road Closures;
-- Road Ahead — Projects Under Construction.
+**Selected driving route + cached regional Open511 events → deterministic journey relevance → combined road context, with wider regional map visibility.**
 
 The phase must deliver:
 
-- reliable access to both official datasets;
-- validated approximately 24-hour structured-data caching;
-- conservative normalization into the approved `CityEvent` model;
-- preservation of complete event geometry and provenance;
-- projected, metre-based route-relevance calculations;
-- direct-overlap detection and nearby supplemental event selection;
-- selective deterministic enrichment from official Road Ahead detail pages;
-- an initial `POST /api/trips/analyze` workflow;
-- display of relevant Road Ahead information on MapLibre;
-- an initial Along Your Route intelligence section;
-- deterministic summaries based on actual matched events;
-- clear source freshness, partial-failure, and error behavior.
+- evidence-backed access to DriveBC's supported Open511 event interface;
+- a justified regional fetch envelope, all active event types/severities, and complete pagination;
+- conservative normalization into the established `CityEvent` contract;
+- a reusable validated regional cache with approximately 5–15-minute provisional freshness;
+- deterministic route relevance including geometry, direction, schedule, and applicability qualifications where supported;
+- integration with the existing `POST /api/trips/analyze` response without losing Road Ahead behavior;
+- regional Open511 map visibility **independent from** journey briefing eligibility;
+- source-aware panel presentation, freshness, partial failures, and live end-to-end verification.
 
-This is the first major architectural proof of the RouteLens intelligence pipeline.
-
-It does not implement DriveBC Open511, weather, cameras, transit intelligence, or AI-generated briefings.
+Do not implement DriveBC cameras, traffic-speed estimates, ETA changes, route optimization, weather, transit, or LLM briefings.
 
 ---
 
-## 2. Execution Scope
+## 2. Execution Scope and Authorization
 
-Phase 4 will be implemented through four separately authorized Codex assignments.
+Phase 5 consists of four **separately authorized** Codex assignments. Completing an assignment does not authorize the next one.
 
-Each assignment receives its own bounded implementation prompt.
+### Assignment 5A — Open511 Source Evidence, Ingestion, Normalization, and Cache
 
-Do not interpret this build plan as authorization to implement every workstream at once.
+- Verify actual endpoint, query parameters, returned schema, status semantics, paging, license/attribution, and regional geographic coverage.
+- Implement a bounded source adapter (expected `backend/app/drivebc_open511.py`), preserving validated original geometry, source identity, descriptive metadata, directions, schedules, and timestamps.
+- Fetch active events of **all types and severities**, across all result pages, in one regional request scope.
+- Implement a validated, reusable regional disk cache with independent freshness, atomic replacement, and stale fallback.
+- Add sanitized live-derived fixtures, mocked tests, and limited authorized live checks.
 
-Preserve the accepted Phase 1–3 application.
+**Boundary:** No journey relevance, analysis API integration, or frontend work.
 
-### Assignment 4A — Road Ahead Ingestion, Normalization, and Cache
+### Assignment 5B — Open511 Journey Relevance
 
-Implement:
+- Reuse/adapt the accepted projected geometry matcher rather than creating a second GIS engine.
+- Evaluate route overlap and proximity; supplement geographic relevance with trustworthy road/direction/schedule evidence when available.
+- Distinguish geographic intersection from current travel-time applicability; preserve unknown and future-scheduled conditions.
+- Preserve deterministic ordering, event identities, source-specific explanations, and all qualifying direct overlaps ahead of any nearby supplemental cap.
+- Provide an application-owned result callable and offline regression tests.
 
-- access to both Road Ahead structured datasets;
-- normalization into `CityEvent`;
-- geometry and source metadata preservation;
-- validated approximately 24-hour caching;
-- atomic cache replacement and stale fallback;
-- focused deterministic tests;
-- targeted live source verification.
+**Boundary:** No API orchestration or map/panel integration. Do not invent directional certainty or severities.
 
-This assignment establishes a reliable source-data foundation.
+### Assignment 5C — Combined Road Analysis API
 
-Do not implement route matching, detail-page enrichment, or frontend telemetry presentation.
+- Extend existing `POST /api/trips/analyze` to load both Road Ahead and Open511 independently and combine source-aware findings.
+- Preserve the accepted `Trip`, `SelectedRoute`, `JourneyAnalysis`, Road Ahead matching/enrichment, statuses, and factual summaries.
+- Return sufficient **regional map data** separately from the route-relevant Open511 findings; do not put every regional event into the briefing.
+- Handle absent/stale/failing Open511 without suppressing Road Ahead, and vice versa.
+- Add focused contract/orchestration tests and representative API verification.
 
-### Assignment 4B — Geospatial Route Relevance
+**Boundary:** No frontend/map implementation; no aggressive cross-source deduplication.
 
-Implement:
+### Assignment 5D — Regional Map/Panel Integration and Human Acceptance
 
-- conversion of route/event geometries into an appropriate projected coordinate system;
-- direct route-intersection detection;
-- nearby supplemental event matching;
-- deterministic prioritization;
-- the rule preserving all direct overlaps before supplemental limits;
-- meaningful geospatial regression tests.
+- Extend MapLibre with regional Open511 event geometry/markers; support source-aware styling and inspectable selected-event highlights.
+- Keep the selected driving route prominent, maintain Road Ahead overlay behavior, and distinguish all-region map events from route-matched findings.
+- Extend Along Your Route with source, status, severity when actually provided, affected direction, timing, provenance, and safe official links.
+- Present stale, partial, and unavailable states accurately; protect against stale journey responses.
+- Complete frontend/backend regression tests and a representative live regional journey, followed by human visual acceptance.
 
-Do not implement external detail-page enrichment or frontend presentation.
+**Boundary:** No Phase 6 work; no broad shell redesign or new map framework.
 
-### Assignment 4C — Detail Enrichment and Analysis API
-
-Implement:
-
-- selective Road Ahead detail-page retrieval;
-- deterministic extraction of useful restrictions and scheduling information;
-- enrichment caching and safe fallback;
-- initial Road Ahead trip-analysis API;
-- source freshness and failure-status reporting;
-- deterministic event-count or evidence summaries.
-
-Do not implement LLM-generated analysis.
-
-### Assignment 4D — Frontend Integration and Acceptance
-
-Implement:
-
-- Analyze Journey activation when a valid route is explicitly selected;
-- integration with the Road Ahead analysis API;
-- relevant event geometry/markers on MapLibre;
-- the initial Along Your Route panel;
-- direct-overlap versus nearby-context presentation;
-- loading, stale-source, empty, and failure states;
-- final end-to-end verification and Phase 4 acceptance assessment.
-
-These assignment boundaries are organizational.
-
-Avoid creating infrastructure or abstractions merely because separate assignments exist.
+Assignment boundaries are organizational, not grounds for speculative abstractions. Codex must stop after its authorized assignment and leave staging/commit/push to the human developer.
 
 ---
 
-## 3. Established Implementation Baseline
+## 3. Established Accepted Baseline
 
-### 3.1 Accepted Application Foundation
+### 3.1 Application and journey
 
-Phases 1–3 established:
+Preserve Phases 1–3:
 
-- FastAPI backend and `/api/health`;
-- React/Vite/TypeScript frontend;
-- MapLibre with MapTiler dark basemap;
-- fixed approximately 65/35 desktop shell;
-- Vite `/api` proxy;
-- canonical `Location` selection;
-- MapTiler geocoding/autocomplete;
-- deterministic City of Vancouver destination validation;
-- ORS driving-route candidate API;
-- normalized route geometries;
-- explicit user-controlled route selection;
-- correct selected-route invalidation;
-- route rendering, candidate summaries, and viewport fitting;
-- frontend asynchronous request safeguards;
-- provider-credential boundaries;
-- backend pytest, Ruff, and frontend build verification.
+- FastAPI backend, React/Vite/TypeScript frontend, MapLibre/MapTiler dark basemap, ~65/35 desktop layout, Vite `/api` proxy;
+- canonical geocoded locations and City of Vancouver destination validation;
+- ORS driving alternatives with **explicit user route selection**;
+- original selected GeoJSON LineString geometry, distance in metres, duration in seconds, request-scoped route identity;
+- request cancellation/identity safeguards and correct map selection/invalidation;
+- backend credential boundaries, pytest, Ruff, frontend tests and production build.
 
-Preserve this behavior.
+Never select a route automatically or make analysis reroute using ORS.
 
-Do not rebuild the route-selection system.
+### 3.2 Accepted Phase 4 Road Ahead pipeline
 
-### 3.2 Accepted Route Contract
+- `backend/app/road_ahead.py`: official closures/construction ingestion, complete geometry, source identity, ~24-hour validated cache, independent `SourceStatus` and stale fallback;
+- `backend/app/route_relevance.py`: Shapely/pyproj, EPSG:26910 metre-distance calculation, exact overlap vs nearby context, full mixed geometry, uncapped direct matches, provisional 500 m nearby threshold and nearby-only limit 10;
+- `backend/app/detail_enrichment.py`: selective official detail enrichment, cautious source text, safe URLs, bounded requests, validated ~6-hour detail cache and failure fallback;
+- `backend/app/analysis.py` and `backend/app/routes.py`: validated explicit `Trip`/`SelectedRoute`, `POST /api/trips/analyze`, structured `JourneyAnalysis`, honest data availability and deterministic summary;
+- frontend analysis types/helpers, Road Ahead panel and MapLibre event layers, selected-event highlight above route, manual Analyze Journey interaction, stale-result invalidation.
 
-The existing routing API returns candidates with:
+Inspect actual files/models before proposing extensions; these paths and model summaries describe the accepted baseline, not permission to rewrite it. Preserve Phase 4 performance, source-status behavior and tests.
 
-- `id`;
-- GeoJSON `LineString` geometry;
-- `distance_meters`;
-- `duration_seconds`;
-- optional `label`.
+### 3.3 Source separation
 
-Frontend route identity is request-scoped.
-
-Phase 4 must operate on the explicitly selected route belonging to the current canonical origin/destination pair.
-
-Do not automatically choose an alternative.
-
-Do not analyze stale geometry after the user edits or changes journey inputs.
-
-### 3.3 Road Ahead Research
-
-Planning and Phase 0 investigated:
-
-- Current Road Closures;
-- Projects Under Construction;
-- official dataset schemas;
-- full event geometries;
-- incomplete optional fields;
-- detail-page enrichment opportunities;
-- approximately 24-hour caching.
-
-Review relevant source evidence under:
-
-- `docs/technical-design.md`;
-- `docs/implementation-plan.md`;
-- `docs/data-licensing-and-commercialization.md`;
-- existing `docs/integration-notes/`;
-- existing `fixtures/`;
-- `PROJECT_STATE.md`.
-
-Use the actual existing fixture names and records discovered in the repository.
-
-Do not assume additional fixtures or endpoints exist without inspection.
-
-Do not repeat broad provider research.
-
-Targeted live verification of the implemented integration is required.
+Road Ahead municipal construction and DriveBC regional advisories may describe nearby or overlapping conditions without being duplicate records. Preserve distinct source identities, provenance, and source-specific freshness. No geometry-only merge or aggressive cross-source deduplication.
 
 ---
 
-## 4. Road Ahead Dataset Integration
+## 4. Open511 Source Discovery and Geographic Coverage
 
-Integrate both approved official datasets.
+### 4.1 Evidence-first integration
 
-Use a focused adapter consistent with the approved technical design.
+Before coding 5A, inspect authoritative DriveBC Open511 documentation, previously captured Phase 0 evidence, approved license notes, and a small bounded number of real responses. Verify:
 
-The implementation roadmap identifies `road_ahead.py` as an expected module.
+- official endpoint, HTTPS behavior, permitted usage and attribution;
+- actual Open511 field names and schema/version;
+- regional filtering parameters and supported bbox syntax;
+- `status=ACTIVE` availability and whether status filtering is exhaustive for intended records;
+- source event identifiers, timestamps, dates/schedules, direction fields and nested geography;
+- pagination form (next links, offsets/limits or other actual provider mechanism);
+- reported collection totals, completeness indicators, and possible service limits;
+- event geometry types, missing fields, and invalid records;
+- whether provider event detail links are trustworthy and usable.
 
-### Required behavior
+Do not build against guessed query parameters or speculative fields. Preserve sanitized provider evidence; never commit credentials.
 
-- Fetch the two source datasets.
-- Validate the expected response structure.
-- Handle missing optional attributes.
-- Normalize records conservatively.
-- Preserve complete geographic geometry.
-- Preserve source provenance.
-- Handle upstream failures without crashing the application.
-- Avoid re-fetching entire datasets for every selected journey.
+### 4.2 Regional scope
 
-### Source-specific rules
+**Provisional bounding box:** `-123.45,48.99,-122.45,49.49` (west,south,east,north).
 
-Do not assume:
+This comes from the approved roadmap and **is not yet locked**. Verify against intended Metro Vancouver → City of Vancouver trips, especially eastern approaches and highway corridors. If the approved box excludes significant intended origins or creates unusable coverage, document measured evidence and a proposed adjustment before locking a new default. Do not silently claim universal Lower Mainland coverage.
 
-- `street` is populated;
-- `project` is complete;
-- `location` is complete;
-- `comp_date` establishes the authoritative final applicability date;
-- every record contains usable detail-page information;
-- every geometry has the same GeoJSON type.
+Request a reusable regional feed, **not a new provider dataset per chosen journey**. Keep bounds configurable and ensure cache identity includes the actual regional query scope.
 
-Do not fabricate missing fields.
+### 4.3 Inclusion policy
 
-Do not convert unknown schedule or restriction details into definitive claims.
-
-### Dataset completeness
-
-A structurally valid provider response must not automatically be assumed complete.
-
-Use source-specific evidence and validation rules appropriate to the actual feeds.
-
-Do not overwrite a known valid cache with malformed or demonstrably incomplete content.
-
-If a source introduces a material schema change, report it.
+Initial ingestion requests `ACTIVE` events, all event types, and all severities. Do not filter out `MINOR` or `UNKNOWN`, or discard future-scheduled ACTIVE events during ingestion. Retain the original source semantics and separate fetch inclusion from route/time relevance.
 
 ---
 
-## 5. CityEvent Normalization
+## 5. Pagination, Completeness, and Normalization
 
-Normalize Road Ahead records into the approved `CityEvent` model.
+### 5.1 Pagination
 
-Consult `APP_SPEC.md` and `docs/technical-design.md` for the authoritative contract.
+Retrieve every matching page using the **actual verified Open511 paging contract**. Do not assume `limit=100` is complete. Bound page counts, runtime and payload size defensively while retaining completeness requirements. Detect and reject or mark incomplete:
 
-Preserve:
+- repeated next-page pointers/cycles;
+- invalid pagination metadata;
+- truncated or missing pages;
+- internally inconsistent totals;
+- unexpectedly invalid mass record loss;
+- transport errors mid-pagination.
 
-- source identifier;
-- source dataset/type;
-- source URL;
-- full geometry;
-- representative geographic point;
-- project or location description;
-- available source timestamps;
-- available status/schedule metadata;
-- provenance needed for user-facing attribution.
+Never replace a known good cache with a demonstrably incomplete download. An empty valid dataset is allowed only when justified by source response validation.
 
-Do not establish incompatible duplicate models.
+### 5.2 `CityEvent` normalization
 
-### Geometry requirements
+Reuse the existing normalized model, extending it narrowly only if required by an observed Open511 field that cannot be represented safely otherwise. Preserve:
 
-Support actual provider structures including:
+- stable source-scoped event ID, source name, Open511 URL/record ID;
+- headline, description, event category/subtypes;
+- severity and source status **without interpreting unknown as clear**;
+- actual full GeoJSON geography and representative point when provided;
+- affected roads, named intersections/segments, direction or lane restrictions when supplied;
+- raw schedule text or supported structured temporal data;
+- created/updated/observed timestamps with correct timezone interpretation;
+- official evidence URL and attribution.
 
-- `LineString`;
-- `MultiLineString`;
-- `GeometryCollection`.
+Keep provider-native values in source metadata where needed, rather than inventing cross-source enums. Do not treat source representative points as replacements for supplied full geometry. Do not fabricate impact, direction, applicability, or closure state.
 
-Preserve legitimate geographic components within these structures.
+### 5.3 Malformed records
 
-Handle missing, null, malformed, and unsupported geometry safely.
-
-Do not silently replace unknown line geometry with an invented point.
-
-A representative point is supplemental metadata, not a substitute for complete geographic geometry.
-
-### Coordinate handling
-
-GeoJSON geographic coordinates use:
-
-`[longitude, latitude]`
-
-Maintain the established RouteLens coordinate conventions.
-
-Validate coordinate ranges and geometry usability.
-
-Do not reverse axes.
-
-### Data integrity
-
-Retain meaningful provider metadata while avoiding unnecessary raw-response fields in the permanent application contract.
-
-Distinct source records must not be aggressively merged solely because they have similar names or nearby geometry.
+One isolated bad event should not necessarily invalidate the entire dataset. Count and report skipped records and source coverage honestly. Reject systemic schema drift or large unexplained record loss. Avoid hidden silent mass filtering.
 
 ---
 
-## 6. Validated Structured-Data Cache
+## 6. Regional Validated Cache and Source Status
 
-Implement the approved approximately 24-hour Road Ahead cache.
+Use a configurable **initial 5–15-minute TTL**, selecting and documenting one concrete default at 5A after observing the feed. This is provisional, unlike Road Ahead's accepted ~24-hour TTL.
 
-### Required lifecycle
+Cache should:
 
-1. Check for an existing valid cached dataset.
-2. Use it when fresh.
-3. Attempt refresh when stale or missing.
-4. Validate the newly downloaded response.
-5. Replace the previous cache only after successful validation.
-6. Retain the last valid dataset when refresh fails.
-7. Expose appropriate freshness/stale status.
+1. Reuse a fresh, validated **regional** snapshot for repeated analysis and route changes.
+2. Refresh when stale or missing.
+3. Fetch all pages and validate the complete replacement before activation.
+4. Atomically replace the previous good snapshot.
+5. Preserve the last valid snapshot on timeout, malformed response, interrupted pagination, or other refresh failure.
+6. Return appropriate `SourceStatus` availability, success, cache hit, fetched time, age, stale state, received/normalized/skipped counts and bounded errors.
+7. Report true unavailability when no usable cache exists.
 
-Use safe atomic replacement where practical.
+Avoid overlapping redundant refreshes within the process. Reuse established 4A cache patterns where appropriate; avoid a generalized caching framework or new database infrastructure solely for Phase 5. Keep generated data Git-ignored and cache files validated before use.
 
-### Cache requirements
-
-- Both source datasets must be accounted for.
-- One dataset's failure should not unnecessarily invalidate the other.
-- The cache must not be treated as fresh merely because a fetch was attempted.
-- Incomplete writes must not corrupt the last valid cache.
-- Failed refreshes must not silently erase usable previous data.
-- Missing cache and failed retrieval must be reported appropriately.
-
-Prefer simple local persistence appropriate for the MVP.
-
-Do not introduce Redis, distributed caching, background workers, or database infrastructure without a demonstrated requirement.
-
-### Freshness metadata
-
-Expose meaningful timestamps and status, consistent with the approved `SourceStatus` model.
-
-Distinguish:
-
-- fresh source data;
-- valid but stale cached data;
-- unavailable data.
-
-Do not invent a successful refresh timestamp.
-
-No portal modification-date checker is required.
+Road Ahead and Open511 source freshness must remain independent. A successful Open511 refresh must not update Road Ahead timestamps or statuses, and vice versa.
 
 ---
 
-## 7. Geospatial Route Relevance
+## 7. Open511 Geospatial and Journey Relevance
 
-Use the explicitly selected route geometry to determine which Road Ahead events are relevant.
+### 7.1 Reuse deterministic geometry
 
-### Coordinate reference system
+Feed accepted valid Open511 geometry into the existing geographic projection/matching approach. EPSG:26910 is the established local projected CRS. Reuse and extend 4B logic where appropriate; avoid a second implementation of projection, intersection and distance ranking.
 
-Use an appropriate projected CRS for metre-based calculations in Vancouver.
+Classify geometry relationship conservatively:
 
-Do not apply metre-valued distance thresholds directly to unprojected longitude/latitude degrees.
+- actual direct intersection/overlap;
+- nonintersecting nearby context;
+- geographically distant/not selected;
+- missing/unusable geometry, explicitly unknown where it prevents matching.
 
-Use Shapely and justified projection tools consistent with the existing technical design.
+A point-only Open511 event may require its own explicit point-distance rule; verify actual provider geometry and record its weaker specificity. Do not invent line segments or classify near points as exact road intersections.
 
-### Direct overlaps
+**Preserve all qualifying direct route overlaps before limiting nearby supplemental findings.** Any supplemental limit is separate from the direct list. Existing 500 m/10 Road Ahead defaults are not automatically binding on Open511; reuse only with documented rationale, keep tuning explicit.
 
-Determine whether event geometry directly intersects or overlaps the selected route.
+### 7.2 Road, direction and schedule qualifications
 
-Preserve the distinction between geometric contact and actual traffic impact.
+Use trustworthy source evidence where available to assess:
 
-A route intersection is evidence of geographic relevance; it does not automatically prove a currently active full road closure.
+- affected road identity and segments;
+- source-provided travel direction or carriageway;
+- start/end periods or recurrence;
+- whether an ACTIVE record describes an ongoing, planned or uncertain restriction;
+- severity/type for presentation and cautious prioritization.
 
-### Nearby supplemental events
+**ACTIVE status is not proof that a restriction is occurring at the instant of analysis.** Do not exclude a geometrically relevant event solely because a missing schedule/direction cannot be resolved. Instead preserve uncertainty and annotate applicability appropriately.
 
-Identify geographically nearby events even when their geometry does not directly intersect the route.
+Do not claim lane blockage, delay, detour or direction-specific impact without suitable evidence. Do not invent geospatial matching certainty if geometry is inadequate. Keep temporal decisions deterministic and testable; defer complex event timelines and predictive impact to later phases.
 
-Apply deterministic proximity calculations and reasonable selection/ranking rules.
+### 7.3 Output
 
-The precise distance threshold should follow any value already established in the approved technical design.
-
-If no exact numeric threshold is authorized, use a clearly documented, configurable MVP choice consistent with the approved design rather than presenting it as a locked historical decision.
-
-### Mandatory prioritization rule
-
-**All direct route overlaps must survive candidate limiting.**
-
-Only nearby supplemental events may be subject to a supplemental candidate limit.
-
-For example, if a journey has eight direct overlaps and the nearby-event limit is five:
-
-- all eight direct overlaps remain;
-- up to five additional nearby candidates may be included.
-
-Never reduce direct overlaps merely to satisfy a combined event-count cap.
-
-### Matching outputs
-
-Preserve enough information to distinguish:
-
-- direct overlap;
-- nearby context;
-- irrelevant/distant records.
-
-Where distance is reported, use actual projected geometry calculations.
-
-Do not infer event severity or traffic disruption from proximity alone.
+Produce source-attributed match results with classifications, computed distance where meaningful, match rationale, and temporal/directional qualifiers as supported. Preserve original event geometry, metadata, and identity. Stable sorting and duplicate suppression apply **within the same source event identity**, not across unrelated sources.
 
 ---
 
-## 8. Selective Detail-Page Enrichment
+## 8. Regional Map Coverage Versus Journey Findings
 
-Enrich geographically relevant Road Ahead candidates using official source detail pages where available.
+This Phase 5 distinction is **mandatory**:
 
-Do not crawl every event detail page during ordinary dataset ingestion.
+- **Map visibility:** show eligible active Open511 regional events in the supported area, even when distant from the currently selected route.
+- **Journey analysis:** include only a deterministic route-relevant subset in the Along Your Route intelligence and summary.
 
-### Extraction
+A map-visible event is not automatically a briefing candidate. A source's `ACTIVE` inclusion is not a guarantee of present road obstruction.
 
-Use deterministic HTML parsing.
+The backend/API must expose an economical means for the frontend to obtain the current regional map snapshot separately from relevant findings. Reuse the same regional cache for both purposes. In 5C, choose a small contract consistent with existing API conventions (for example a regional events endpoint or appropriately separated analysis response field); document and test the choice. Do not overload `findings` with all regional events.
 
-Extract supported information such as:
-
-- full event title/location;
-- description;
-- status;
-- work schedule;
-- operating hours;
-- exceptions;
-- closure or restriction details.
-
-Preserve source links and extraction timestamps.
-
-Do not use an LLM to parse raw event pages.
-
-### Failure handling
-
-When a detail page is unavailable or parsing fails:
-
-- retain the base normalized dataset record;
-- mark unavailable enrichment fields unknown;
-- continue analysis;
-- report meaningful enrichment limitations where useful.
-
-Do not discard a geographically relevant event because its detail page failed.
-
-### Enrichment caching
-
-Cache enrichment by source/event identity.
-
-Avoid repeatedly requesting the same page during one user session.
-
-The approved technical design does not lock an exact enrichment TTL.
-
-Choose a modest documented MVP cache policy based on observed source behavior, or escalate if a material product decision is required.
-
-Do not create a historical webpage archive.
-
-### Licensing
-
-Preserve provenance and attribution.
-
-The approved licensing assessment treats the core Road Ahead datasets as suitable open-data inputs.
-
-Do not assume every separately delivered detail-page element is automatically covered by the same reuse rights.
-
-Avoid bulk republication of source webpage contents.
+Frontend should distinguish DriveBC regional context from Road Ahead municipal findings, avoid unnecessary re-fetching when route selection changes, and tolerate unavailable/partial map datasets. All relevant geometry remains in original GeoJSON geographic coordinates for MapLibre.
 
 ---
 
-## 9. Initial Journey Analysis API
+## 9. Combined Journey Analysis API
 
-Implement or extend:
+Extend the accepted `POST /api/trips/analyze` rather than replacing it.
 
-`POST /api/trips/analyze`
+### Request
 
-### Request context
+Preserve validated canonical origin/destination, driving mode, explicit selected route identity and original geometry. Do not rerun ORS or infer which route the user intended. Preserve existing request limits and destination eligibility.
 
-The analysis must receive or reliably identify the explicitly selected journey route and the canonical locations required by the approved trip model.
+### Orchestration
 
-Consult the approved `Trip`, `SelectedRoute`, and related model contracts before choosing request fields.
+- Load Road Ahead and Open511 through independent source adapters and caches.
+- Match each source using its appropriate deterministic relevance logic.
+- Continue Road Ahead selective detail enrichment only for Road Ahead events.
+- Do not fetch unrelated DriveBC webpages just to match events.
+- Build source-aware findings with provenance and applicability qualifications.
+- Preserve source-specific `SourceStatus` and combined coverage status.
+- Produce factual deterministic summaries reflecting both sources and partial/unavailable coverage.
 
-Do not invent database-backed trip identity.
+### Compatibility
 
-Do not silently analyze an unselected candidate.
+Keep existing frontend Road Ahead functionality and the accepted response contract usable. Narrow additive fields/models are preferable to breaking renames; update frontend types in 5D. Avoid creating a parallel Open511-only analysis endpoint unless a concrete requirement justifies it.
 
-### Initial analysis behavior
+### Degradation
 
-The Phase 4 analysis may contain Road Ahead information only.
+- Road Ahead available, Open511 unavailable → keep Road Ahead findings; identify regional coverage gap.
+- Open511 available, Road Ahead unavailable → retain regional findings; identify municipal coverage gap.
+- Both unavailable → communicate unavailable, not "no road issues".
+- Available sources with zero matches → say none identified **in available data**, not that the journey is clear.
+- Stale cached sources → use with clearly surfaced age/stale flags.
+- Unmatchable records → do not fabricate relevance or silence a material loss of coverage.
 
-Required flow:
+### Cross-source deduplication
 
-1. Validate incoming journey context.
-2. Obtain the available Road Ahead datasets.
-3. Normalize source records.
-4. Determine route-relevant events.
-5. Apply direct-overlap and nearby-supplemental selection rules.
-6. Enrich relevant candidates where supported.
-7. Produce application-owned structured results.
-8. Return clear source availability/freshness status.
-
-### Response
-
-Preserve the approved analysis structure where defined.
-
-Include sufficient information for:
-
-- event identities;
-- event source/dataset;
-- descriptions;
-- relevant geometry;
-- source links;
-- direct versus nearby classification;
-- source freshness;
-- optional enrichment;
-- deterministic summary text.
-
-Do not expose raw provider structures as the permanent application contract.
-
-### Failure behavior
-
-The analysis must handle:
-
-- no matching road events;
-- one unavailable Road Ahead dataset;
-- both datasets unavailable;
-- stale validated cached data;
-- enrichment failure;
-- invalid route geometry;
-- malformed source responses;
-- upstream timeouts.
-
-A provider failure must not be represented as a successful finding of zero road events.
-
-Keep errors and partial results understandable.
+Do not merge Open511 and Road Ahead events merely because geometries, roads or descriptions overlap. Show clearly attributed independent records over a falsely unified event.
 
 ---
 
-## 10. Frontend — Analyze Journey
+## 10. Frontend — Regional Open511 Map
 
-Activate the existing Analyze Journey action for the initial Road Ahead analysis.
+Extend the existing MapLibre implementation rather than replacing it.
 
-### Enablement
+- Render supported regional Open511 geometry/markers from the regional snapshot, not only from matched analysis findings.
+- Use source-specific restrained styling, separate from Road Ahead coral/amber/highlight behavior.
+- Keep the selected driving route prominent and selected-event overlays inspectable above coincident route geometry.
+- Support only observed geometry types; use safe fallback/skip for unusable geometry.
+- Avoid treating a source representative point as an exact road restriction unless explicitly labeled as approximate.
+- Preserve existing map controls, route fits, bounds, dark basemap and attribution.
+- Avoid repeated full map recreation or unnecessary network requests when merely switching route alternatives.
+- Ensure regional map events are not mistaken for route warnings.
 
-Enable Analyze Journey only after:
-
-- origin and destination remain valid canonical selections;
-- destination validation succeeded;
-- a route candidate has been explicitly selected;
-- no conflicting analysis request is active.
-
-The action must remain unavailable if the selected route becomes invalid.
-
-### User interaction
-
-On activation:
-
-1. Use the current canonical journey and selected route.
-2. Call the approved analysis API.
-3. Display loading/progress feedback.
-4. Show actual Road Ahead findings.
-5. Present source freshness or partial-failure status.
-6. Preserve route selection and map interaction.
-
-Do not trigger analysis automatically merely because a route is selected.
-
-### Invalidation
-
-Changing origin, destination, route candidates, or selected route must invalidate obsolete analysis.
-
-Stale asynchronous responses must not restore findings from an earlier journey.
-
-Use appropriate abort and request-identity safeguards, consistent with Phase 2–3 patterns.
+If source-level zoom filters, clustering or feature-count safeguards become necessary for actual regional volume, implement only the minimum supported by measured data and document the visibility tradeoff. Do not invent a generalized layer management interface.
 
 ---
 
-## 11. Frontend — MapLibre Road Ahead Overlay
+## 11. Frontend — Along Your Route and Source Presentation
 
-Display relevant Road Ahead events on the existing map.
+Preserve the accepted Road Ahead panel and add source-distinguishable DriveBC findings.
 
-### Requirements
+Present where grounded:
 
-- Use actual normalized event geometry or justified representative markers.
-- Preserve existing route rendering.
-- Keep the selected route identifiable.
-- Visually distinguish Road Ahead events from route alternatives.
-- Support direct-overlap versus nearby-context identification where practical.
-- Preserve map controls, attribution, fitting, and resizing.
-- Clear obsolete event overlays when analysis is invalidated.
+- event title, type and official source;
+- direct/intersecting versus nearby/context relationship;
+- source-reported severity and status;
+- direction/affected road/schedule and whether applicability is known;
+- source updated/retrieved time, cache age, stale/partial warning;
+- official link only when safely validated;
+- concise source-aware deterministic summary.
 
-Do not recreate the MapLibre instance whenever findings change.
+Do not treat `UNKNOWN` severity as minor, or `ACTIVE` as an ongoing physical obstruction without a matching schedule. Do not fabricate traffic speeds, delay minutes or detour recommendations. Preserve Road Ahead enrichment and safe-link messaging.
 
-### Presentation
+The interface must distinguish a regional map-only event from a relevant finding and avoid presenting map counts as journey findings counts. Preserve loading/error/empty/manual refresh states and request invalidation when origin, destination or selected route changes.
 
-Prefer a restrained layer/marker system consistent with the approved dark UI.
-
-Do not create excessive visual clutter.
-
-Use source-derived labels.
-
-Do not imply that a plotted record proves active disruption at the present moment unless its source data supports that conclusion.
-
-Do not add DriveBC, weather, transit, or camera overlays.
+Do not redesign the 65/35 desktop layout or implement a general telemetry dashboard.
 
 ---
 
-## 12. Frontend — Along Your Route
+## 12. Provenance, Licensing, and Honest Interpretation
 
-Add the initial Road Ahead intelligence section within the existing right-side panel.
+Use `docs/data-licensing-and-commercialization.md` and provider-specific evidence to verify Open511 terms, attribution and permitted uses before committing external content to fixtures or providing user-visible source reproductions.
 
-### Information
+Preserve data lineage from official event record through cache, normalized event, relevance result, response and map/panel. Sanitize fixtures; do not include secrets, tokens, personal account data, or bulk republished content beyond what testing requires.
 
-Display useful data such as:
+The following are distinct and must not be conflated:
 
-- Road Ahead event description;
-- closure versus construction dataset;
-- direct-overlap or nearby-context classification;
-- geographic proximity when meaningful;
-- supported schedule/restriction details;
-- official source link;
-- source timestamp/freshness status.
+1. Event appears in an ACTIVE Open511 response.
+2. Event is located within the regional map bounds.
+3. Event is geographically relevant to the selected route.
+4. The event applies to the intended travel direction and time.
+5. It actually causes congestion or delay.
 
-Clearly distinguish observations from interpretations.
-
-### Summary
-
-A deterministic summary may report actual counts, for example:
-
-"3 Road Ahead events intersect this route. 1 additional nearby construction project was found."
-
-Generate counts from actual matching results.
-
-Do not fabricate events or traffic impact.
-
-### Empty and failure states
-
-Distinguish:
-
-- no relevant events identified from available data;
-- data loading;
-- stale data;
-- partial source failure;
-- unavailable data;
-- analysis failure.
-
-Do not display "no road issues" merely because the source request failed.
-
-### Existing placeholders
-
-Preserve honest placeholders for:
-
-- DriveBC;
-- weather;
-- cameras;
-- transit;
-- AI briefings.
-
-Do not imply those capabilities have been implemented.
+Only make claims supported by available data. Missing information remains unknown. Preserve source wording without treating it as a verified prediction.
 
 ---
 
-## 13. Source Provenance and Honest Interpretation
+## 13. Non-Goals
 
-Source provenance must remain intact from ingestion through UI presentation.
+Phase 5 does **not** authorize:
 
-### Principles
-
-- A municipal event record is not automatically proof of an active obstruction at the user's travel time.
-- An intersection with the route is geographic evidence, not proof of severity.
-- Missing schedule information remains unknown.
-- `comp_date` alone must not establish event completion.
-- Stale cached events must be identified as stale.
-- An enrichment failure must not erase the underlying event.
-- Different source events must not be incorrectly merged.
-
-The MVP may use straightforward deterministic language.
-
-No LLM inference is required in this phase.
-
----
-
-## 14. Expected Scope and Artifacts
-
-Potential changes include:
-
-- `backend/app/road_ahead.py`;
-- backend event and source-status models;
-- focused cache logic;
-- geospatial relevance helpers;
-- detail-enrichment parser;
-- journey analysis API;
-- backend tests and sanitized fixtures;
-- relevant frontend state and components;
-- MapLibre road-event layers;
-- limited styles;
-- `README.md` when setup changes;
-- `PROJECT_STATE.md`.
-
-Follow existing architecture and file naming conventions.
-
-These are anticipated areas, not a strict filesystem allowlist.
-
-Avoid unnecessary generalized ingestion frameworks.
-
-Do not add future data-source adapters or create speculative database schemas.
+- DriveBC highway or bridge camera image feeds;
+- Vancouver camera integrations or image understanding;
+- ECCC SWOB, OpenWeather or weather forecasts (Phase 6);
+- GTFS Static, TransLink alerts or transit routing;
+- OpenRouter text/vision inference, LLM interpretation or final AI briefing;
+- turn-by-turn navigation or route optimization;
+- traffic-aware rerouting, live speeds, computed delay/ETA changes;
+- speculative event impact/severity inference;
+- complex temporal prediction or historical telemetry warehousing;
+- aggressive Road Ahead/Open511 deduplication;
+- job queues, polling services, WebSockets, background monitoring;
+- Redis, unrelated database migrations or abstract source-plugin platforms;
+- new user accounts, saved journeys or application-wide frontend redesign;
+- fabricated map markers or example telemetry represented as live data.
 
 ---
 
-## 15. Non-Goals
+## 14. Verification Requirements
 
-Phase 4 must not implement:
+Each assignment must perform scope-appropriate checks and report **Passed / Failed / Not run** separately for mocked, fixture-based and live verification.
 
-- DriveBC Open511 integration;
-- ECCC SWOB weather observations;
-- OpenWeather integration;
-- Vancouver webcam image ingestion;
-- camera AI interpretation;
-- OpenRouter text or vision analysis;
-- final AI-generated journey briefing;
-- TransLink Service Alerts;
-- transit route selection or routing;
-- live traffic speeds;
-- traffic-adjusted ETA;
-- route recommendation or optimization;
-- turn-by-turn navigation;
-- road-condition forecasting;
-- historical municipal event analytics;
-- complex multi-source deduplication;
-- database-backed saved journeys;
-- user accounts;
-- background continuous monitoring;
-- generalized geospatial data platforms;
-- wholesale application redesign.
+### 5A — Source and cache
 
-Do not add fabricated telemetry to make the interface appear complete.
+- Actual HTTPS endpoint, query shape, region, status/type/severity policy and paging verified.
+- Bbox coverage decision documented against representative route geography.
+- One page, multiple pages, final partial page, pagination cycle, truncated response and provider total mismatch covered.
+- All severity/type records retained; explicit ACTIVE inclusion tested; future-scheduled ACTIVE event retained.
+- Null/malformed optional fields and actual observed geometry types normalized conservatively.
+- Stable source IDs/provenance, source timestamps and detail URLs validated.
+- Fresh cache reuse, stale refresh, atomic replacement, corrupted cache and source failure fallback tested.
+- Region/parameter changes cannot accidentally reuse an incompatible cached snapshot.
+- Bounded authorized live sanity verification captured without credentials.
 
----
+### 5B — Relevance
 
-## 16. Verification Requirements
+- Exact overlap, nearby, distant, point-only and unusable geometry handled per approved rules.
+- Projected metres and coordinate ordering verified.
+- Road, direction and schedule evidence retained; missing/ambiguous qualifiers stay unknown.
+- ACTIVE future schedule does not become "happening now".
+- All direct intersections survive nearby limits.
+- Stable results and source identity preserved.
+- Existing Road Ahead geospatial tests remain passing.
 
-Each assignment must perform the tests appropriate to its scope.
+### 5C — API
 
-### Source integration
+- Existing Road Ahead-only behavior remains intact.
+- Combined response distinguishes each source and separates regional map dataset from journey findings.
+- One-source failure, both-source failure, stale-source fallback and no-relevant-events results are honest.
+- Explicit selected route is respected; no automatic rerouting.
+- Two independently attributed overlapping events are not automatically merged.
+- Stable serialized models and tests support later frontend integration.
 
-Verify:
+### 5D — Frontend and end to end
 
-- both official Road Ahead datasets are retrievable;
-- live response structures match normalization assumptions;
-- missing optional fields are handled;
-- source IDs and links are preserved;
-- LineString, MultiLineString, and GeometryCollection normalize safely.
+- Regional events appear on the map independently of briefing eligibility.
+- Source-specific markers/lines and selected-event highlights are legible.
+- Road Ahead and route-selection layers still work.
+- Along Your Route shows relevant Open511 events with conservative status, direction, schedule and provenance.
+- Distant map-only events do not inflate analysis counts.
+- Source cache freshness, partial and unavailable states remain distinct.
+- Journey changes clear obsolete findings; late responses cannot restore them.
+- Representative Metro Vancouver → Vancouver live analysis and browser visual check performed where available.
+- No DriveBC camera functionality introduced.
 
-### Cache
+### General regression and hygiene
 
-Verify:
-
-- valid fresh cache reuse;
-- stale refresh;
-- successful validated replacement;
-- rejected malformed refresh;
-- atomic replacement behavior;
-- stale fallback;
-- cache-missing source failure;
-- independent dataset failure handling;
-- source-status accuracy.
-
-### Geometry
-
-Verify:
-
-- proper projected CRS handling;
-- correct longitude/latitude interpretation;
-- direct overlap;
-- nearby supplemental event;
-- distant irrelevant event;
-- mixed geometry types;
-- geometry collections;
-- all direct overlaps retained when exceeding the supplemental limit.
-
-### Enrichment
-
-Verify:
-
-- supported detail-page information can be extracted;
-- unavailable fields remain unknown;
-- page failure preserves base event;
-- parse failure preserves base event;
-- enrichment cache avoids unnecessary repeated fetching.
-
-### API
-
-Verify:
-
-- valid selected-route analysis requests;
-- invalid route rejection;
-- correctly normalized event results;
-- direct/nearby classifications;
-- empty findings;
-- stale source status;
-- partial source failure;
-- useful deterministic summary.
-
-### Frontend
-
-Verify:
-
-- Analyze Journey requires a selected valid route;
-- analysis is user initiated;
-- real Road Ahead findings appear;
-- event geometry/markers display;
-- the selected route remains visible;
-- panel information matches the API;
-- source links work;
-- empty, loading, stale, and failure states are understandable;
-- route changes invalidate earlier intelligence;
-- stale analysis responses cannot restore obsolete findings.
-
-### Regression
-
-Verify:
-
-- backend health;
-- geocoding/autocomplete;
-- destination validation;
-- ORS routing;
-- route selection and highlighting;
-- route invalidation;
-- MapLibre navigation and attribution;
-- desktop shell layout;
-- disabled future capabilities.
-
-### Tooling and repository
-
-Run:
-
-- applicable backend pytest;
-- Ruff;
-- frontend TypeScript verification;
-- frontend production build;
-- `git diff --check`;
-- Git status and scope inspection;
-- credential and `.env` checks.
-
-Normal automated tests must not depend on live external services.
-
-Classify every reported check as Passed, Failed, or Not run.
+Run applicable backend pytest, Ruff, frontend `npm test`, TypeScript/production build, backend health and API smoke checks, `git diff --check`, status/scope inspection, and `.env`/cache/secret hygiene checks. Do not require browser interaction for backend-only assignments. A build is not proof of visual browser acceptance.
 
 ---
 
-## 17. Phase 4 Acceptance Criteria
+## 15. Phase 5 Human Acceptance Criteria
 
-Phase 4 is ready for human acceptance when:
+Phase 5 is eligible for human acceptance only when:
 
-- [ ] Both Road Ahead datasets are integrated.
-- [ ] Live source access works.
-- [ ] Normalized `CityEvent` records preserve source provenance.
-- [ ] Full supported geometries normalize correctly.
-- [ ] Missing optional fields remain unknown.
-- [ ] The structured-data cache uses the approved approximately 24-hour policy.
-- [ ] Valid cache reuse works.
-- [ ] Cache replacement follows validation.
-- [ ] Failed refresh preserves valid stale data.
-- [ ] Stale source status is exposed.
-- [ ] Route-relevance calculations use a suitable projected CRS.
-- [ ] Direct route overlaps are detected.
-- [ ] Nearby supplemental events are identified.
-- [ ] Distant events are excluded from relevant results.
-- [ ] All direct overlaps survive candidate limiting.
-- [ ] Relevant detail pages are enriched where supported.
-- [ ] Enrichment failures preserve base event records.
-- [ ] Enrichment caching works.
-- [ ] The initial trip-analysis API exists.
-- [ ] Analysis uses the explicitly selected route.
-- [ ] Results distinguish direct overlaps from nearby context.
-- [ ] Zero relevant events are handled honestly.
-- [ ] Partial Road Ahead failures degrade gracefully.
-- [ ] Analyze Journey is enabled only for a valid selected journey.
-- [ ] Analysis is initiated by user action.
-- [ ] Relevant Road Ahead geometry/markers appear on MapLibre.
-- [ ] The initial Along Your Route panel displays useful source-grounded information.
-- [ ] Factual event counts and deterministic summaries are accurate.
-- [ ] Source freshness and limitations are visible where appropriate.
-- [ ] Changing journey context invalidates obsolete analysis.
-- [ ] Stale responses cannot restore previous journey findings.
-- [ ] Existing Phase 1–3 functionality remains working.
-- [ ] No unrelated telemetry sources or LLM features are introduced.
-- [ ] Relevant automated tests and build checks pass.
-- [ ] Representative live end-to-end behavior is manually verified.
-- [ ] No credentials are exposed.
-- [ ] `PROJECT_STATE.md` records actual evidence and limitations.
-- [ ] Codex provides the required completion report.
-- [ ] Codex performs no staging, commit, push, or history modification.
+- [ ] Open511 official endpoint and license/attribution are verified against actual evidence.
+- [ ] The regional bbox is tested and its coverage/limitations documented.
+- [ ] Regional ACTIVE ingestion retains all source severities and types.
+- [ ] All pages are fetched and incomplete replacements rejected.
+- [ ] Normalized CityEvents preserve source identity, geometry, road/direction/schedule metadata and timestamps.
+- [ ] Regional validated cache is reused across selected routes.
+- [ ] The chosen 5–15-minute provisional TTL is documented and functions.
+- [ ] Cache corruption, stale fallback and unavailable source behavior are tested.
+- [ ] Open511 relevance is deterministic, spatially sound and conservative about applicability.
+- [ ] Direct overlaps are not truncated by nearby limits.
+- [ ] Existing Road Ahead ingestion, enrichment and findings remain functional.
+- [ ] Analysis integrates both source families with independent statuses.
+- [ ] No aggressive cross-source deduplication occurs.
+- [ ] Map shows regional Open511 events, including events not relevant to the selected route.
+- [ ] Route-relevant Open511 events are distinguished from map-only events.
+- [ ] Along Your Route communicates source, event type, status, direction and timing where available.
+- [ ] Partial, unavailable, stale and empty states are truthfully conveyed.
+- [ ] Selected-route identity and invalidation safeguards remain functional.
+- [ ] Representative live regional analysis and meaningful visual review are documented.
+- [ ] Relevant automated tests, builds and lint pass.
+- [ ] Credentials and generated caches remain protected.
+- [ ] No Phase 6, DriveBC camera or LLM scope is introduced.
+- [ ] `PROJECT_STATE.md` reflects evidence, limitations and human-review status.
+- [ ] Codex completes the required report and does not modify Git history.
 
-These checks establish eligibility for human acceptance.
-
-They do not constitute automatic acceptance.
+These conditions establish review eligibility, **not automatic acceptance**.
 
 ---
 
-## 18. Blockers and Escalation
+## 16. Blockers and Escalation
 
-Stop affected work and report when:
+Stop the affected assignment and report evidence if:
 
-- official Road Ahead endpoints or response formats materially differ from approved evidence;
-- a required source cannot be accessed;
-- the actual `CityEvent` contract cannot represent meaningful source geometry;
-- a source schema change prevents reliable normalization;
-- downloaded data cannot be distinguished from malformed or incomplete content;
-- safe cache replacement cannot be achieved within the existing architecture;
-- the geospatial matching approach requires an unapproved fundamental design change;
-- a significant product decision is needed about relevance thresholds or event interpretation;
-- event detail-page behavior materially contradicts previous research;
-- the analysis API would require incompatible changes to accepted journey contracts;
-- a substantial new infrastructure dependency is required;
-- existing geographic validation must be weakened;
-- implementing the phase would require unauthorized later-phase capabilities;
-- destructive or unrelated repository modifications appear necessary.
+- the real Open511 endpoint, licensing terms or schema materially contradict the approved roadmap;
+- status, bbox or pagination semantics cannot be safely verified;
+- validated pagination cannot establish a sufficiently complete regional snapshot;
+- planned region omits intended journey corridors and adjustment requires product approval;
+- the accepted `CityEvent` or analysis response cannot represent essential source data without a significant breaking change;
+- geometry types or direction/schedule semantics require redesigning the established matcher;
+- a critical safety, credential, security or transport boundary cannot be met;
+- a provider error cannot be represented honestly without extensive unrelated refactoring;
+- a major new runtime service or architecture is required;
+- completing the task would require unauthorized later-phase work.
 
-For each blocker, report:
-
-- observed issue;
-- affected requirement;
-- available evidence;
-- reasonable options.
-
-Continue independent in-scope work where safe.
-
-Routine parser changes, cache implementation details, projection plumbing, focused test corrections, UI styling, and limited API organization may be handled autonomously.
-
-Do not silently redesign the product.
+For blockers, provide: observed issue, requirement affected, relevant evidence, reasonable alternatives and independent in-scope work completed. Routine pagination fixes, narrow model additions, cache configuration, field normalization, tests and small UI adjustments may proceed autonomously when compatible with existing contracts.
 
 ---
 
-## 19. Phase Completion and Handoff
+## 17. Phase Completion and Handoff
 
-After each bounded assignment:
+After each assignment:
 
-- Run applicable verification.
-- Update `PROJECT_STATE.md` factually.
-- Record real source behavior and meaningful discoveries.
-- Preserve previously accepted functionality.
-- Report changed files and dependencies.
-- Record failures and limitations.
-- Provide the standard completion report required by `AGENTS.md`.
-- Leave Git history untouched.
+1. Run focused and regression checks.
+2. Update `PROJECT_STATE.md` with factual implementation, real evidence, test counts and limitations.
+3. Report changed files, source behavior, deviations and remaining work.
+4. Stop for human review; do not proceed to the next assignment automatically.
+5. Leave Git staging, commits, pushes, merges, rebases, tags and history rewriting to the human developer.
 
-Phase 4 remains in progress until the human developer reviews and accepts its full implementation.
+After human Phase 5 acceptance:
 
-After acceptance:
+1. Record acceptance and supporting evidence in `PROJECT_STATE.md`.
+2. Create the human-controlled final Git checkpoint.
+3. Prepare and approve the next `BUILD_PLAN.md`.
+4. Do not begin Phase 6 until separately authorized.
 
-1. Record human acceptance in `PROJECT_STATE.md`.
-2. Create the human-controlled Git checkpoint.
-3. Prepare and approve the next phase's `BUILD_PLAN.md`.
-4. Do not begin the next phase without separate authorization.
-
-Codex must not stage, commit, push, merge, rebase, amend, tag, or rewrite Git history.
+This build plan is a **planning contract**. It does not itself authorize a blanket implementation of Phase 5.
 
 ---
 
-## 20. Next Phase
+## 18. Next Phase
 
-**Phase 5 — Regional Road Context: DriveBC Open511**
+**Phase 6 — Current + Near-Term Weather**
 
-The next phase adds regional road-event information beyond Vancouver's municipal Road Ahead datasets.
+The approved roadmap next adds destination-context weather through ECCC SWOB observations and OpenWeather products, preserving the distinction between observations, current/forecast data and later camera-derived evidence. Phase 6 is outside this build plan and is not authorized by it.
 
-Its planned responsibilities include:
-
-- regional Open511 ingestion;
-- pagination;
-- short-lived regional caching;
-- road-event normalization;
-- journey-specific relevance;
-- regional event map presentation.
-
-Do not implement Phase 5 during Phase 4.
-
-**Phase 5 work is not authorized by this document.**
