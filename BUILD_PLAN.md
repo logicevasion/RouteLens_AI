@@ -2,1070 +2,958 @@
 
 ## 1. Current Phase
 
-**Phase:** 3 — Drive Route Candidates + Selection
+**Phase:** 4 — Vancouver Road Ahead Vertical Slice
 **Status:** Planned — authorized for implementation through separately approved bounded assignments; not yet verified
-**Source:** `docs/implementation-plan.md`, Phase 3
-**Previous phase:** Phase 2 — Journey Input + Geocoding, accepted by the human developer on 2026-10-10
+**Source:** `docs/implementation-plan.md`, Phase 4
+**Previous phase:** Phase 3 — Drive Route Candidates + Selection, accepted by the human developer on 2026-10-10
 
 ### Objective
 
-Enable users to generate, inspect, and explicitly select real driving-route alternatives between validated origin and destination locations.
+Implement the first complete real-world journey-intelligence vertical slice using the City of Vancouver's Road Ahead datasets.
 
-Use openrouteservice (ORS) to retrieve route candidates, normalize their geographic and summary information, and display them interactively on the existing MapLibre map.
+Phase 4 establishes:
 
-Phase 3 must deliver:
+**Selected driving route → real municipal road events → deterministic route relevance → useful journey context.**
 
-- working ORS driving-route integration through the FastAPI backend;
-- normalized route candidates consistent with the approved application models;
-- usable route geometry, provider-reported distance, and estimated duration;
-- a functional Find Routes action;
-- multiple driving-route alternatives where available;
-- clear route visualization and differentiation on MapLibre;
-- explicit user-controlled selection of an intended route;
-- canonical selected-route state available to later phases;
-- appropriate loading, no-route, error, and invalidation behavior;
-- successful end-to-end verification using representative Metro Vancouver journeys.
+Integrate both:
 
-The application should support this interaction:
+- Road Ahead — Current Road Closures;
+- Road Ahead — Projects Under Construction.
 
-**Select valid origin → select valid destination → Find Routes → inspect alternatives → select intended route → retain selected route.**
+The phase must deliver:
 
-The origin may be within the supported Metro Vancouver / Lower Mainland scope.
+- reliable access to both official datasets;
+- validated approximately 24-hour structured-data caching;
+- conservative normalization into the approved `CityEvent` model;
+- preservation of complete event geometry and provenance;
+- projected, metre-based route-relevance calculations;
+- direct-overlap detection and nearby supplemental event selection;
+- selective deterministic enrichment from official Road Ahead detail pages;
+- an initial `POST /api/trips/analyze` workflow;
+- display of relevant Road Ahead information on MapLibre;
+- an initial Along Your Route intelligence section;
+- deterministic summaries based on actual matched events;
+- clear source freshness, partial-failure, and error behavior.
 
-The destination must remain inside the **City of Vancouver municipal boundary**.
+This is the first major architectural proof of the RouteLens intelligence pipeline.
 
-Phase 3 establishes the selected geographic journey path.
-
-It does not gather journey telemetry, determine traffic conditions, or generate AI analysis.
-
-The user remains responsible for choosing the route most closely matching their intended journey. RouteLens is a journey-intelligence companion, not a replacement for Google Maps navigation.
+It does not implement DriveBC Open511, weather, cameras, transit intelligence, or AI-generated briefings.
 
 ---
 
 ## 2. Execution Scope
 
-This document defines the complete Phase 3 acceptance boundary.
+Phase 4 will be implemented through four separately authorized Codex assignments.
 
-Phase 3 may be implemented through multiple smaller Codex assignments. Each assignment receives a bounded prompt specifying its immediate objective, expected artifacts, and verification requirements.
+Each assignment receives its own bounded implementation prompt.
 
-- Do not interpret this document as authorization to implement every Phase 3 component in one assignment.
-- Implement only the work explicitly authorized by the current assignment prompt.
-- Preserve the completed Phase 1 and Phase 2 functionality.
-- Update `PROJECT_STATE.md` with factual implementation progress.
-- Do not begin Phase 4 until Phase 3 has been accepted by the human developer.
+Do not interpret this build plan as authorization to implement every workstream at once.
 
-### Planned Assignments
+Preserve the accepted Phase 1–3 application.
 
-**Assignment 3A — Routing Backend**
+### Assignment 4A — Road Ahead Ingestion, Normalization, and Cache
 
-Implement the ORS driving-route adapter, approved route normalization, focused routing API, provider error handling, and deterministic automated tests.
+Implement:
 
-Perform targeted live ORS verification using the existing Phase 0 evidence.
+- access to both Road Ahead structured datasets;
+- normalization into `CityEvent`;
+- geometry and source metadata preservation;
+- validated approximately 24-hour caching;
+- atomic cache replacement and stale fallback;
+- focused deterministic tests;
+- targeted live source verification.
 
-Do not modify frontend route controls or MapLibre presentation.
+This assignment establishes a reliable source-data foundation.
 
-**Assignment 3B — Route Visualization and Selection**
+Do not implement route matching, detail-page enrichment, or frontend telemetry presentation.
 
-Integrate the routing API into the existing journey controls.
+### Assignment 4B — Geospatial Route Relevance
 
-Implement the Find Routes action, display real alternatives on MapLibre, show factual route summaries, and allow the user to explicitly select a candidate.
+Implement:
 
-Preserve canonical route-selection state and invalidate outdated routes when location inputs change.
+- conversion of route/event geometries into an appropriate projected coordinate system;
+- direct route-intersection detection;
+- nearby supplemental event matching;
+- deterministic prioritization;
+- the rule preserving all direct overlaps before supplemental limits;
+- meaningful geospatial regression tests.
 
-Do not implement telemetry or journey analysis.
+Do not implement external detail-page enrichment or frontend presentation.
 
-**Assignment 3C — End-to-End Routing Integration**
+### Assignment 4C — Detail Enrichment and Analysis API
 
-Complete integrated verification of route generation, candidate visualization, selection, state invalidation, provider errors, and map behavior.
+Implement:
 
-Apply narrowly scoped corrections where needed.
+- selective Road Ahead detail-page retrieval;
+- deterministic extraction of useful restrictions and scheduling information;
+- enrichment caching and safe fallback;
+- initial Road Ahead trip-analysis API;
+- source freshness and failure-status reporting;
+- deterministic event-count or evidence summaries.
 
-Perform the full Phase 3 acceptance assessment.
+Do not implement LLM-generated analysis.
 
-Assignment boundaries are organizational, not independent architectural layers.
+### Assignment 4D — Frontend Integration and Acceptance
 
-Avoid creating elaborate abstractions merely to accommodate separate assignments.
+Implement:
 
-Each assignment should produce directly verifiable behavior appropriate to its scope.
+- Analyze Journey activation when a valid route is explicitly selected;
+- integration with the Road Ahead analysis API;
+- relevant event geometry/markers on MapLibre;
+- the initial Along Your Route panel;
+- direct-overlap versus nearby-context presentation;
+- loading, stale-source, empty, and failure states;
+- final end-to-end verification and Phase 4 acceptance assessment.
+
+These assignment boundaries are organizational.
+
+Avoid creating infrastructure or abstractions merely because separate assignments exist.
 
 ---
 
-## 3. Established Implementation and Integration Baseline
+## 3. Established Implementation Baseline
 
-### 3.1 Accepted Phase 1 Foundation
+### 3.1 Accepted Application Foundation
 
-Phase 1 established:
+Phases 1–3 established:
 
-- a runnable FastAPI backend;
-- `GET /api/health`;
+- FastAPI backend and `/api/health`;
 - React/Vite/TypeScript frontend;
-- Tailwind-based dark desktop shell;
-- frontend/backend communication through Vite's `/api` proxy;
-- interactive MapLibre map using MapTiler's `streets-v4-dark` style;
-- fixed approximately 65/35 map-to-intelligence-panel layout;
-- top journey-controls region;
-- right-side intelligence placeholders;
-- established frontend and backend regression checks.
-
-Preserve the existing MapLibre lifecycle, worker configuration, attribution, error handling, and resizing behavior.
-
-The VMware/Chromium WebGL compatibility workaround is documented in `PROJECT_STATE.md`.
-
-Do not redesign the mapping stack.
-
-### 3.2 Accepted Phase 2 Journey Inputs
-
-Phase 2 established:
-
-- backend MapTiler geocoding;
-- normalized canonical `Location` objects;
-- functional origin and destination autocomplete;
-- independent frontend location-selection state;
+- MapLibre with MapTiler dark basemap;
+- fixed approximately 65/35 desktop shell;
+- Vite `/api` proxy;
+- canonical `Location` selection;
+- MapTiler geocoding/autocomplete;
 - deterministic City of Vancouver destination validation;
-- frontend/backend destination-validation integration;
-- asynchronous request cancellation and stale-response protection;
-- keyboard and pointer selection;
-- loading, failure, and geographic rejection feedback.
+- ORS driving-route candidate API;
+- normalized route geometries;
+- explicit user-controlled route selection;
+- correct selected-route invalidation;
+- route rendering, candidate summaries, and viewport fitting;
+- frontend asynchronous request safeguards;
+- provider-credential boundaries;
+- backend pytest, Ruff, and frontend build verification.
 
-The accepted canonical location fields are:
+Preserve this behavior.
 
-- `name`: required;
-- `latitude`: required;
-- `longitude`: required;
-- `address`: optional;
-- `provider_id`: optional.
+Do not rebuild the route-selection system.
 
-Phase 3 must consume these existing canonical locations.
+### 3.2 Accepted Route Contract
 
-Do not create a second location-selection contract.
+The existing routing API returns candidates with:
 
-Do not allow routing requests to bypass the existing destination-validation requirement.
+- `id`;
+- GeoJSON `LineString` geometry;
+- `distance_meters`;
+- `duration_seconds`;
+- optional `label`.
 
-### 3.3 Phase 0 ORS Integration Readiness
+Frontend route identity is request-scoped.
 
-Assignment 0C previously validated live ORS driving-route requests.
+Phase 4 must operate on the explicitly selected route belonging to the current canonical origin/destination pair.
 
-Relevant evidence is recorded in:
+Do not automatically choose an alternative.
 
-- `docs/integration-notes/geographic-services-readiness.md`
-- `fixtures/openrouteservice/`
-- `docs/integration-notes/phase-0-readiness-summary.md`
-- `PROJECT_STATE.md`
+Do not analyze stale geometry after the user edits or changes journey inputs.
 
-Phase 0 established:
+### 3.3 Road Ahead Research
 
-- authenticated ORS access;
-- working `driving-car` requests;
-- origin/destination coordinate handling;
-- GeoJSON LineString route geometries;
-- provider-reported distance and duration;
-- successful alternative-route retrieval for three representative journeys;
-- three candidates returned for each sampled journey.
+Planning and Phase 0 investigated:
 
-However, the Phase 0 sample does **not** establish that ORS always returns three alternatives.
+- Current Road Closures;
+- Projects Under Construction;
+- official dataset schemas;
+- full event geometries;
+- incomplete optional fields;
+- detail-page enrichment opportunities;
+- approximately 24-hour caching.
 
-Phase 3 must support fewer alternatives and legitimate no-route results.
+Review relevant source evidence under:
 
-Review the existing fixtures and integration notes before implementing the ORS adapter.
+- `docs/technical-design.md`;
+- `docs/implementation-plan.md`;
+- `docs/data-licensing-and-commercialization.md`;
+- existing `docs/integration-notes/`;
+- existing `fixtures/`;
+- `PROJECT_STATE.md`.
 
-Do not repeat broad provider discovery.
+Use the actual existing fixture names and records discovered in the repository.
 
-Targeted live verification of the actual Phase 3 integration is permitted and required where appropriate.
+Do not assume additional fixtures or endpoints exist without inspection.
 
-### 3.4 Existing Configuration
+Do not repeat broad provider research.
 
-The ignored root `.env` contains the existing ORS credential:
+Targeted live verification of the implemented integration is required.
 
-`OPENROUTESERVICE_API_KEY`
+---
 
-The frontend must not receive this credential.
+## 4. Road Ahead Dataset Integration
 
-All ORS API requests must originate from the FastAPI backend.
+Integrate both approved official datasets.
+
+Use a focused adapter consistent with the approved technical design.
+
+The implementation roadmap identifies `road_ahead.py` as an expected module.
+
+### Required behavior
+
+- Fetch the two source datasets.
+- Validate the expected response structure.
+- Handle missing optional attributes.
+- Normalize records conservatively.
+- Preserve complete geographic geometry.
+- Preserve source provenance.
+- Handle upstream failures without crashing the application.
+- Avoid re-fetching entire datasets for every selected journey.
+
+### Source-specific rules
+
+Do not assume:
+
+- `street` is populated;
+- `project` is complete;
+- `location` is complete;
+- `comp_date` establishes the authoritative final applicability date;
+- every record contains usable detail-page information;
+- every geometry has the same GeoJSON type.
+
+Do not fabricate missing fields.
+
+Do not convert unknown schedule or restriction details into definitive claims.
+
+### Dataset completeness
+
+A structurally valid provider response must not automatically be assumed complete.
+
+Use source-specific evidence and validation rules appropriate to the actual feeds.
+
+Do not overwrite a known valid cache with malformed or demonstrably incomplete content.
+
+If a source introduces a material schema change, report it.
+
+---
+
+## 5. CityEvent Normalization
+
+Normalize Road Ahead records into the approved `CityEvent` model.
+
+Consult `APP_SPEC.md` and `docs/technical-design.md` for the authoritative contract.
 
 Preserve:
 
-- existing environment-loading conventions;
-- `.env` ignore behavior;
-- `.env.example`;
-- the intentional browser-visible MapTiler key configuration;
-- backend-only handling of other provider credentials.
+- source identifier;
+- source dataset/type;
+- source URL;
+- full geometry;
+- representative geographic point;
+- project or location description;
+- available source timestamps;
+- available status/schedule metadata;
+- provenance needed for user-facing attribution.
 
-Do not introduce a general secrets-management platform or unnecessary configuration infrastructure.
+Do not establish incompatible duplicate models.
 
----
+### Geometry requirements
 
-## 4. Required Phase 3 Workstreams
+Support actual provider structures including:
 
-### 4.1 Backend — ORS Driving-Routes Adapter
+- `LineString`;
+- `MultiLineString`;
+- `GeometryCollection`.
 
-Implement a focused ORS integration consistent with the approved technical design.
+Preserve legitimate geographic components within these structures.
 
-Required behavior:
+Handle missing, null, malformed, and unsupported geometry safely.
 
-- Accept canonical origin and destination locations.
-- Construct valid ORS `driving-car` requests.
-- Convert canonical coordinates into the required provider coordinate ordering.
-- Request driving-route alternatives using the validated Phase 0 approach.
-- Receive and validate provider responses.
-- Normalize usable routes into application-owned candidates.
-- Return a predictable result through FastAPI.
-- Handle provider errors and missing routes safely.
-- Keep ORS credentials server-side.
+Do not silently replace unknown line geometry with an invented point.
 
-Use `httpx` and asynchronous HTTP where consistent with the existing backend architecture.
+A representative point is supplemental metadata, not a substitute for complete geographic geometry.
 
-Apply reasonable request timeouts.
+### Coordinate handling
 
-Avoid unnecessary provider calls.
-
-### Provider coordinate ordering
-
-The canonical application model uses explicit:
-
-- `latitude`
-- `longitude`
-
-ORS and GeoJSON geographic coordinates use:
+GeoJSON geographic coordinates use:
 
 `[longitude, latitude]`
 
-Convert explicitly when constructing requests and normalizing responses.
+Maintain the established RouteLens coordinate conventions.
 
-Do not silently invert coordinates.
+Validate coordinate ranges and geometry usability.
 
-### Provider behavior
+Do not reverse axes.
 
-ORS may return:
+### Data integrity
 
-- multiple alternatives;
-- fewer alternatives than requested;
-- one usable route;
-- no route for a journey;
-- an upstream error.
+Retain meaningful provider metadata while avoiding unnecessary raw-response fields in the permanent application contract.
 
-Do not treat fewer-than-requested alternatives as an automatic failure.
-
-Do not fabricate route candidates to satisfy a desired count.
-
-Do not silently alter coordinates to obtain additional routes.
-
-Do not create a provider-independent routing framework.
+Distinct source records must not be aggressively merged solely because they have similar names or nearby geometry.
 
 ---
 
-### 4.2 Route Candidate Normalization
+## 6. Validated Structured-Data Cache
 
-Normalize ORS route responses into the approved `RouteCandidate` representation defined by `APP_SPEC.md` and `docs/technical-design.md`.
+Implement the approved approximately 24-hour Road Ahead cache.
 
-Consult these documents before establishing fields.
+### Required lifecycle
 
-The application-owned contract must preserve the information needed for:
+1. Check for an existing valid cached dataset.
+2. Use it when fresh.
+3. Attempt refresh when stale or missing.
+4. Validate the newly downloaded response.
+5. Replace the previous cache only after successful validation.
+6. Retain the last valid dataset when refresh fails.
+7. Expose appropriate freshness/stale status.
 
-- presenting alternatives;
-- selecting an individual candidate;
-- drawing the route on MapLibre;
-- retaining the selected route;
-- supporting later geospatial relevance calculations.
+Use safe atomic replacement where practical.
 
-### Required route information
+### Cache requirements
 
-Subject to the authoritative contract, normalized candidates must preserve:
+- Both source datasets must be accounted for.
+- One dataset's failure should not unnecessarily invalidate the other.
+- The cache must not be treated as fresh merely because a fetch was attempted.
+- Incomplete writes must not corrupt the last valid cache.
+- Failed refreshes must not silently erase usable previous data.
+- Missing cache and failed retrieval must be reported appropriately.
 
-- a distinct route-candidate identifier;
-- route geometry;
-- provider-reported distance;
-- provider-reported duration;
-- relevant approved route metadata.
+Prefer simple local persistence appropriate for the MVP.
 
-Do not invent additional required fields unless necessary to fulfill the approved contract.
+Do not introduce Redis, distributed caching, background workers, or database infrastructure without a demonstrated requirement.
 
-### Candidate identity
+### Freshness metadata
 
-A candidate identifier must uniquely identify an alternative within the current route-result set.
+Expose meaningful timestamps and status, consistent with the approved `SourceStatus` model.
 
-Do not assume that ORS supplies a globally stable route identifier.
+Distinguish:
 
-Request-scoped identifiers are acceptable when consistent with the approved design.
+- fresh source data;
+- valid but stale cached data;
+- unavailable data.
 
-Do not create persistent route identities or database records.
+Do not invent a successful refresh timestamp.
 
-### Geometry
-
-Preserve actual provider route geometry.
-
-The approved design's representation takes precedence.
-
-Where GeoJSON LineString geometry is specified:
-
-- preserve valid GeoJSON structure;
-- preserve longitude/latitude ordering;
-- ensure coordinates are usable by MapLibre;
-- retain sufficient geographic detail for later relevance checks.
-
-Do not simplify away important geographic detail without an approved reason.
-
-Do not generate synthetic line segments to repair malformed routing results.
-
-### Distance and duration
-
-Preserve the actual provider values with explicit units.
-
-ORS-reported distance and duration must not be misrepresented as measured real-world journey conditions.
-
-Do not:
-
-- invent travel times;
-- apply traffic adjustments;
-- claim live congestion awareness;
-- calculate weather-adjusted ETAs;
-- infer traffic incidents from duration values.
-
-The UI may format factual provider estimates for readability.
+No portal modification-date checker is required.
 
 ---
 
-### 4.3 Backend Routing API
+## 7. Geospatial Route Relevance
 
-Expose a focused FastAPI endpoint for requesting driving-route candidates.
+Use the explicitly selected route geometry to determine which Road Ahead events are relevant.
 
-Follow the API organization and approved models established by the technical design and existing backend.
+### Coordinate reference system
 
-### Request
+Use an appropriate projected CRS for metre-based calculations in Vancouver.
 
-Accept:
+Do not apply metre-valued distance thresholds directly to unprojected longitude/latitude degrees.
 
-- canonical origin location;
-- canonical destination location.
+Use Shapely and justified projection tools consistent with the existing technical design.
 
-Required behavior:
+### Direct overlaps
 
-- validate request structure using Pydantic;
-- preserve coordinate validity;
-- reject missing or malformed locations;
-- reuse existing destination geographic validation;
-- enforce City of Vancouver destination eligibility;
-- permit supported origins outside Vancouver;
-- avoid accepting arbitrary display strings in place of coordinates.
+Determine whether event geometry directly intersects or overlaps the selected route.
+
+Preserve the distinction between geometric contact and actual traffic impact.
+
+A route intersection is evidence of geographic relevance; it does not automatically prove a currently active full road closure.
+
+### Nearby supplemental events
+
+Identify geographically nearby events even when their geometry does not directly intersect the route.
+
+Apply deterministic proximity calculations and reasonable selection/ranking rules.
+
+The precise distance threshold should follow any value already established in the approved technical design.
+
+If no exact numeric threshold is authorized, use a clearly documented, configurable MVP choice consistent with the approved design rather than presenting it as a locked historical decision.
+
+### Mandatory prioritization rule
+
+**All direct route overlaps must survive candidate limiting.**
+
+Only nearby supplemental events may be subject to a supplemental candidate limit.
+
+For example, if a journey has eight direct overlaps and the nearby-event limit is five:
+
+- all eight direct overlaps remain;
+- up to five additional nearby candidates may be included.
+
+Never reduce direct overlaps merely to satisfy a combined event-count cap.
+
+### Matching outputs
+
+Preserve enough information to distinguish:
+
+- direct overlap;
+- nearby context;
+- irrelevant/distant records.
+
+Where distance is reported, use actual projected geometry calculations.
+
+Do not infer event severity or traffic disruption from proximity alone.
+
+---
+
+## 8. Selective Detail-Page Enrichment
+
+Enrich geographically relevant Road Ahead candidates using official source detail pages where available.
+
+Do not crawl every event detail page during ordinary dataset ingestion.
+
+### Extraction
+
+Use deterministic HTML parsing.
+
+Extract supported information such as:
+
+- full event title/location;
+- description;
+- status;
+- work schedule;
+- operating hours;
+- exceptions;
+- closure or restriction details.
+
+Preserve source links and extraction timestamps.
+
+Do not use an LLM to parse raw event pages.
+
+### Failure handling
+
+When a detail page is unavailable or parsing fails:
+
+- retain the base normalized dataset record;
+- mark unavailable enrichment fields unknown;
+- continue analysis;
+- report meaningful enrichment limitations where useful.
+
+Do not discard a geographically relevant event because its detail page failed.
+
+### Enrichment caching
+
+Cache enrichment by source/event identity.
+
+Avoid repeatedly requesting the same page during one user session.
+
+The approved technical design does not lock an exact enrichment TTL.
+
+Choose a modest documented MVP cache policy based on observed source behavior, or escalate if a material product decision is required.
+
+Do not create a historical webpage archive.
+
+### Licensing
+
+Preserve provenance and attribution.
+
+The approved licensing assessment treats the core Road Ahead datasets as suitable open-data inputs.
+
+Do not assume every separately delivered detail-page element is automatically covered by the same reuse rights.
+
+Avoid bulk republication of source webpage contents.
+
+---
+
+## 9. Initial Journey Analysis API
+
+Implement or extend:
+
+`POST /api/trips/analyze`
+
+### Request context
+
+The analysis must receive or reliably identify the explicitly selected journey route and the canonical locations required by the approved trip model.
+
+Consult the approved `Trip`, `SelectedRoute`, and related model contracts before choosing request fields.
+
+Do not invent database-backed trip identity.
+
+Do not silently analyze an unselected candidate.
+
+### Initial analysis behavior
+
+The Phase 4 analysis may contain Road Ahead information only.
+
+Required flow:
+
+1. Validate incoming journey context.
+2. Obtain the available Road Ahead datasets.
+3. Normalize source records.
+4. Determine route-relevant events.
+5. Apply direct-overlap and nearby-supplemental selection rules.
+6. Enrich relevant candidates where supported.
+7. Produce application-owned structured results.
+8. Return clear source availability/freshness status.
 
 ### Response
 
-Return a predictable application-owned routing result containing the normalized candidate collection.
+Preserve the approved analysis structure where defined.
 
-The response must support zero, one, or multiple usable candidates.
+Include sufficient information for:
 
-It must preserve actual route geometry, identity, distance, and duration.
+- event identities;
+- event source/dataset;
+- descriptions;
+- relevant geometry;
+- source links;
+- direct versus nearby classification;
+- source freshness;
+- optional enrichment;
+- deterministic summary text.
 
-Do not expose the full raw ORS response as the permanent frontend contract.
+Do not expose raw provider structures as the permanent application contract.
 
-### API failures
+### Failure behavior
 
-Handle:
+The analysis must handle:
 
-- invalid requests;
-- unsupported destinations;
-- missing ORS credentials;
-- provider authentication failures;
-- provider timeouts;
-- rate-limit responses where distinguishable;
-- upstream service errors;
-- malformed provider responses;
-- legitimate no-route conditions.
+- no matching road events;
+- one unavailable Road Ahead dataset;
+- both datasets unavailable;
+- stale validated cached data;
+- enrichment failure;
+- invalid route geometry;
+- malformed source responses;
+- upstream timeouts.
 
-Use safe, meaningful error responses.
+A provider failure must not be represented as a successful finding of zero road events.
 
-Do not expose API keys, raw request URLs containing credentials, or provider stack traces.
-
-Do not introduce journey orchestration or telemetry APIs.
+Keep errors and partial results understandable.
 
 ---
 
-### 4.4 Find Routes Action
+## 10. Frontend — Analyze Journey
 
-Activate a dedicated **Find Routes** action in the existing journey-controls region.
+Activate the existing Analyze Journey action for the initial Road Ahead analysis.
 
-This action is distinct from the later Analyze Journey workflow.
+### Enablement
 
-### Enabled state
+Enable Analyze Journey only after:
 
-Find Routes becomes available only when:
+- origin and destination remain valid canonical selections;
+- destination validation succeeded;
+- a route candidate has been explicitly selected;
+- no conflicting analysis request is active.
 
-- a canonical origin is selected;
-- a canonical destination is selected;
-- the destination has passed backend validation;
-- the application is not already performing the same routing request.
-
-Typed but unselected text must not qualify as a valid location.
-
-A pending or rejected destination must not enable route generation.
+The action must remain unavailable if the selected route becomes invalid.
 
 ### User interaction
 
-When the user activates Find Routes:
+On activation:
 
-1. Read the accepted canonical origin and destination.
-2. Submit a routing request through the FastAPI `/api` interface.
-3. Display a clear loading state.
-4. Receive normalized route candidates.
-5. Display available alternatives.
-6. Allow explicit candidate selection.
+1. Use the current canonical journey and selected route.
+2. Call the approved analysis API.
+3. Display loading/progress feedback.
+4. Show actual Road Ahead findings.
+5. Present source freshness or partial-failure status.
+6. Preserve route selection and map interaction.
 
-Do not automatically submit routing requests on every autocomplete change.
+Do not trigger analysis automatically merely because a route is selected.
 
-Keep route generation a user-initiated action.
+### Invalidation
 
-### Analyze Journey
+Changing origin, destination, route candidates, or selected route must invalidate obsolete analysis.
 
-The existing Analyze Journey action must remain inactive.
+Stale asynchronous responses must not restore findings from an earlier journey.
 
-Do not enable it merely because route candidates have been retrieved or selected.
-
-Actual journey intelligence belongs to later phases.
+Use appropriate abort and request-identity safeguards, consistent with Phase 2–3 patterns.
 
 ---
 
-### 4.5 Frontend Routing State
+## 11. Frontend — MapLibre Road Ahead Overlay
 
-Introduce focused React state for the route-generation workflow.
-
-Required concepts include:
-
-- current routing request status;
-- returned route candidates;
-- selected route candidate;
-- relevant error or no-route feedback.
-
-Use the approved frontend architecture and models.
-
-Avoid global state-management libraries.
-
-### Route request lifecycle
-
-The frontend must handle:
-
-- no route request yet;
-- routing in progress;
-- candidates available;
-- no usable routes;
-- routing request failure;
-- selected candidate available.
-
-These may be represented through a minimal discriminated state or equivalent structure.
-
-Do not introduce a generic application workflow engine.
-
-### Canonical selected route
-
-A route becomes the canonical selected route only through explicit user selection.
-
-Receiving multiple routes does not imply that the first candidate is the user's intended journey.
-
-Do not silently select the fastest or shortest route.
-
-The selected candidate must remain associated with the exact origin and destination pair used for its routing request.
-
-Retain the selected route in frontend application state for later phases.
-
-Do not introduce database or browser-storage persistence.
-
----
-
-### 4.6 Route Invalidation and Asynchronous Correctness
-
-Route results are only valid for the location pair that generated them.
-
-This is a critical Phase 3 requirement.
-
-### Location changes
-
-Immediately invalidate existing route candidates and the selected route when:
-
-- the selected origin changes;
-- the selected destination changes;
-- either selected location is cleared;
-- either input is edited so its canonical selection becomes invalid;
-- destination validation becomes pending or fails.
-
-Do not retain a selected route whose coordinates no longer correspond to the visible journey inputs.
-
-### Pending routing requests
-
-If location inputs change while routing is in progress:
-
-- invalidate the pending request;
-- prevent obsolete responses from restoring old candidates;
-- prevent obsolete responses from selecting a route;
-- preserve unrelated valid location state.
-
-Use `AbortController`, request identity checks, or equivalent React lifecycle mechanisms.
-
-Do not display canceled requests as genuine provider errors.
-
-### Repeated requests
-
-If a new route request supersedes an earlier request, only the current response may update the application's routing state.
-
-Do not mix candidates returned for different location pairs.
-
-### Failed requests
-
-A routing failure must not leave previously generated candidates appearing to apply to a newer journey.
-
-The user should be able to retry safely.
-
-Do not silently fall back to fabricated routes.
-
----
-
-### 4.7 MapLibre Route Visualization
-
-Display real driving-route candidates on the existing interactive MapLibre map.
+Display relevant Road Ahead events on the existing map.
 
 ### Requirements
 
-- Use actual normalized route geometry.
-- Preserve the validated MapTiler dark basemap.
-- Display alternative routes clearly.
-- Distinguish selected and unselected candidates.
-- Keep the basemap visually usable.
-- Preserve map pan, zoom, controls, and attribution.
-- Keep route layers synchronized with current routing state.
-- Remove stale route geometry when candidates are invalidated.
+- Use actual normalized event geometry or justified representative markers.
+- Preserve existing route rendering.
+- Keep the selected route identifiable.
+- Visually distinguish Road Ahead events from route alternatives.
+- Support direct-overlap versus nearby-context identification where practical.
+- Preserve map controls, attribution, fitting, and resizing.
+- Clear obsolete event overlays when analysis is invalidated.
 
-### Route styling
+Do not recreate the MapLibre instance whenever findings change.
 
-Use a restrained visual system consistent with the dark RouteLens interface.
+### Presentation
 
-For example:
+Prefer a restrained layer/marker system consistent with the approved dark UI.
 
-- unselected candidates may use subdued line treatments;
-- a selected candidate may use a stronger accent;
-- overlapping alternatives should remain distinguishable where practical.
+Do not create excessive visual clutter.
 
-Exact colors and stroke widths are routine implementation decisions.
+Use source-derived labels.
 
-Do not introduce decorative route animations or excessive visual effects.
+Do not imply that a plotted record proves active disruption at the present moment unless its source data supports that conclusion.
 
-### Map interaction
-
-Support route selection through the approved user interface.
-
-A route list or card control must permit explicit candidate selection.
-
-Clickable map geometry may provide a complementary selection method if straightforward and consistent with the technical design.
-
-Do not make map-line clicking the only route-selection mechanism.
-
-### Viewport behavior
-
-When routes become available, adjust the map viewport so that the relevant route geometry is reasonably visible.
-
-Preserve usable padding and avoid clipping the route beneath interface controls.
-
-Do not implement continuous camera tracking or navigation guidance.
-
-### Route markers
-
-Simple origin/destination markers are permitted when useful for interpreting the displayed journey.
-
-They must derive from actual canonical coordinates.
-
-Do not introduce unrelated map overlays or location layers.
-
-### Lifecycle
-
-Use MapLibre source/layer management consistent with the existing `VancouverMap` architecture.
-
-Avoid recreating the entire map when routes or selection state change.
-
-Ensure route layers clean up appropriately.
-
-Do not break existing map initialization or resize behavior.
+Do not add DriveBC, weather, transit, or camera overlays.
 
 ---
 
-### 4.8 Route Alternatives and User Selection
+## 12. Frontend — Along Your Route
 
-Allow the user to inspect and choose from actual returned candidates.
+Add the initial Road Ahead intelligence section within the existing right-side panel.
 
-### Candidate presentation
+### Information
 
-Display enough factual information to distinguish alternatives.
+Display useful data such as:
 
-Useful information includes:
+- Road Ahead event description;
+- closure versus construction dataset;
+- direct-overlap or nearby-context classification;
+- geographic proximity when meaningful;
+- supported schedule/restriction details;
+- official source link;
+- source timestamp/freshness status.
 
-- route label or ordinal;
-- distance;
-- estimated duration;
-- selected/unselected state.
+Clearly distinguish observations from interpretations.
 
-The exact display should follow the approved product design.
+### Summary
 
-Do not invent road names, congestion scores, reliability ratings, or comparative recommendations.
+A deterministic summary may report actual counts, for example:
 
-If the provider does not supply a meaningful route name, use a neutral identifier such as:
+"3 Road Ahead events intersect this route. 1 additional nearby construction project was found."
 
-- Route 1;
-- Route 2;
-- Route 3.
+Generate counts from actual matching results.
 
-These labels identify candidates, not rankings of route quality.
+Do not fabricate events or traffic impact.
 
-### Explicit selection
+### Empty and failure states
 
-The user must be able to select a candidate through an accessible control.
+Distinguish:
 
-Requirements:
+- no relevant events identified from available data;
+- data loading;
+- stale data;
+- partial source failure;
+- unavailable data;
+- analysis failure.
 
-- selected route is visually distinct;
-- selected route remains identifiable in the interface;
-- selecting a different candidate updates canonical selected-route state;
-- selection updates the map presentation;
-- the chosen candidate belongs to the current route-result set.
+Do not display "no road issues" merely because the source request failed.
 
-Do not automatically choose the first route.
+### Existing placeholders
 
-### Alternative counts
+Preserve honest placeholders for:
 
-Support:
+- DriveBC;
+- weather;
+- cameras;
+- transit;
+- AI briefings.
 
-- one valid candidate;
-- two candidates;
-- three candidates where supplied;
-- a different valid count if supported by the approved adapter;
-- no valid candidate.
-
-The absence of three alternatives is not by itself a defect.
-
-Do not create duplicate routes to fill the list.
+Do not imply those capabilities have been implemented.
 
 ---
 
-### 4.9 Route Summary and Intelligence Panel Integration
+## 13. Source Provenance and Honest Interpretation
 
-Use existing interface regions where appropriate.
+Source provenance must remain intact from ingestion through UI presentation.
 
-The right-side intelligence panel may display factual route-selection information, such as:
+### Principles
 
-- selected route label;
-- distance;
-- provider-estimated duration;
-- indication that journey intelligence is not yet available.
+- A municipal event record is not automatically proof of an active obstruction at the user's travel time.
+- An intersection with the route is geographic evidence, not proof of severity.
+- Missing schedule information remains unknown.
+- `comp_date` alone must not establish event completion.
+- Stale cached events must be identified as stale.
+- An enrichment failure must not erase the underlying event.
+- Different source events must not be incorrectly merged.
 
-Keep route-selection information visually distinct from future AI or telemetry findings.
+The MVP may use straightforward deterministic language.
 
-Requirements:
-
-- Do not fabricate road incidents.
-- Do not display live traffic claims.
-- Do not imply camera or weather analysis has occurred.
-- Do not generate an AI briefing.
-- Preserve honest placeholders for unimplemented capabilities.
-- Avoid materially redesigning the existing 65/35 shell.
-
-The interface should communicate that route selection is complete while journey intelligence remains a later step.
+No LLM inference is required in this phase.
 
 ---
 
-### 4.10 Travel Mode
+## 14. Expected Scope and Artifacts
 
-Phase 3 supports driving routes only.
+Potential changes include:
 
-Requirements:
-
-- Drive remains the active mode.
-- ORS requests use `driving-car`.
-- Transit remains inactive or clearly unavailable.
-- Do not request transit itineraries.
-- Do not integrate TransLink data.
-- Do not imply driving and transit routes are interchangeable.
-
-Preserve the approved future Drive / Transit product direction without introducing Phase 10 functionality.
-
----
-
-### 4.11 No-Route and Failure UX
-
-Provide understandable user feedback for:
-
-- route request in progress;
-- provider unavailable;
-- provider timeout;
-- rate limiting where distinguishable;
-- invalid routing request;
-- no usable route candidates;
-- successful route retrieval.
-
-### No-route behavior
-
-If the provider legitimately returns no usable candidate:
-
-- show an appropriate message;
-- retain the valid origin and destination;
-- leave selected-route state empty;
-- permit retry or location changes.
-
-Do not fabricate a direct-line route as a replacement.
-
-### Provider errors
-
-A provider failure must be distinguishable from a legitimate no-route result.
-
-Do not present an upstream timeout as evidence that the requested journey has no route.
-
-Keep errors concise and actionable.
-
-Do not expose raw provider error details or credentials.
-
----
-
-## 5. Expected Scope and Artifacts
-
-Phase 3 may create or modify:
-
-- `backend/app/` — focused ORS adapter, route models, and routing API;
-- `backend/tests/` — route normalization, API, error, and regression tests;
-- `frontend/src/` — route request state, route controls, candidate presentation, and MapLibre layers;
-- relevant TypeScript route contracts;
-- narrowly scoped styles and visual integration;
-- sanitized routing fixtures where useful;
-- dependency manifests only if justified;
-- `README.md`, where startup or API instructions require updates;
+- `backend/app/road_ahead.py`;
+- backend event and source-status models;
+- focused cache logic;
+- geospatial relevance helpers;
+- detail-enrichment parser;
+- journey analysis API;
+- backend tests and sanitized fixtures;
+- relevant frontend state and components;
+- MapLibre road-event layers;
+- limited styles;
+- `README.md` when setup changes;
 - `PROJECT_STATE.md`.
+
+Follow existing architecture and file naming conventions.
 
 These are anticipated areas, not a strict filesystem allowlist.
 
-Keep implementation consistent with the approved technical design.
+Avoid unnecessary generalized ingestion frameworks.
 
-Create only what the current bounded assignment requires.
-
-Avoid speculative abstractions for future data sources, route intelligence, journey persistence, or transit routing.
+Do not add future data-source adapters or create speculative database schemas.
 
 ---
 
-## 6. Non-Goals
+## 15. Non-Goals
 
-Phase 3 must not implement:
+Phase 4 must not implement:
 
-- Road Ahead construction or closure ingestion;
-- DriveBC Open511 incidents;
-- Vancouver webcam selection or image ingestion;
-- ECCC SWOB observations;
-- OpenWeather conditions or forecasts;
-- TransLink integration or transit routing;
-- OpenRouter inference;
-- AI-generated journey briefings;
-- live congestion detection;
-- traffic-aware route optimization;
-- traffic-adjusted duration estimates;
-- route-by-route telemetry relevance analysis;
-- route timeline or segment intelligence beyond provider route geometry;
-- navigation guidance or turn-by-turn directions;
-- automatic route selection based on traffic or AI judgment;
-- database persistence or saved journeys;
-- user accounts or authentication;
-- background routing jobs;
-- continuous location tracking;
-- mobile-specific navigation functionality;
-- additional routing providers;
-- new major frontend frameworks;
-- unrelated infrastructure.
+- DriveBC Open511 integration;
+- ECCC SWOB weather observations;
+- OpenWeather integration;
+- Vancouver webcam image ingestion;
+- camera AI interpretation;
+- OpenRouter text or vision analysis;
+- final AI-generated journey briefing;
+- TransLink Service Alerts;
+- transit route selection or routing;
+- live traffic speeds;
+- traffic-adjusted ETA;
+- route recommendation or optimization;
+- turn-by-turn navigation;
+- road-condition forecasting;
+- historical municipal event analytics;
+- complex multi-source deduplication;
+- database-backed saved journeys;
+- user accounts;
+- background continuous monitoring;
+- generalized geospatial data platforms;
+- wholesale application redesign.
 
-Do not fabricate alternate routes, travel times, incidents, or conditions.
-
-Do not implement the intelligence-gathering workflow merely because a route has been selected.
-
-Do not redesign the approved application architecture without authorization.
+Do not add fabricated telemetry to make the interface appear complete.
 
 ---
 
-## 7. Verification Requirements
+## 16. Verification Requirements
 
-Each bounded assignment must perform the checks relevant to its authorized scope.
+Each assignment must perform the tests appropriate to its scope.
 
-### Backend Verification
+### Source integration
 
 Verify:
 
-- FastAPI imports and starts.
-- Existing `/api/health` behavior remains available.
-- ORS requests use the approved driving profile.
-- Canonical coordinates are converted correctly.
-- Routing API accepts valid canonical origin/destination inputs.
-- Invalid input is rejected.
-- Destinations outside Vancouver are rejected.
-- Valid ORS responses normalize correctly.
-- Route identifiers are distinct.
-- Route geometry is valid and preserves longitude/latitude ordering.
-- Distance and duration values use correct units.
-- Fewer-than-requested alternatives are supported.
-- Legitimate no-route responses are handled.
-- Provider authentication, timeout, and service errors are handled safely.
-- Existing geocoding and destination-validation tests remain passing.
-- Ruff and relevant pytest checks pass.
+- both official Road Ahead datasets are retrievable;
+- live response structures match normalization assumptions;
+- missing optional fields are handled;
+- source IDs and links are preserved;
+- LineString, MultiLineString, and GeometryCollection normalize safely.
 
-Use mocked provider responses for deterministic automated testing.
-
-Do not make the default test suite depend on live ORS access.
-
-### Targeted Live Integration Verification
-
-Use a small number of authenticated ORS requests.
-
-Suggested representative journeys:
-
-1. Richmond → Downtown Vancouver.
-2. Burnaby → Downtown Vancouver.
-3. A shorter journey within Vancouver.
-
-For each observed response, verify:
-
-- successful ORS authentication;
-- valid normalized candidates;
-- accurate alternative count;
-- distinct candidate identifiers;
-- usable route geometry;
-- actual distance and duration values;
-- safe backend API representation.
-
-Do not require exactly three alternatives.
-
-Do not fabricate live results or repeat calls solely to obtain a preferred candidate count.
-
-Record provider-specific limitations.
-
-### Frontend Verification
+### Cache
 
 Verify:
 
-- TypeScript checks pass.
-- Production build succeeds.
-- Vite starts.
-- Find Routes is enabled only for accepted canonical locations.
-- Routing requests use the existing `/api` proxy.
-- Loading and failure states are visible and recoverable.
-- Real route candidates appear.
-- Alternative route summaries are readable.
-- The user can explicitly select a route.
-- Selection changes update canonical selected-route state.
-- Changing origin/destination invalidates old route results.
-- Out-of-order routing responses cannot restore stale candidates.
-- Analyze Journey remains inactive.
+- valid fresh cache reuse;
+- stale refresh;
+- successful validated replacement;
+- rejected malformed refresh;
+- atomic replacement behavior;
+- stale fallback;
+- cache-missing source failure;
+- independent dataset failure handling;
+- source-status accuracy.
 
-### Map Verification
+### Geometry
 
 Verify:
 
-- the MapTiler basemap renders;
-- actual route geometries display correctly;
-- route alternatives are distinguishable;
-- the selected route is highlighted;
-- candidate changes update route layers;
-- route invalidation removes stale geometry;
-- map viewport fits relevant route geometry appropriately;
-- existing pan and zoom remain functional;
-- attribution remains visible;
-- resizing does not break map dimensions;
-- no major overlapping or clipped interface regions appear.
+- proper projected CRS handling;
+- correct longitude/latitude interpretation;
+- direct overlap;
+- nearby supplemental event;
+- distant irrelevant event;
+- mixed geometry types;
+- geometry collections;
+- all direct overlaps retained when exceeding the supplemental limit.
 
-A successful ORS response alone does not prove that route rendering works.
+### Enrichment
 
-Actual browser verification must be recorded separately.
+Verify:
 
-### End-to-End Verification
+- supported detail-page information can be extracted;
+- unavailable fields remain unknown;
+- page failure preserves base event;
+- parse failure preserves base event;
+- enrichment cache avoids unnecessary repeated fetching.
 
-Test representative flows.
+### API
 
-**Valid journey**
+Verify:
 
-Select Richmond as origin and Downtown Vancouver as destination, retrieve routes, and explicitly select a candidate.
+- valid selected-route analysis requests;
+- invalid route rejection;
+- correctly normalized event results;
+- direct/nearby classifications;
+- empty findings;
+- stale source status;
+- partial source failure;
+- useful deterministic summary.
 
-**Alternative selection**
+### Frontend
 
-Select one route, then another, and confirm the selected state and map emphasis change.
+Verify:
 
-**Location edit**
+- Analyze Journey requires a selected valid route;
+- analysis is user initiated;
+- real Road Ahead findings appear;
+- event geometry/markers display;
+- the selected route remains visible;
+- panel information matches the API;
+- source links work;
+- empty, loading, stale, and failure states are understandable;
+- route changes invalidate earlier intelligence;
+- stale analysis responses cannot restore obsolete findings.
 
-Change either input after generating routes and verify old routes disappear.
+### Regression
 
-**Pending request invalidation**
+Verify:
 
-Begin route retrieval, then edit a location before the request completes. Verify the stale response is ignored.
+- backend health;
+- geocoding/autocomplete;
+- destination validation;
+- ORS routing;
+- route selection and highlighting;
+- route invalidation;
+- MapLibre navigation and attribution;
+- desktop shell layout;
+- disabled future capabilities.
 
-**Single candidate**
+### Tooling and repository
 
-Verify a one-route response remains usable and selectable.
+Run:
 
-**No route**
+- applicable backend pytest;
+- Ruff;
+- frontend TypeScript verification;
+- frontend production build;
+- `git diff --check`;
+- Git status and scope inspection;
+- credential and `.env` checks.
 
-Verify an empty legitimate result produces no-route feedback without fabricated geometry.
+Normal automated tests must not depend on live external services.
 
-**Provider failure**
-
-Verify an upstream failure does not crash the interface or preserve stale selected-route state.
-
-**Regression**
-
-Verify Phase 2 autocomplete, destination validation, backend health, map interactions, and desktop layout remain functional.
-
-### Security and Repository Verification
-
-- Confirm `.env` remains ignored.
-- Confirm the ORS credential stays backend-only.
-- Ensure backend-only provider credentials are absent from frontend assets.
-- Confirm no secret values enter source files, fixtures, or logs.
-- Run `git diff --check`.
-- Review final Git status.
-- Confirm changed files remain within the authorized assignment boundary.
-- Check that no unrequested dependencies or runtime services were added.
-
-### Reporting Standard
-
-Classify checks as:
-
-- **Passed** — performed successfully.
-- **Failed** — performed but did not satisfy expectations.
-- **Not run** — not executed, with a reason.
-
-Do not report browser interactions or live provider results as successful unless they actually occurred.
-
-Preserve the distinction between mocked tests, live observations, and historical Phase 0 evidence.
-
----
-
-## 8. Phase 3 Acceptance Criteria
-
-Phase 3 is ready for human acceptance when:
-
-- [ ] A backend ORS driving-route adapter exists.
-- [ ] The adapter uses the approved `driving-car` profile.
-- [ ] Real authenticated ORS routing works.
-- [ ] Canonical origin and destination coordinates are handled correctly.
-- [ ] Invalid or unsupported destinations are rejected.
-- [ ] Route results normalize into the approved `RouteCandidate` contract.
-- [ ] Route geometry remains valid and MapLibre-compatible.
-- [ ] Provider distance and duration are preserved with correct units.
-- [ ] Route-candidate identities distinguish alternatives.
-- [ ] A focused FastAPI routing endpoint exists.
-- [ ] Multiple driving alternatives are supported.
-- [ ] Fewer-than-requested alternatives are handled.
-- [ ] Single-route results are supported.
-- [ ] Legitimate no-route results are handled.
-- [ ] Malformed routes and provider failures are handled safely.
-- [ ] Find Routes is available only when valid canonical origin and destination selections exist.
-- [ ] Users can explicitly request driving routes.
-- [ ] Actual returned alternatives appear on MapLibre.
-- [ ] Alternative routes are visually distinguishable.
-- [ ] Available alternatives have factual distance and duration summaries.
-- [ ] Users can explicitly select a route.
-- [ ] The selected route is visually identifiable.
-- [ ] Canonical selected-route state is retained for later phases.
-- [ ] No route is silently selected as the intended journey.
-- [ ] Changing origin/destination invalidates old routes.
-- [ ] Stale routing responses cannot restore obsolete routes.
-- [ ] Route selection can be changed without requesting a new journey.
-- [ ] Appropriate routing loading, error, and no-route states are displayed.
-- [ ] Existing MapLibre pan, zoom, attribution, and resizing remain functional.
-- [ ] The fixed approximately 65/35 desktop layout remains usable.
-- [ ] Existing location autocomplete and destination validation remain functional.
-- [ ] Drive remains the active mode without premature transit behavior.
-- [ ] Analyze Journey remains inactive.
-- [ ] No fabricated traffic, telemetry, or AI findings are presented.
-- [ ] Relevant backend pytest and Ruff checks pass.
-- [ ] Frontend TypeScript checks and production build pass.
-- [ ] Representative end-to-end route selection is manually verified.
-- [ ] No backend-only API credentials are exposed in the frontend.
-- [ ] `PROJECT_STATE.md` records actual verification, limitations, and acceptance readiness.
-- [ ] Codex provides the required completion report and confirms no Git staging, commit, or push occurred.
-
-Passing these checks makes Phase 3 eligible for human review.
-
-It does not constitute automatic acceptance.
+Classify every reported check as Passed, Failed, or Not run.
 
 ---
 
-## 9. Blockers and Escalation
+## 17. Phase 4 Acceptance Criteria
+
+Phase 4 is ready for human acceptance when:
+
+- [ ] Both Road Ahead datasets are integrated.
+- [ ] Live source access works.
+- [ ] Normalized `CityEvent` records preserve source provenance.
+- [ ] Full supported geometries normalize correctly.
+- [ ] Missing optional fields remain unknown.
+- [ ] The structured-data cache uses the approved approximately 24-hour policy.
+- [ ] Valid cache reuse works.
+- [ ] Cache replacement follows validation.
+- [ ] Failed refresh preserves valid stale data.
+- [ ] Stale source status is exposed.
+- [ ] Route-relevance calculations use a suitable projected CRS.
+- [ ] Direct route overlaps are detected.
+- [ ] Nearby supplemental events are identified.
+- [ ] Distant events are excluded from relevant results.
+- [ ] All direct overlaps survive candidate limiting.
+- [ ] Relevant detail pages are enriched where supported.
+- [ ] Enrichment failures preserve base event records.
+- [ ] Enrichment caching works.
+- [ ] The initial trip-analysis API exists.
+- [ ] Analysis uses the explicitly selected route.
+- [ ] Results distinguish direct overlaps from nearby context.
+- [ ] Zero relevant events are handled honestly.
+- [ ] Partial Road Ahead failures degrade gracefully.
+- [ ] Analyze Journey is enabled only for a valid selected journey.
+- [ ] Analysis is initiated by user action.
+- [ ] Relevant Road Ahead geometry/markers appear on MapLibre.
+- [ ] The initial Along Your Route panel displays useful source-grounded information.
+- [ ] Factual event counts and deterministic summaries are accurate.
+- [ ] Source freshness and limitations are visible where appropriate.
+- [ ] Changing journey context invalidates obsolete analysis.
+- [ ] Stale responses cannot restore previous journey findings.
+- [ ] Existing Phase 1–3 functionality remains working.
+- [ ] No unrelated telemetry sources or LLM features are introduced.
+- [ ] Relevant automated tests and build checks pass.
+- [ ] Representative live end-to-end behavior is manually verified.
+- [ ] No credentials are exposed.
+- [ ] `PROJECT_STATE.md` records actual evidence and limitations.
+- [ ] Codex provides the required completion report.
+- [ ] Codex performs no staging, commit, push, or history modification.
+
+These checks establish eligibility for human acceptance.
+
+They do not constitute automatic acceptance.
+
+---
+
+## 18. Blockers and Escalation
 
 Stop affected work and report when:
 
-- ORS credentials are missing or rejected after ordinary troubleshooting;
-- actual ORS responses materially contradict approved Phase 0 assumptions;
-- the approved route-candidate contract cannot represent real provider results;
-- the required geometry representation is unresolved or incompatible with MapLibre;
-- the existing destination-validation contract would need to be weakened;
-- route selection cannot be represented without a material architectural change;
-- a major new dependency or infrastructure component is required;
-- existing Phase 2 location state cannot be preserved safely;
-- map rendering or lifecycle behavior cannot be maintained;
-- completion requires unauthorized later-phase functionality;
-- destructive or unrelated repository changes appear necessary;
-- an important product policy must be invented to satisfy the acceptance criteria.
+- official Road Ahead endpoints or response formats materially differ from approved evidence;
+- a required source cannot be accessed;
+- the actual `CityEvent` contract cannot represent meaningful source geometry;
+- a source schema change prevents reliable normalization;
+- downloaded data cannot be distinguished from malformed or incomplete content;
+- safe cache replacement cannot be achieved within the existing architecture;
+- the geospatial matching approach requires an unapproved fundamental design change;
+- a significant product decision is needed about relevance thresholds or event interpretation;
+- event detail-page behavior materially contradicts previous research;
+- the analysis API would require incompatible changes to accepted journey contracts;
+- a substantial new infrastructure dependency is required;
+- existing geographic validation must be weakened;
+- implementing the phase would require unauthorized later-phase capabilities;
+- destructive or unrelated repository modifications appear necessary.
 
-For each material blocker, report:
+For each blocker, report:
 
 - observed issue;
 - affected requirement;
 - available evidence;
-- reasonable options, where apparent.
+- reasonable options.
 
-Continue independent in-scope implementation work when safe.
+Continue independent in-scope work where safe.
 
-Routine ORS parsing, error handling, candidate labeling, React state organization, MapLibre layer styling, and focused test corrections may be resolved autonomously.
+Routine parser changes, cache implementation details, projection plumbing, focused test corrections, UI styling, and limited API organization may be handled autonomously.
 
-Do not silently replace approved architectural contracts.
-
-Do not weaken deterministic geographic validation for convenience.
+Do not silently redesign the product.
 
 ---
 
-## 10. Phase Completion and Handoff
+## 19. Phase Completion and Handoff
 
 After each bounded assignment:
 
-- Run relevant verification.
-- Update `PROJECT_STATE.md` with factual implementation progress.
-- Record actual route API behavior and provider observations.
-- Preserve completed functionality.
-- Report files created or modified.
-- Identify failures, limitations, and material decisions.
+- Run applicable verification.
+- Update `PROJECT_STATE.md` factually.
+- Record real source behavior and meaningful discoveries.
+- Preserve previously accepted functionality.
+- Report changed files and dependencies.
+- Record failures and limitations.
 - Provide the standard completion report required by `AGENTS.md`.
-- Do not claim the entire phase is complete until all applicable acceptance criteria have been assessed.
+- Leave Git history untouched.
 
-Phase 3 is accepted only after human review of:
-
-- real driving-route generation;
-- alternate route presentation;
-- explicit user route selection;
-- selected-route state consistency;
-- invalidation after location changes;
-- routing failure and no-route behavior;
-- MapLibre route visualization;
-- existing map and journey-input regression;
-- relevant tests and production build results;
-- material limitations and deviations.
-
-Git checkpoints remain human-controlled.
-
-Codex must not stage, commit, push, amend, merge, rebase, tag, or rewrite Git history.
+Phase 4 remains in progress until the human developer reviews and accepts its full implementation.
 
 After acceptance:
 
 1. Record human acceptance in `PROJECT_STATE.md`.
-2. Perform the human-controlled Git checkpoint.
-3. Prepare the next phase's `BUILD_PLAN.md`.
-4. Do not begin subsequent implementation until separately authorized.
+2. Create the human-controlled Git checkpoint.
+3. Prepare and approve the next phase's `BUILD_PLAN.md`.
+4. Do not begin the next phase without separate authorization.
+
+Codex must not stage, commit, push, merge, rebase, amend, tag, or rewrite Git history.
 
 ---
 
-## 11. Next Phase
+## 20. Next Phase
 
-**Phase 4 — See `docs/implementation-plan.md` for the authoritative phase name and scope.**
+**Phase 5 — Regional Road Context: DriveBC Open511**
 
-After Phase 3 acceptance, the selected driving-route geometry and associated canonical journey locations become available to subsequent RouteLens data-integration and intelligence work.
+The next phase adds regional road-event information beyond Vancouver's municipal Road Ahead datasets.
 
-The selected route will provide geographic context for determining which real-world information is relevant to a journey.
+Its planned responsibilities include:
 
-The exact Phase 4 requirements must be taken from the approved implementation roadmap when preparing its build plan.
+- regional Open511 ingestion;
+- pagination;
+- short-lived regional caching;
+- road-event normalization;
+- journey-specific relevance;
+- regional event map presentation.
 
-Do not assume that all telemetry sources or AI features belong to Phase 4.
+Do not implement Phase 5 during Phase 4.
 
-**Phase 4 work is not authorized by this document.**
+**Phase 5 work is not authorized by this document.**
