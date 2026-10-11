@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 4 — Vancouver Road Ahead Vertical Slice
-**Phase status:** In progress — Assignment 4A implementation and human review complete; Assignments 4B–4D have not started
-**Human review:** Phase 3 accepted on 2026-10-10; Assignment 4A accepted on 2026-10-10
-**Git checkpoint:** Phase 3 Assignment 3C committed as `0fb9c13`; Assignment 4A pending human Git checkpoint
+**Phase status:** In progress — Assignments 4A and 4B accepted; Assignments 4C–4D have not started
+**Human review:** Phase 3 accepted on 2026-10-10; Assignment 4A accepted and committed; Assignment 4B accepted on 2026-10-10
+**Git checkpoint:** Assignment 4A committed as `e15b926`; Assignment 4B pending human Git checkpoint
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Assignment 4A established the Road Ahead ingestion, normalization, and validated caching foundation. Route relevance, telemetry presentation, and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Assignment 3C verified Phase 3 end to end and corrected the Mode card styling. Assignment 4A established the Road Ahead ingestion, normalization, and validated caching foundation; Assignment 4B adds projected deterministic route relevance and is ready for human review. Telemetry presentation and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -589,7 +589,7 @@ The initial mocked run used an overly specific assertion for the existing shared
 
 **Phase 3 assessment:** Accepted. All applicable Phase 3 acceptance requirements are satisfied using the accepted 3A/3B evidence and Assignment 3C integration verification. Remaining provider limitations and deferred functionality are documented above.
 
-**Next action:** Human review of Assignment 4A. Assignments 4B–4D remain separately authorized work and have not started.
+**Next action:** Human review of Assignment 4B. Assignments 4C and 4D remain separately authorized work and have not started.
 
 ## 19. Assignment 4A — Road Ahead Ingestion, Normalization, and Cache
 
@@ -612,4 +612,28 @@ Each dataset has an independent atomic JSON cache at `data/cache/road_ahead/{clo
 
 **Limitations:** No provider publication/update timestamp was present in the sampled records; `fetched_at` is the local successful retrieval time. GeometryCollections with `Polygon` are supported based on live evidence; other unobserved geometry types remain unsupported and are isolated as malformed records. Live stale-fallback and refresh-failure scenarios were verified deterministically with mocked responses, not by disrupting the public provider.
 
-**Deviations:** None. The parser follows the live portal response structure, including explicitly selecting its source record ID and preserving observed Polygon components inside GeometryCollections. No route matching, detail-page enrichment, analysis API, or frontend telemetry was added. Assignment 4A is not human accepted; no staging, commit, push, or history operation was performed.
+**Deviations:** None. The parser follows the live portal response structure, including explicitly selecting its source record ID and preserving observed Polygon components inside GeometryCollections. No route matching, detail-page enrichment, analysis API, or frontend telemetry was added. Assignment 4A was accepted and committed as `e15b926`.
+
+## 20. Assignment 4B — Geospatial Route Relevance
+
+**Status:** Accepted by the human developer on 2026-10-10. Phase 4 remains in progress. Assignment 4A is accepted and committed as `e15b926`; Assignments 4C and 4D have not started.
+
+`backend/app/route_relevance.py` accepts the selected ORS GeoJSON LineString and normalized `CityEvent` records. It validates route coordinates and rejects malformed, empty, zero-length, or unsupported routes with `RouteGeometryError`. Event LineString, MultiLineString, Polygon, and mixed GeometryCollection geometries are validated and projected as complete geometries. Missing, structurally invalid, empty, topologically invalid, or unprojectable event geometries are skipped with an event ID and bounded reason code; one such event does not prevent matching other records. No geometry repair or representative-point fallback is performed.
+
+The matcher transforms EPSG:4326 longitude/latitude into **EPSG:26910 (NAD83 / UTM zone 10N)** using `pyproj.Transformer` with `always_xy=True`. Shapely intersection and distance calculations therefore use projected metres, while original event models and geographic geometries remain unchanged. Exact geometry intersection produces `direct_overlap` with distance 0 m. Non-intersecting geometry within the default **500 m** threshold produces `nearby` with its actual minimum geometry distance. The 500 m threshold and nearby-only limit of **10** are configurable MVP implementation defaults, not locked product decisions. Nearby events sort by distance and then dataset/source event identity. Every direct overlap is retained ahead of the nearby slice; there is no combined count cap. Result wrappers preserve the original `CityEvent`; repeated dataset-scoped event identity is returned once, while distinct source events remain distinct.
+
+**Sanitized fixture sanity check:** The selected geometry was feature 0 from `fixtures/openrouteservice/driving_richmond_to_downtown.geojson`; 2 normalized events were available from the existing Road Ahead fixtures. With a 500 m threshold and nearby limit 10, the result contained 1 direct overlap, 0 nearby events, and 0 unmatchable events. The matched identity was `road-ahead-current-road-closures:closure-row-001`. No local Road Ahead cache directory was available, so no cached-live-dataset check was run and no provider was fetched for this assignment.
+
+**Automated verification:** Focused geospatial tests — Passed, 26 tests. Complete backend pytest suite — Passed, 133 tests. Ruff (`app tests`) — Passed. Frontend TypeScript and production build — Passed; the existing large JavaScript chunk advisory remains. `git diff --check` — Passed. `.env` ignore check — Passed. The focused tests cover projected axis order and metre scale; all supported geometry types; direct and nearby classifications; ranking and tie-breaking; limits including zero; uncapped direct intersections; source identity/provenance; invalid route rejection; malformed-event isolation; accepted Road Ahead normalization; and a sanitized ORS route fixture.
+
+**Dependencies:** Added pinned `pyproj==3.7.2` because the accepted backend environment had Shapely but no projection library. No frontend dependency changed.
+
+**Limitations:** The 500 m/10 defaults require tuning against representative journeys. The fixture sanity check is deterministic and sanitized, not a live or cached-data validation. Geographic relevance does not establish current closure status, traffic impact, directionality, delay, or detour need. Unmatchable geometries include bounded reason codes, but no detailed per-record diagnostics.
+
+**Deviations:** None. No ingestion/cache, API, detail enrichment, route-selection frontend, or map presentation work was added.
+
+**Git status:** Assignment 4B changes are awaiting the human-controlled Git checkpoint. Codex performed no staging, commit, push, or history modification.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Human review confirmed the projected CRS approach, geometry validation, direct-overlap preservation, deterministic nearby ranking, and alignment with the approved Assignment 4B scope. Automated regression and fixture-based verification passed. Live-data matching remains deferred to later Phase 4 integration verification.
+
+**Next action:** Human-controlled Git checkpoint for Assignment 4B, followed by preparation of Assignment 4C — Detail Enrichment and Analysis API.
