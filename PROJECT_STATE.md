@@ -5,12 +5,12 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established  
 **Current phase:** Phase 3 — Drive Route Candidates + Selection
-**Phase status:** Assignment 3A implementation complete; ready for human review
+**Phase status:** Assignment 3B implementation complete; ready for human review. Phase 3 is not yet accepted.
 **Human review:** Completed — Assignments 2A–2C and full Phase 2 accepted by human developer on 2026-10-10
-**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`; Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C pending human commit
+**Git checkpoint:** Assignment 1A `01ff452`; Assignment 1B `c2c501b`; Assignment 1C `fb931ad`; Assignment 2A `d46e12a`; Assignment 2B `f3b7d65`; Assignment 2C `15c8028`; Assignment 3A `ca5d880`. Assignment 3B remains uncommitted for human review.
 **Repository baseline:** Inspected for Assignment 0A
 
-Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API only. No route UI, telemetry, or AI journey analysis has been implemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
+Assignment 0A validated the root SDD harness and inspected repository contents; at that time no application source or automated tests were found. Assignments 0B–0D added sanitized provider evidence and readiness notes. Assignment 0E consolidated the evidence and finalized `.env.example`. Assignments 1A–1C established the app foundation, interactive Vancouver basemap, and desktop shell; Phase 1 was accepted on 2026-10-10. Assignments 2A–2C delivered and verified geocoding, destination validation, and canonical location selection; Phase 2 was accepted on 2026-10-10. Assignment 3A adds the backend ORS driving-candidate API. Assignment 3B adds user-initiated route retrieval, candidate summaries and explicit selection, and MapLibre route rendering. Telemetry and AI journey analysis remain unimplemented. The Phase 0 assessment is `docs/integration-notes/phase-0-readiness-summary.md`.
 
 ## 2. Established Planning Artifacts
 
@@ -33,11 +33,11 @@ All four root harness files are present and readable. All five listed planning d
 
 ## 3. Implementation Reality
 
-**Repository implementation status: Assignments 1A–1C, 2A–2C, and 3A implemented; Assignment 3A evidence is recorded in Section 16.**
+**Repository implementation status: Assignments 1A–1C, 2A–2C, 3A, and 3B implemented; Assignment 3B evidence is recorded in Section 17.**
 
-The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignment 3A implements backend route-candidate retrieval; route rendering, selection, and journey analysis are not implemented.
+The Assignment 0A inventory found no backend, frontend, source code, dependency manifest, or application configuration. Later readiness assignments added integration notes and fixtures only. Assignment 1A added the minimal backend/frontend foundation, Assignment 1B added the interactive MapLibre map with MapTiler's dark Vancouver basemap, and Assignment 1C added the desktop shell and intelligence placeholders. Assignments 2A–2C implement backend geocoding/validation and frontend location selection. Assignments 3A–3B implement backend route-candidate retrieval, frontend route selection, and map rendering. Journey analysis remains disabled and unimplemented.
 
-At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 2B adds a shared React location autocomplete and parent-owned canonical origin/destination state. Assignment 3A adds normalized ORS driving routes through the backend. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
+At the Assignment 0A inventory, no automated test infrastructure, API integration scripts, or build tooling was found. Assignment 1A now provides a backend pytest/Ruff setup and a Vite/TypeScript/Tailwind frontend. Assignment 2B adds a shared React location autocomplete and parent-owned canonical origin/destination state. Assignment 3A adds normalized ORS driving routes through the backend; Assignment 3B owns canonical route candidates and selected route at the React app level. Assignment 0B added two observed OpenWeather response fixtures under `fixtures/openweather/`.
 
 `.gitignore` is present and includes `.env`. The ignored local `.env` has MapTiler, ORS, OpenWeather, and OpenRouter credentials; `TRANSLINK_API_KEY` is absent locally, although planning research records prior testing. Secret values were not displayed or changed. Assignment 0E created `.env.example` with the five approved credential names and both tested provisional OpenRouter model identifiers.
 
@@ -440,4 +440,39 @@ Live results above are this assignment's observations. Phase 0 separately observ
 
 **Remaining limitations:** ORS does not guarantee three alternatives for arbitrary journeys. Provider durations are routing estimates, not live traffic measurements. Strict Lower Mainland origin-boundary enforcement remains undefined in the approved design. Live no-route and upstream-failure scenarios were not induced; deterministic tests cover these behaviors.
 
-**Next action:** Human Git checkpoint followed by separately authorized Assignment 3B — Route Visualization and Selection. Phase 3 remains in progress.
+**Next action:** Assignment 3B route visualization and selection is recorded in Section 17. Phase 3 remains in progress pending Assignment 3C integrated verification and human acceptance.
+
+## 17. Assignment 3B — Route Visualization and Selection
+
+The frontend uses the accepted `POST /api/routes/driving` contract through the existing Vite `/api` proxy. `frontend/src/routeTypes.ts` defines the matching LineString, candidate, request, response, known API error, and request-state types. The response normalizer accepts only usable candidates with finite longitude/latitude pairs and positive finite distance and duration; it retains provider IDs including sparse IDs and does not select a route automatically.
+
+Canonical origin, validated destination, and route request state are owned by `App`. Find Routes is user-initiated and enabled only when both canonical locations exist and no request is active. Destination remains unavailable while validation is pending, rejected, or failed. Route requests use `AbortController` and a monotonically increasing request identity. Editing either query clears the affected canonical selection and immediately clears candidates, selection, status, and map features; late responses cannot restore routes. Failed and empty responses retain valid locations and allow retry.
+
+The panel lists each available candidate with a neutral label, rounded kilometre distance, and estimated driving duration. Candidate buttons expose `aria-pressed`; selection stores the actual candidate and is not coupled to another request. Empty results and `no_route_found` have no-route messaging; provider failures use concise safe feedback. Analyze Journey remains disabled, and the existing intelligence placeholders are unchanged.
+
+`VancouverMap` keeps the existing MapLibre instance and adds one GeoJSON source retaining each candidate ID. Subdued, stable per-ID colors distinguish unselected alternatives; the selected route is drawn with a dark casing and teal highlight above them. The combined returned route geometry determines the fit bounds when a new result set arrives. Selection updates source data and styling without refitting the camera. Basemap style, initial view, controls, attribution, worker setup, ResizeObserver, and cleanup are preserved.
+
+### Assignment 3B verification
+
+| Check | Status | Evidence |
+|---|---|---|
+| Frontend TypeScript and production build | Passed | `npm run build`; Vite emitted a large-chunk advisory for the existing MapLibre-heavy client bundle |
+| Backend regression suite | Passed | 79 pytest tests |
+| Backend Ruff | Passed | `./.venv/bin/python -m ruff check app tests` |
+| Live API through Vite `/api` proxy | Passed | One Richmond-to-Downtown request returned normalized ORS route candidates with real LineString geometry and metadata; no credentials were printed |
+| Browser initial/selection workflow | Passed (mocked route response) | Headless Chrome verified Find Routes disabled before canonical selections, enabled after mocked successful destination validation, no auto-selection, candidate summaries, candidate switching without another route request, selected route feedback, basemap, controls, and attribution |
+| Browser invalidation and failure states | Passed (mocked responses) | Origin edit cleared candidates and disabled Find Routes; provider failure allowed retry; `no_route_found` showed no-route feedback; a deferred response that ignored abort could not restore routes after an origin edit |
+| Responsive layout | Passed (headless Chrome) | 1440px and 430px viewport checks found no horizontal overflow; at 430px the controls and candidate buttons remained within viewport width |
+| `.env`, build artifacts, and diff hygiene | Passed | `.env` remains ignored; configured ORS/OpenWeather/OpenRouter secret values were absent from frontend assets; `git diff --check` passed |
+
+**Not run in Assignment 3B:** A live browser interaction against the real ORS endpoint, dedicated frontend unit-test suite, and single-route browser scenario. The live endpoint was tested through Vite separately, and Assignment 3C remains responsible for comprehensive integrated verification, remaining robustness checks, and final Phase 3 acceptance.
+
+**Deviations:** None. Backend sources and API contracts were unchanged; no runtime dependencies were added.
+
+**Known limitations:** ORS candidate count and alternatives remain provider-dependent. Durations are provider estimates, not live traffic. Headless browser failure/race cases used deterministic mocked responses; real provider no-route and outage responses were not induced. During visual inspection, MapLibre logged a missing MapTiler transportation sprite image while the basemap, route, controls, and attribution rendered; this did not block the observed route display.
+
+**Review status:** Accepted by the human developer on 2026-10-10. Manual browser verification confirmed real ORS driving-route retrieval, MapLibre visualization of alternative routes, explicit user selection, candidate distance/duration summaries, and route invalidation after location changes. Existing autocomplete, City of Vancouver destination validation, map interaction, and desktop shell behavior remained functional.
+
+**Remaining verification:** Assignment 3C will complete the integrated Phase 3 regression assessment, including single-candidate, no-route, provider-failure, and additional asynchronous request scenarios. No telemetry or AI journey analysis has been implemented.
+
+**Next action:** Human Git checkpoint, followed by separately authorized Assignment 3C — End-to-End Routing Integration. Phase 3 remains in progress.

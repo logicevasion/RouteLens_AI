@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
+import {
+  routeColor,
+  type DrivingRoutesRequest,
+  type DrivingRoutesResponse,
+  type RouteCandidate,
+  type RouteRequestState,
+  type RoutingApiError,
+} from './routeTypes';
 
 type BackendStatus = 'checking' | 'connected' | 'unavailable';
 
@@ -71,9 +79,76 @@ type DestinationFeedback = {
   message: string;
 };
 
-function JourneyControls() {
-  const [origin, setOrigin] = useState<Location | null>(null);
-  const [destination, setDestination] = useState<Location | null>(null);
+const initialRouteState: RouteRequestState = {
+  status: 'idle', candidates: [], selectedRoute: null, error: null, fitKey: 0,
+};
+
+function normalizeRoutes(value: unknown): DrivingRoutesResponse | null {
+  if (typeof value !== 'object' || value === null || !('routes' in value) || !Array.isArray(value.routes)) {
+    return null;
+  }
+  const routes = value.routes.filter((item): item is RouteCandidate => {
+    if (typeof item !== 'object' || item === null) return false;
+    const route = item as Partial<RouteCandidate>;
+    return typeof route.id === 'string' && route.id.length > 0 &&
+      typeof route.geometry === 'object' && route.geometry !== null &&
+      route.geometry.type === 'LineString' && Array.isArray(route.geometry.coordinates) &&
+      route.geometry.coordinates.length >= 2 && route.geometry.coordinates.every((point) =>
+        Array.isArray(point) && point.length === 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]) &&
+        point[0] >= -180 && point[0] <= 180 && point[1] >= -90 && point[1] <= 90,
+      ) && typeof route.distance_meters === 'number' && Number.isFinite(route.distance_meters) &&
+      route.distance_meters > 0 && typeof route.duration_seconds === 'number' &&
+      Number.isFinite(route.duration_seconds) && route.duration_seconds > 0 &&
+      (route.label === undefined || route.label === null || typeof route.label === 'string');
+  });
+  return { routes };
+}
+
+function formatDistance(meters: number): string {
+  const kilometres = meters / 1000;
+  return `${kilometres.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
+}
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours > 0 ? `approximately ${hours} hr ${remainder} min` : `approximately ${minutes} min`;
+}
+
+function routingErrorMessage(error: RoutingApiError | null, status: number): string {
+  switch (error?.detail?.code) {
+    case 'no_route_found':
+      return 'No drivable route was found for these locations. Try a different starting point.';
+    case 'unsupported_destination':
+      return error.detail.message ?? 'Choose a destination inside the City of Vancouver.';
+    case 'routing_rate_limited':
+      return 'Route service is busy. Please wait a moment and try again.';
+    case 'routing_timeout':
+      return 'Route service took too long to respond. Please try again.';
+    case 'routing_not_configured':
+    case 'routing_authentication_failed':
+    case 'routing_provider_unavailable':
+      return 'Driving routes are temporarily unavailable. Please try again.';
+    default:
+      return status >= 500
+        ? 'Driving routes are temporarily unavailable. Please try again.'
+        : 'Could not retrieve routes for this journey. Please try again.';
+  }
+}
+
+type JourneyControlsProps = {
+  origin: Location | null;
+  destination: Location | null;
+  onOriginChange: (location: Location | null) => void;
+  onDestinationChange: (location: Location | null) => void;
+  routeState: RouteRequestState;
+  canFindRoutes: boolean;
+  onJourneyInputEdit: () => void;
+  onFindRoutes: () => void;
+};
+
+function JourneyControls({ origin, destination, onOriginChange, onDestinationChange, routeState, canFindRoutes, onJourneyInputEdit, onFindRoutes }: JourneyControlsProps) {
   const [destinationFeedback, setDestinationFeedback] = useState<DestinationFeedback | null>(null);
   const validationSequence = useRef(0);
   const validationController = useRef<AbortController | null>(null);
@@ -81,20 +156,22 @@ function JourneyControls() {
   useEffect(() => () => validationController.current?.abort(), []);
 
   function invalidateDestination() {
+    onJourneyInputEdit();
     validationSequence.current += 1;
     validationController.current?.abort();
     validationController.current = null;
-    setDestination(null);
+    onDestinationChange(null);
     setDestinationFeedback(null);
   }
 
   async function validateDestination(candidate: Location) {
+    onJourneyInputEdit();
     validationSequence.current += 1;
     const requestId = validationSequence.current;
     validationController.current?.abort();
     const controller = new AbortController();
     validationController.current = controller;
-    setDestination(null);
+    onDestinationChange(null);
     setDestinationFeedback({ kind: 'pending', message: 'Checking City of Vancouver boundary…' });
 
     try {
@@ -115,10 +192,10 @@ function JourneyControls() {
       if (validationSequence.current !== requestId) return;
 
       if (validation.valid) {
-        setDestination(candidate);
+        onDestinationChange(candidate);
         setDestinationFeedback(null);
       } else {
-        setDestination(null);
+        onDestinationChange(null);
         setDestinationFeedback({
           kind: 'rejected',
           message: validation.reason ?? 'Choose a destination inside the City of Vancouver.',
@@ -126,7 +203,7 @@ function JourneyControls() {
       }
     } catch {
       if (controller.signal.aborted || validationSequence.current !== requestId) return;
-      setDestination(null);
+      onDestinationChange(null);
       setDestinationFeedback({
         kind: 'error',
         message: 'Destination could not be verified. Please try again.',
@@ -141,7 +218,7 @@ function JourneyControls() {
           <p className="eyebrow">VANCOUVER · BRITISH COLUMBIA</p>
           <h1 id="journey-title">Your city, in context.</h1>
         </div>
-        <span className="coming-badge">Route planning coming next</span>
+        <span className="coming-badge">DRIVE ROUTE CONTEXT</span>
       </div>
 
       <div className="journey-form" aria-label="Journey location inputs">
@@ -151,8 +228,8 @@ function JourneyControls() {
           placeholder="Search Metro Vancouver"
           marker="origin-marker"
           selectedLocation={origin}
-          onQueryEdit={() => setOrigin(null)}
-          onSelect={setOrigin}
+          onQueryEdit={() => { onOriginChange(null); onJourneyInputEdit(); }}
+          onSelect={onOriginChange}
         />
         <span className="journey-arrow" aria-hidden="true">→</span>
         <LocationAutocomplete
@@ -173,21 +250,35 @@ function JourneyControls() {
             <button type="button" disabled aria-pressed="false">Transit</button>
           </div>
         </div>
+        <button
+          className="find-routes-button"
+          type="button"
+          disabled={!canFindRoutes || routeState.status === 'loading'}
+          onClick={onFindRoutes}
+        >
+          {routeState.status === 'loading' ? <><span className="map-spinner" aria-hidden="true" /> Finding routes…</> : 'Find routes'}
+        </button>
         <button className="analyze-button" type="button" disabled>
           <span aria-hidden="true">✦</span>
           Analyze journey
         </button>
       </div>
-      {origin && destination && (
-        <p className="selection-readiness" role="status">
-          Origin and destination selected — route planning coming next.
-        </p>
-      )}
+      <p className="route-request-status" role={routeState.status === 'error' ? 'alert' : 'status'} aria-live="polite">
+        {routeState.status === 'loading' && 'Requesting driving alternatives…'}
+        {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
+        {routeState.status === 'error' && routeState.error}
+        {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one below.`}
+      </p>
     </section>
   );
 }
 
-function IntelligencePanel() {
+type IntelligencePanelProps = {
+  routeState: RouteRequestState;
+  onSelectRoute: (route: RouteCandidate) => void;
+};
+
+function IntelligencePanel({ routeState, onSelectRoute }: IntelligencePanelProps) {
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -195,7 +286,7 @@ function IntelligencePanel() {
           <p className="eyebrow">JOURNEY INTELLIGENCE</p>
           <h2 id="intelligence-title">Your journey</h2>
         </div>
-        <span className="panel-status"><span /> Waiting for a journey</span>
+        <span className="panel-status"><span /> {routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'Waiting for a journey'}</span>
       </div>
 
       <div className="journey-overview">
@@ -205,10 +296,54 @@ function IntelligencePanel() {
           <span className="overview-pin" />
         </div>
         <div>
-          <h3>No journey selected</h3>
-          <p>Choose an origin and destination to see relevant city context.</p>
+          <h3>{routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'No journey selected'}</h3>
+          <p>{routeState.selectedRoute
+            ? `${routeState.selectedRoute.label ?? 'Selected driving route'} is ready for future journey intelligence.`
+            : routeState.status === 'ready'
+              ? 'Select the candidate closest to your planned journey.'
+              : 'Choose an origin and destination, then find driving routes.'}</p>
         </div>
       </div>
+
+      {(routeState.status === 'loading' || routeState.status === 'ready' || routeState.status === 'empty' || routeState.status === 'error') && (
+        <section className="route-selection" aria-labelledby="route-selection-title">
+          <div className="route-selection-heading">
+            <div>
+              <p className="eyebrow">DRIVING ALTERNATIVES</p>
+              <h3 id="route-selection-title">Choose your route</h3>
+            </div>
+            {routeState.status === 'ready' && <span>{routeState.candidates.length} available</span>}
+          </div>
+          {routeState.status === 'loading' && <p className="route-list-message" role="status">Loading route alternatives…</p>}
+          {routeState.status === 'empty' && <p className="route-list-message">No usable routes were found. You can adjust your locations and try again.</p>}
+          {routeState.status === 'error' && <p className="route-list-message">{routeState.error}</p>}
+          {routeState.status === 'ready' && (
+            <div className="route-candidate-list" role="group" aria-label="Driving route alternatives">
+              {routeState.candidates.map((route, index) => {
+                const selected = routeState.selectedRoute?.id === route.id;
+                const label = route.label?.trim() || `Route ${index + 1}`;
+                return (
+                  <button
+                    className={`route-candidate${selected ? ' route-candidate-selected' : ''}`}
+                    type="button"
+                    key={route.id}
+                    aria-pressed={selected}
+                    aria-label={`${label}, ${formatDistance(route.distance_meters)}, estimated driving time ${formatDuration(route.duration_seconds)}${selected ? ', selected' : ''}`}
+                    onClick={() => onSelectRoute(route)}
+                  >
+                    <span className={`candidate-swatch${selected ? ' candidate-swatch-selected' : ''}`} style={{ backgroundColor: selected ? '#51d5cc' : routeColor(route.id) }} aria-hidden="true" />
+                    <span className="candidate-copy">
+                      <span className="candidate-title">{label}</span>
+                      <span className="candidate-metadata">{formatDistance(route.distance_meters)} · {formatDuration(route.duration_seconds)} driving</span>
+                    </span>
+                    <span className="candidate-selection">{selected ? 'Selected' : 'Select'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="intelligence-sections">
         {intelligenceSections.map((section) => (
@@ -229,6 +364,83 @@ function IntelligencePanel() {
 
 export default function App() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
+  const [routeState, setRouteState] = useState<RouteRequestState>(initialRouteState);
+  const [origin, setOrigin] = useState<Location | null>(null);
+  const [destination, setDestination] = useState<Location | null>(null);
+  const routingSequence = useRef(0);
+  const routingController = useRef<AbortController | null>(null);
+  const activePair = useRef<string | null>(null);
+
+  const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
+
+  function invalidateRoutes() {
+    routingSequence.current += 1;
+    routingController.current?.abort();
+    routingController.current = null;
+    activePair.current = null;
+    setRouteState({ status: 'idle', candidates: [], selectedRoute: null, error: null, fitKey: routeState.fitKey });
+  }
+
+  async function findRoutes() {
+    if (!origin || !destination) return;
+    const request: DrivingRoutesRequest = { origin, destination };
+    const requestPair = JSON.stringify(request);
+    if (routingController.current && activePair.current === requestPair) return;
+
+    routingSequence.current += 1;
+    const requestId = routingSequence.current;
+    routingController.current?.abort();
+    const controller = new AbortController();
+    routingController.current = controller;
+    activePair.current = requestPair;
+    setRouteState({ status: 'loading', candidates: [], selectedRoute: null, error: null, fitKey: routeState.fitKey });
+
+    try {
+      const response = await fetch('/api/routes/driving', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        let error: RoutingApiError | null = null;
+        try { error = await response.json() as RoutingApiError; } catch { /* use safe status fallback */ }
+        if (routingSequence.current !== requestId) return;
+        if (error?.detail?.code === 'no_route_found') {
+          setRouteState({ status: 'empty', candidates: [], selectedRoute: null, error: null, fitKey: routeState.fitKey });
+        } else {
+          setRouteState({ status: 'error', candidates: [], selectedRoute: null, error: routingErrorMessage(error, response.status), fitKey: routeState.fitKey });
+        }
+        return;
+      }
+
+      const normalized = normalizeRoutes(await response.json());
+      if (routingSequence.current !== requestId) return;
+      if (!normalized) {
+        setRouteState({ status: 'error', candidates: [], selectedRoute: null, error: 'Route service returned an unreadable response. Please try again.', fitKey: routeState.fitKey });
+      } else if (normalized.routes.length === 0) {
+        setRouteState({ status: 'empty', candidates: [], selectedRoute: null, error: null, fitKey: routeState.fitKey });
+      } else {
+        setRouteState({ status: 'ready', candidates: normalized.routes, selectedRoute: null, error: null, fitKey: routeState.fitKey + 1 });
+      }
+    } catch {
+      if (controller.signal.aborted || routingSequence.current !== requestId) return;
+      setRouteState({ status: 'error', candidates: [], selectedRoute: null, error: 'Driving routes are temporarily unavailable. Please try again.', fitKey: routeState.fitKey });
+    } finally {
+      if (routingSequence.current === requestId) {
+        routingController.current = null;
+        activePair.current = null;
+      }
+    }
+  }
+
+  function selectRoute(route: RouteCandidate) {
+    setRouteState((current) => current.status === 'ready' && current.candidates.some((candidate) => candidate.id === route.id)
+      ? { ...current, selectedRoute: current.candidates.find((candidate) => candidate.id === route.id) ?? null }
+      : current);
+  }
+
+  useEffect(() => () => routingController.current?.abort(), []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -267,14 +479,27 @@ export default function App() {
         </div>
       </header>
 
-      <JourneyControls />
+      <JourneyControls
+        origin={origin}
+        destination={destination}
+        onOriginChange={setOrigin}
+        onDestinationChange={setDestination}
+        routeState={routeState}
+        canFindRoutes={canFindRoutes}
+        onJourneyInputEdit={invalidateRoutes}
+        onFindRoutes={() => void findRoutes()}
+      />
 
       <div className="workspace">
         <div className="map-workspace">
           <div className="map-caption"><span className="map-caption-dot" /> VANCOUVER OVERVIEW</div>
-          <VancouverMap />
+          <VancouverMap
+            routes={routeState.status === 'ready' ? routeState.candidates : []}
+            selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
+            fitKey={routeState.fitKey}
+          />
         </div>
-        <IntelligencePanel />
+        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} />
       </div>
     </main>
   );

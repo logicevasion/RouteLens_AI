@@ -122,9 +122,9 @@ button, input { font: inherit; }
 .journey-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
 .eyebrow { margin: 0 0 5px; color: #7b8d9c; font-size: 9px; font-weight: 700; letter-spacing: .16em; }
 .journey-heading h1 { margin: 0; color: #edf2f6; font-size: 19px; font-weight: 560; letter-spacing: -.035em; }
-.coming-badge { padding: 5px 9px; border: 1px solid rgb(86 200 194 / 19%); border-radius: 999px; background: rgb(86 200 194 / 6%); color: #83c9c5; font-size: 9px; letter-spacing: .03em; }
+.coming-badge { padding: 5px 9px; border: 1px solid rgb(86 200 194 / 19%); border-radius: 999px; background: rgb(86 200 194 / 6%); color: #83c9c5; font-size: 9px; letter-spacing: .08em; }
 
-.journey-form { position: relative; z-index: 6; display: grid; grid-template-columns: minmax(170px, 1fr) 16px minmax(190px, 1.12fr) 176px 178px; align-items: center; gap: 12px; }
+.journey-form { position: relative; z-index: 6; display: grid; grid-template-columns: minmax(150px, 1fr) 16px minmax(180px, 1.1fr) 154px 145px 160px; align-items: center; gap: 10px; }
 .location-autocomplete { position: relative; z-index: 8; min-width: 0; }
 .journey-field, .mode-control {
   display: flex;
@@ -173,6 +173,13 @@ button, input { font: inherit; }
 .analyze-button { display: inline-flex; height: 52px; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgb(86 200 194 / 14%); border-radius: 8px; background: rgb(86 200 194 / 8%); color: #7cb7b4; font-size: 11px; font-weight: 600; }
 .analyze-button span { font-size: 13px; }
 .analyze-button:disabled { cursor: not-allowed; }
+.find-routes-button { display: inline-flex; height: 52px; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgb(86 200 194 / 45%); border-radius: 8px; background: linear-gradient(135deg, rgb(57 169 163 / 24%), rgb(39 110 117 / 22%)); color: #b3f1eb; font-size: 11px; font-weight: 650; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
+.find-routes-button:hover:not(:disabled) { border-color: rgb(86 200 194 / 78%); background: rgb(86 200 194 / 20%); }
+.find-routes-button:disabled { border-color: rgb(191 211 232 / 9%); background: rgb(255 255 255 / 2%); color: #667582; cursor: not-allowed; }
+.find-routes-button .map-spinner { width: 12px; height: 12px; border-color: rgb(179 241 235 / 25%); border-top-color: #b3f1eb; }
+.route-request-status { min-height: 13px; margin: 8px 1px 0; color: #8d9ba7; font-size: 9px; line-height: 1.45; }
+.route-request-status:empty { display: none; }
+.route-request-status[role="alert"] { color: #e1a18f; }
 
 .workspace { display: grid; min-height: 0; flex: 1 1 auto; grid-template-columns: minmax(0, 65fr) minmax(330px, 35fr); gap: 12px; padding: 12px 14px 14px; }
 .map-workspace { position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid rgb(191 211 232 / 11%); border-radius: 11px; background: #10171e; box-shadow: 0 14px 36px rgb(0 0 0 / 16%); }
@@ -192,6 +199,25 @@ button, input { font: inherit; }
 .overview-pin { width: 7px; height: 7px; border: 1.5px solid var(--accent); border-radius: 2px; transform: rotate(45deg); }
 .journey-overview h3 { margin: 0 0 4px; color: #d7e0e7; font-size: 11px; font-weight: 600; }
 .journey-overview p { margin: 0; color: #82909d; font-size: 9px; line-height: 1.5; }
+
+.route-selection { margin: 8px 14px 6px; padding: 13px; border: 1px solid rgb(86 200 194 / 15%); border-radius: 9px; background: linear-gradient(145deg, rgb(86 200 194 / 5%), rgb(255 255 255 / 1%)); }
+.route-selection-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.route-selection-heading .eyebrow { margin-bottom: 4px; color: #6f9b9a; }
+.route-selection-heading h3 { margin: 0; color: #dce7ec; font-size: 12px; font-weight: 600; }
+.route-selection-heading > span { color: #81919d; font-size: 8px; white-space: nowrap; }
+.route-candidate-list { display: grid; gap: 7px; }
+.route-candidate { display: flex; width: 100%; min-width: 0; align-items: center; gap: 10px; padding: 10px; border: 1px solid rgb(191 211 232 / 10%); border-radius: 7px; background: rgb(6 12 17 / 32%); color: #dce5eb; text-align: left; cursor: pointer; transition: border-color .14s ease, background .14s ease; }
+.route-candidate:hover { border-color: rgb(86 200 194 / 36%); background: rgb(86 200 194 / 5%); }
+.route-candidate:focus-visible, .find-routes-button:focus-visible { outline: 2px solid #70ddd4; outline-offset: 2px; }
+.route-candidate-selected { border-color: rgb(86 200 194 / 63%); background: rgb(86 200 194 / 9%); box-shadow: inset 0 0 0 1px rgb(86 200 194 / 10%); }
+.candidate-swatch { width: 17px; height: 3px; flex: 0 0 auto; border-radius: 3px; background: #9eafb9; }
+.route-candidate-selected .candidate-swatch { height: 4px; background: #51d5cc; box-shadow: 0 0 8px rgb(81 213 204 / 45%); }
+.candidate-copy { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 5px; }
+.candidate-title { overflow: hidden; color: #e2e9ee; font-size: 10px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.candidate-metadata { color: #94a2ad; font-size: 9px; line-height: 1.35; overflow-wrap: anywhere; }
+.candidate-selection { flex: 0 0 auto; color: #7f909c; font-size: 8px; }
+.route-candidate-selected .candidate-selection { color: #8de0d8; }
+.route-list-message { margin: 8px 0 0; color: #94a2ad; font-size: 9px; line-height: 1.5; }
 
 .intelligence-sections { padding: 3px 14px 0; }
 .intelligence-section { padding: 13px 2px 12px; border-bottom: 1px solid rgb(191 211 232 / 8%); }
@@ -222,7 +248,8 @@ button, input { font: inherit; }
 @media (max-width: 1050px) {
   .topbar { padding-right: 20px; padding-left: 20px; }
   .journey-controls { padding-right: 20px; padding-left: 20px; }
-  .journey-form { grid-template-columns: minmax(135px, 1fr) 12px minmax(155px, 1.1fr) 150px 150px; gap: 8px; }
+  .journey-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 137px 128px 137px; gap: 8px; }
+  .journey-arrow { display: none; }
   .field-hint { display: none; }
   .workspace { grid-template-columns: minmax(0, 65fr) minmax(300px, 35fr); }
   .panel-heading { padding-right: 14px; padding-left: 14px; }
@@ -242,7 +269,7 @@ button, input { font: inherit; }
   .journey-form { grid-template-columns: 1fr 1fr; align-items: start; gap: 8px; }
   .journey-field { min-width: 0; }
   .journey-arrow { display: none; }
-  .mode-control, .analyze-button { min-height: 49px; }
+  .mode-control, .find-routes-button, .analyze-button { min-height: 49px; }
   .workspace { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
   .map-workspace { height: min(57vh, 470px); min-height: 320px; flex: 0 0 auto; }
   .intelligence-panel { min-height: 420px; overflow: visible; }
