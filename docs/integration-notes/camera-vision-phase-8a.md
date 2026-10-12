@@ -441,6 +441,8 @@ If the exact FP8 endpoint cannot satisfy the required structured-output or priva
 
 OpenRouter's endpoint naming and routing representation must be rechecked before implementation; the developer's approval of FP8 does not establish a verified route slug.
 
+**Subsequent human decisions (2026-10-11):** For the private datathon MVP, the human developer later superseded Assignment 8A's request-level requirement for `data_collection: "deny"` and ZDR routing. The developer has also superseded the DeepInfra FP8 provider choice and now approves OpenRouter automatic provider routing for `google/gemma-4-31b-it` 31B. Assignment 8B therefore omits those privacy and provider/quantization filters while retaining the selected model and structured-output requirements. These later decisions do not alter the historical research findings above and do not authorize transmitting real City of Vancouver camera images; separate transfer authorization remains required.
+
 ### 6.2 Licensing and image transfer
 
 Research findings distinguish the following activities:

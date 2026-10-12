@@ -5,9 +5,9 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established; Phase 8 execution plan prepared
 **Current phase:** Phase 8 — Multi-View Camera AI Analysis
-**Phase status:** Phases 0–7 are complete and human accepted. Phase 7 Assignments 7A–7E were accepted on 2026-10-11 and committed/pushed by the human developer. Phase 8 is planned; implementation has not started.
+**Phase status:** Phases 0–7 are complete and human accepted. Phase 7 Assignments 7A–7E were accepted on 2026-10-11 and committed/pushed by the human developer. Assignment 8A is accepted; Assignment 8B is implemented and pending human acceptance. No 8C, 8D, frontend, Phase 9, or Phase 10 work has started.
 **Human review:** Phase 7 human acceptance is complete. The developer verified the directional camera gallery, nearby camera markers, intersection hover labels, direct official-page navigation, and removal of unwanted map decorations. Remaining Road Ahead highlight persistence is an accepted nonblocking MVP limitation. Manual camera failure-isolation testing and comprehensive narrow-screen verification remain deferred.
-**Next assignment:** Phase 8A — Vision Contract and Model Validation. Requires separate bounded Codex authorization; no Phase 8 implementation has started.
+**Next assignment:** Assignment 8C requires separate bounded authorization after human review and acceptance of 8B. The 8B adapter is an internal callable only and has no journey endpoint or UI integration.
 **Git checkpoint:** Phase 7 accepted changes, including Assignment 7E and the approved Phase 7 build-plan amendment, were committed and pushed by the human developer on 2026-10-11. Earlier recorded checkpoints include Phase 4 `3c2600a`, Phase 5 plan `c7c31f2`, Assignment 5A `1ff1a6d`, Assignment 5B `18aa6b8`, Assignment 5C `a2c7a69`, Assignment 6B `5dcfaaa`, and Assignment 6C (hash not recorded here).
 **Repository baseline:** Originally inspected in Assignment 0A; subsequent accepted implementation and Git checkpoints supersede that initial scaffold baseline.
 **MVP scope decision (2026-10-11):** RouteLens AI remains driving-only for the datathon. Transit Mode is deferred beyond the MVP. Phase 8 extracts structured camera observations for internal downstream AI reasoning; Phase 9 refines journey relevance and evidence organization; Phase 10 generates the user-facing AI Journey Briefing; Phases 11–12 cover integration hardening and presentation/demo polish.
@@ -37,7 +37,7 @@ The structured camera observations are intended as an input to the later AI Jour
 - Road Ahead event highlighting can remain bold after editing journey inputs or regenerating routes; it clears after a new Analyze Journey operation. Further correction is deferred for this MVP.
 - Camera failure-isolation and comprehensive narrow-screen manual verification are deferred; automated coverage exists.
 - Camera coordinates are approximate; frame retrieval time is not automatically the source capture time.
-- Camera-image permissions and external AI-provider transmission require the separate Phase 8A decision; private MVP development does not itself establish permission.
+- Real City camera-image transmission to an AI provider remains unauthorized. Assignment 8B live testing is synthetic-only.
 - Existing manual Analyze Journey behavior, selected-route identity, bounded source access, backend-held credentials, and human-controlled Git operations remain authoritative.
 
 ## 2. Established Planning Artifacts
@@ -1200,8 +1200,56 @@ Headless Chrome verification was limited by the map loading overlay, so interact
 
 **Remaining verification gates:** Exact DeepInfra FP8 routing identifier and current compatibility; synthetic multi-image strict-schema test; applicable provider privacy/ZDR configuration; observed usage costs; and explicit real City camera-image transfer authorization before any such transmission.
 
-**Next assignment:** Assignment 8B — Backend OpenRouter Vision Adapter. Requires separate bounded Codex authorization. No journey API integration, frontend AI presentation, or Phase 9–10 briefing development is authorized by this acceptance.
+**Next assignment:** Assignment 8B — Backend OpenRouter Vision Adapter. The assignment status is recorded in Section 36 below.
 
 **Git status:** Assignment 8A research note and project-state update are ready for a human-controlled documentation checkpoint. No Git history operations were performed by Codex.
 
-**Review status:** Assignment 8A human accepted on 2026-10-11. Phase 8 implementation has not begun; Assignment 8B is next.
+**Review status at 8A close:** Assignment 8A human accepted on 2026-10-11. Assignment 8B was the next authorized phase assignment at that checkpoint; current status is recorded in Section 36.
+
+## 36. Assignment 8B — Backend OpenRouter Vision Adapter
+
+**Assignment status:** Assignment 8B **human accepted and complete** (2026-10-11). The internal backend OpenRouter vision adapter, strict observation schema, Phase 7 cache reader, synthetic-only compatibility probe, automated tests, and integration documentation have passed human review. No 8C lifecycle integration or API endpoint was introduced as part of 8B.
+
+**Adapter interface:** `OpenRouterVisionAdapter.analyze_selected_intersection(selection, catalogue, image_store)` accepts the backend-selected Phase 7 destination result and its validated catalogue/cache objects. It makes no client-controlled model, provider, URL, path, or image bytes available and registers no API route. The adapter reads current cache bytes directly through the existing Phase 7 validation boundary.
+
+**Observation and request behavior:** The adapter applies the accepted 8A enums, strict types, no-extra-fields rule, exact ordered view matching, summary/evidence relationships, and conservative semantic checks. It attaches intersection/street/distance, per-view directions/times/digests/snapshot identities, official source and attribution, requested model, actual provider when reported, inference time, and bounded usage/latency separately from model-produced observations. Source capture time remains null unless verified. Results use the accepted status categories and bounded failure representations.
+
+**Image and provider controls:** One selected intersection, up to 12 current cached frames, 2 MiB/frame, 10 MiB total, Phase 7 freshness and decoder validation, no resizing or nearby substitution, and a pre-encoding digest recheck. The adapter requests `google/gemma-4-31b-it`, strict JSON Schema, and `require_parameters=true`, using OpenRouter automatic provider selection and failover rather than pinning DeepInfra or FP8. The human explicitly superseded the earlier DeepInfra FP8, request-level `data_collection="deny"`, and ZDR requirements for the private MVP. The adapter makes at most one inference call per attempt and never performs an automatic corrective retry.
+
+**Usage/reuse controls:** A separate locked persistent counter fails closed on corrupt state, counts transport failures, and caps 50 attempts per rolling hour and 100 per UTC day. A US$0.02 per-attempt estimate enforces an approximate US$1/day and US$4.90 vision estimate ceiling; actual billing remains provider/account authoritative and other model-role spending is not visible to this independent ledger. Successful exact-snapshot results may be reused in process for at most 300 seconds and never after their source frames expire.
+
+**Verification:** Focused vision tests passed (41), full backend pytest regression passed (376), Ruff passed, and `git diff --check` passed. The synthetic probe preflight confirmed that the requested model supports image input and at least one listed endpoint advertises structured-output capabilities; metadata alone was not treated as runtime proof.
+
+Three automatic-routing synthetic requests used only the two developer-owned Phase 0D illustrations:
+
+- First request: HTTP 200, model matched, reported provider `CoreWeave`, latency 2,826 ms. Finish reason, validation outcome, usage, and cost were not retained.
+- Second request: HTTP 200, model matched, `CoreWeave`, `finish_reason=stop`, schema validation passed but semantic validation failed. Usage: 788 input tokens, 199 output tokens; reported cost US$0.00014646; latency 8,261 ms.
+- Third request: HTTP 200, model matched, `CoreWeave`, `finish_reason=stop`, **strict schema and semantic validation both passed**. Usage: 788 input tokens, 168 output tokens; reported cost US$0.00013592; latency 16,543 ms.
+
+OpenRouter did not report an endpoint ID. The successful third request establishes functional compatibility for the tested synthetic multi-image workflow, not generalized visual accuracy or guaranteed provider reliability.
+
+**Provider diagnostics:** The adapter and synthetic probe preserve HTTP status, safe bounded structured error codes, and fixed categories covering recognized account/model/provider restrictions, no eligible routing, unsupported parameters, invalid identifiers, other provider errors, and unknown errors. Recognized categories receive fixed short explanations. Unfiltered provider messages, credentials, request payloads, and image content are never returned or printed. Mocked tests cover representative and malformed error envelopes and prevent echoing untrusted content.
+
+**Semantic diagnostics:** Semantic rejection returns one of three fixed codes: `view_identity_or_order_mismatch`, `unknown_summary_evidence_view`, or `summary_evidence_relationship_invalid`. These remain separate from structural Pydantic validation and exclude raw model text or echoed identifiers. The previously overrestrictive rule prohibiting definite road-surface observations whenever overall visibility was `not_observable` was removed, consistent with the accepted 8A distinction between scene visibility and locally observable details. The latest live synthetic response passed both validation layers.
+
+**Human authorization — real City camera inference (2026-10-11):** The human developer explicitly **approves sending current City of Vancouver traffic-camera images to OpenRouter for RouteLens AI's private, noncommercial prototype**. This supersedes the earlier development-stage restriction that allowed external inference using developer-owned synthetic illustrations only.
+
+This authorization is bounded as follows:
+
+- Only current camera frames selected and validated through the existing Phase 7 backend camera-selection and cache boundaries may be transmitted.
+- Images may be transmitted to OpenRouter and its automatically selected inference provider solely for the approved prototype's camera-condition analysis.
+- Existing size, freshness, image-count, request-limit, and cost protections remain in force.
+- Inference results remain internal machine-readable telemetry for the journey evidence pipeline; no standalone frontend AI observation card is authorized.
+- No additional raw-image persistence, bulk historical collection, public image redistribution, commercial deployment, or external sharing beyond the approved inference workflow is authorized by this decision.
+- The use of automatic provider routing and omission of request-level ZDR/data-collection filters remains explicitly accepted for this private prototype. Provider-side processing and retention policies may apply.
+- External image-use rights and any requirements for public or commercial deployment remain unresolved and must be reassessed before expanding beyond the approved private prototype.
+
+**Known limitations:** One successful synthetic compatibility test does not establish accuracy or reliability on real City camera imagery. Automatic provider routing may select providers other than CoreWeave. Returned provider and usage metadata may be incomplete. The proposed 16,000 input-token guard remains unenforced because image-token accounting cannot be reliably predicted before submission. Local estimated spending limits do not equal authoritative OpenRouter billing.
+
+**Deviations:** The human explicitly superseded the original 8A DeepInfra FP8 routing, ZDR, denied-data-collection, and synthetic-only external image-transfer restrictions for the private MVP. The accepted Gemma model, observation contract, provenance boundaries, image validation, request quotas, and bounded error handling remain in place. The conditional input-token guard was omitted because reliable provider-side accounting was unavailable.
+
+**Project state:** Assignment 8B is **human accepted and complete**. Its verified backend adapter is the implementation baseline for subsequent Phase 8 assignments. Actual live-camera vision performance and end-to-end journey integration remain to be tested in later assignments.
+
+**Git status:** Codex performed no staging, commit, push, or history operation. Human Git commit/push is pending unless completed separately.
+
+**Review status:** **Assignment 8B human accepted (2026-10-11). Assignment 8C authorized to proceed**, including bounded real City of Vancouver camera-image transmission to OpenRouter for the private, noncommercial prototype. Phase 8C must preserve internal telemetry-only behavior and must not implement the final AI Journey Briefing or an independent frontend AI observations card.

@@ -290,6 +290,23 @@ def _cached_frame(cache_dir: Path, intersection: CameraIntersection, view: Camer
         return None
 
 
+def read_current_cached_frame(
+    store: CameraImageStore, intersection: CameraIntersection, view: CameraView
+) -> tuple[StoredFrame, bytes] | None:
+    """Read one Phase 7 validated current-frame cache entry without an HTTP request."""
+    if view.discovery_status != "url_validated" or view.image_url is None:
+        return None
+    cached = _cached_frame(store.cache_dir, intersection, view)
+    if cached is None:
+        return None
+    frame, body = cached
+    now = store.now().astimezone(timezone.utc)
+    age = (now - frame.retrieved_at.astimezone(timezone.utc)).total_seconds()
+    if age < 0 or age >= store.ttl_seconds:
+        return None
+    return frame, body
+
+
 def _prune(cache_dir: Path, keep: set[str]) -> None:
     if not cache_dir.exists():
         return
