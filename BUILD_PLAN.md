@@ -719,7 +719,7 @@ Any proposed new cache requires explicit evidence of need and human review.
 
 ---
 
-## 10. Phase 9 Validation and Test Requirements
+## 10. Previous Phase 9 Validation and Test Requirements
 
 Each assignment must report **Passed / Failed / Not run**, with source fixtures, mocked responses, and any manual browser checks clearly distinguished.
 
@@ -787,7 +787,7 @@ Each assignment must report **Passed / Failed / Not run**, with source fixtures,
 
 ---
 
-## 11. Phase 9 Non-Goals
+## 11. Previous Phase 9 Non-Goals
 
 Phase 9 does **not** authorize:
 
@@ -812,7 +812,7 @@ Phase 9 does **not** authorize:
 
 ---
 
-## 12. Phase 9 Human Acceptance Criteria
+## 12. Previous Phase 9 Human Acceptance Criteria
 
 Phase 9 is eligible for final human acceptance only when:
 

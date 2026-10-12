@@ -1427,3 +1427,15 @@ The Phase 7 camera gallery continues displaying all available directional views;
 **Project state:** **Phase 9 is human accepted and complete (2026-10-11).** Assignments 9A, 9B, 9C, and 9D are complete. Phase 10 — AI Journey Briefing is the next development phase, currently awaiting its phase-specific planning and separately authorized implementation. Phases 11–12 remain deferred.
 
 **Git/review:** Assignment 9D was implemented by Codex without Git staging, commits, pushes, or history modifications. The developer has accepted the implementation and will perform the Phase 9 final Git checkpoint. Commit/push completion must be confirmed separately; no completed checkpoint is claimed in this section.
+
+## 43. Assignment 10A — AI Journey Briefing Contract, Model, and Generation Policy
+
+**Assignment status:** Human accepted and complete (2026-10-11). No production briefing functionality, provider request, paid inference, or real journey/camera data transfer was added.
+
+**Accepted design:** `docs/integration-notes/journey-briefing-phase-10a.md` records the actual `JourneyEvidenceBundle v1` contract, bounded model-facing DTO, referenced `journey-briefing-v1` response, `journey-briefing-prompt-v1`, fixed text model `google/gemma-4-31b-it`, automatic OpenRouter provider routing with `require_parameters=true`, the locked 15-second camera boundary, 50/hour and 100/day independent attempt limits, conservative per-call estimated accounting within the established under-US$5 total project budget, 512-token ceiling, 30-second backend/35-second frontend deadlines, minimum card contract, and 10B–10D handoff. The separate Phase 10 adapter must not couple to or modify Phase 8 vision behavior.
+
+**Verification and limitations:** Actual frontend Phase 9 types/lifecycle and Phase 8 OpenRouter adapter patterns were inspected. Current public Gemma 4 model/pricing and structured-output documentation were researched. Phase 8 has successful Gemma 4 vision calls, but no Phase 10 text-schema provider call was made; exact schema compatibility, quality, live latency, current pricing/account restrictions, and cumulative spend remain unverified. No automated test suite was required for this design-only assignment.
+
+**Project state:** Phase 9 remains human accepted and complete. Assignment 10A is human accepted and complete. Assignment 10B is next but is not authorized; Phase 10 remains incomplete. The `BUILD_PLAN.md` Phase 9 validation, non-goal, and acceptance headings were clarified as previous-phase material; their body was not rewritten.
+
+**Git/review:** Codex performed no staging, commit, push, or history operation.
