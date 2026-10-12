@@ -98,6 +98,19 @@ test('assembles distinct available road, weather, SWOB, and single-view camera s
   assert.equal(bundle.sources.eccc_swob.observations[0].observation.source_record_id, 'record-123');
   assert.equal(bundle.sources.camera_vision.result.observation.included_views[0].direction_label, 'Northbound');
   assert.equal(bundle.sources.camera_vision.result.observation.included_views[0].sha256, 'a'.repeat(64));
+  assert.equal(bundle.sources.camera_vision.result.observation.included_views.length, 1);
+  assert.equal(bundle.sources.camera_vision.result.observation.included_views[0].retrieved_at, '2026-10-11T12:02:00Z');
+  assert.equal(bundle.sources.camera_vision.result.observation.included_views[0].source_capture_at, '2026-10-11T12:01:00Z');
+  assert.equal(bundle.sources.camera_vision.result.observation.inferred_at, '2026-10-11T12:02:30Z');
+  assert.equal(bundle.sources.camera_vision.result.observation.distance_from_destination_metres, 250);
+  assert.equal(bundle.sources.camera_vision.result.observation.views[0].view_id, 'view-north');
+  assert.equal(bundle.sources.camera_vision.result.observation.views[0].road_surface, 'wet_looking');
+  assert.equal(bundle.sources.camera_vision.result.observation.views[0].vehicle_activity, 'some_visible');
+  assert.equal(bundle.sources.openweather_current.weather.rain_1h_mm, null);
+  assert.equal(bundle.sources.road_ahead.findings[0].event.severity, null);
+  assert.equal(bundle.sources.drivebc_open511.findings[0].source_evidence.current_impact, 'not_established');
+  assert.equal('delay' in bundle.sources.camera_vision.result.observation, false);
+  assert.equal('route_congestion' in bundle.sources.camera_vision.result.observation, false);
   assert.equal('regional_events' in bundle.sources, false);
 });
 
@@ -106,11 +119,15 @@ test('keeps successful empty road findings distinct from source failures', () =>
   const bundle = evidence.assembleJourneyEvidence(inputs({ analysis: { status: 'success', result: noFindings, error: null } }));
   assert.equal(bundle.sources.road_ahead.availability, 'empty');
   assert.equal(bundle.sources.drivebc_open511.availability, 'empty');
+  assert.equal(bundle.readiness.status, 'ready');
+  assert.equal(bundle.readiness.ready_for_briefing, true);
   const failed = analysis({ source_statuses: [sourceStatus('City of Vancouver Road Ahead', 'road-ahead-work', { success: false, available: false, error: 'unavailable' }),
     sourceStatus('DriveBC Open511', 'drivebc-open511-active', { success: false, available: false, error: 'unavailable' })] });
   const failedBundle = evidence.assembleJourneyEvidence(inputs({ analysis: { status: 'success', result: failed, error: null } }));
   assert.equal(failedBundle.sources.road_ahead.availability, 'failed');
   assert.equal(failedBundle.sources.drivebc_open511.availability, 'failed');
+  assert.equal(failedBundle.sources.drivebc_open511.status.error, 'unavailable');
+  assert.equal(failedBundle.sources.road_ahead.statuses[0].error, 'unavailable');
   assert.equal(failedBundle.sources.openweather_current.availability, 'available');
   assert.equal(failedBundle.sources.camera_vision.availability, 'available');
   assert.equal(failedBundle.readiness.status, 'partial');
@@ -152,6 +169,8 @@ test('camera pending and insufficient evidence do not create positive camera cla
   assert.equal(insufficient.sources.camera_vision.availability, 'empty');
   assert.equal(insufficient.sources.camera_vision.result.observation.status, 'insufficient_evidence');
   assert.equal(insufficient.sources.camera_vision.result.observation.views[0].road_surface, 'unclear');
+  assert.equal(insufficient.sources.camera_vision.result.observation.views[0].conditions.length, 0);
+  assert.equal(insufficient.readiness.status, 'ready');
   const unavailableResult = cameraResult('unavailable');
   unavailableResult.observation.views = [];
   const unavailable = evidence.assembleJourneyEvidence(inputs({ camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: unavailableResult } } }));
@@ -165,9 +184,54 @@ test('unknown missing sources and failed analysis are not represented as success
   assert.equal(unknown.readiness.status, 'partial');
   const failed = evidence.assembleJourneyEvidence(inputs({ analysis: { status: 'error', result: null, error: 'request failed' }, camera_vision: null }));
   assert.equal(failed.identity.analysis_status, 'failed');
+  assert.equal(failed.identity.analysis_error, 'request failed');
   assert.equal(failed.identity.analyzed_at, null);
   assert.equal(failed.sources.road_ahead.availability, 'unknown');
-  assert.equal(failed.readiness.status, 'unavailable');
+  assert.equal(failed.readiness.status, 'failed');
+  assert.equal(failed.readiness.ready_for_briefing, false);
+  const pending = evidence.assembleJourneyEvidence(inputs({ analysis: { status: 'loading', result: null, error: null }, camera_vision: null }));
+  assert.equal(pending.identity.analysis_status, 'pending');
+  assert.equal(pending.readiness.status, 'pending');
+  assert.equal(pending.readiness.ready_for_briefing, false);
+  const notStarted = evidence.assembleJourneyEvidence(inputs({ analysis: { status: 'idle', result: null, error: null }, camera_vision: null }));
+  assert.equal(notStarted.identity.analysis_status, 'unknown');
+  assert.equal(notStarted.identity.analysis_error, null);
+  assert.equal(notStarted.readiness.status, 'unknown');
+  assert.equal(notStarted.readiness.ready_for_briefing, false);
+});
+
+test('camera pending or failed remains a usable partial bundle with road and weather evidence', () => {
+  const pending = evidence.assembleJourneyEvidence(inputs({
+    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'pending' } },
+  }));
+  assert.equal(pending.readiness.status, 'partial');
+  assert.equal(pending.readiness.ready_for_briefing, true);
+  assert.equal(pending.sources.road_ahead.findings[0].event.id, 'ra-1');
+  assert.equal(pending.sources.openweather_current.weather.temperature_c, 8);
+
+  const timeoutResult = cameraResult('unavailable');
+  timeoutResult.observation.failure_code = 'timeout';
+  const timedOut = evidence.assembleJourneyEvidence(inputs({
+    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: timeoutResult } },
+  }));
+  assert.equal(timedOut.readiness.status, 'partial');
+  assert.equal(timedOut.readiness.ready_for_briefing, true);
+  assert.equal(timedOut.sources.camera_vision.availability, 'unavailable');
+  assert.equal(timedOut.sources.camera_vision.result.observation.failure_code, 'timeout');
+  assert.equal(timedOut.sources.road_ahead.findings[0].event.id, 'ra-1');
+  assert.equal(timedOut.sources.openweather_current.weather.temperature_c, 8);
+
+  const providerFailureResult = cameraResult('error');
+  providerFailureResult.observation.failure_code = 'provider_error';
+  providerFailureResult.provider_error = { http_status: 503, error_code: 'unavailable', category: 'other_provider_error', explanation: 'provider unavailable' };
+  const providerFailure = evidence.assembleJourneyEvidence(inputs({
+    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: providerFailureResult } },
+  }));
+  assert.equal(providerFailure.readiness.status, 'partial');
+  assert.equal(providerFailure.sources.camera_vision.availability, 'failed');
+  assert.equal(providerFailure.sources.camera_vision.result.provider_error.http_status, 503);
+  assert.equal(providerFailure.sources.road_ahead.findings[0].event.id, 'ra-1');
+  assert.equal(providerFailure.sources.openweather_current.weather.temperature_c, 8);
 });
 
 test('preserves canonical trip and selected route and rejects mismatched source identity', () => {
@@ -233,4 +297,6 @@ test('stale cached evidence after a refresh failure remains partial instead of e
   assert.equal(bundle.sources.road_ahead.availability, 'partial');
   assert.equal(bundle.sources.drivebc_open511.availability, 'partial');
   assert.equal(bundle.sources.openweather_current.availability, 'partial');
+  assert.equal(bundle.sources.openweather_current.status.stale, true);
+  assert.equal(bundle.sources.road_ahead.statuses[0].stale, true);
 });

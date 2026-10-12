@@ -6,7 +6,7 @@ import type {
 import type { CameraVisionResult, JourneyCameraEvidence } from './cameraVision';
 
 export type EvidenceAvailability = 'available' | 'empty' | 'partial' | 'unavailable' | 'pending' | 'failed' | 'unknown';
-export type BundleReadiness = 'ready' | 'partial' | 'unavailable';
+export type BundleReadiness = 'ready' | 'partial' | 'unavailable' | 'pending' | 'failed' | 'unknown';
 
 export type JourneyEvidenceSource<T> = { availability: EvidenceAvailability } & T;
 export type RoadAheadEvidence = JourneyEvidenceSource<{
@@ -33,6 +33,7 @@ export type JourneyEvidenceBundle = {
     attempt_id: number;
     trip: AnalysisRequest;
     analysis_status: 'success' | 'pending' | 'failed' | 'unknown';
+    analysis_error: string | null;
     analyzed_at: string | null;
   };
   readiness: { status: BundleReadiness; ready_for_briefing: boolean };
@@ -119,8 +120,7 @@ function cameraAvailability(camera: JourneyCameraEvidence | null): EvidenceAvail
 }
 
 function readiness(analysisStatus: JourneyEvidenceBundle['identity']['analysis_status'], states: EvidenceAvailability[]): JourneyEvidenceBundle['readiness'] {
-  if (analysisStatus === 'failed' || analysisStatus === 'unknown') return { status: 'unavailable', ready_for_briefing: false };
-  if (analysisStatus === 'pending') return { status: 'partial', ready_for_briefing: false };
+  if (analysisStatus !== 'success') return { status: analysisStatus, ready_for_briefing: false };
   const complete = states.every((state) => state === 'available' || state === 'empty');
   return { status: complete ? 'ready' : 'partial', ready_for_briefing: true };
 }
@@ -183,6 +183,7 @@ export function assembleJourneyEvidence(inputs: JourneyEvidenceInputs): JourneyE
     schema_version: 'journey-evidence-v1', assembled_at: inputs.assembled_at,
     identity: {
       attempt_id: inputs.attempt_id, trip: clone(inputs.trip), analysis_status: outcome,
+      analysis_error: inputs.analysis.status === 'error' ? inputs.analysis.error : null,
       analyzed_at: analysis?.analyzed_at ?? null,
     },
     readiness: readiness(outcome, states), sources,
