@@ -33,7 +33,7 @@ const result = (overrides = {}) => ({
 
 test('explicit Analyze Journey wiring calls vision once with the captured canonical Trip', async () => {
   assert.equal((appSource.match(/fetchCameraVision\(/g) ?? []).length, 1);
-  assert.match(appSource, /void fetchCameraVision\(request, visionRequestController\.signal\)/);
+  assert.match(appSource, /const cameraResultPromise = fetchCameraVision\(request, visionRequestController\.signal\)/);
   assert.match(appSource, /onAnalyze=\{\(\) => void analyzeJourney\(\)\}/);
   assert.doesNotMatch(appSource.slice(appSource.indexOf('async function findRoutes()'), appSource.indexOf('function selectRoute')), /fetchCameraVision/);
   assert.match(appSource, /selectedCameraId=\{cameraState/); // markers remain display-only
@@ -54,11 +54,11 @@ test('vision-specific deadline is 70 seconds and remains independent', () => {
   assert.equal(vision.CAMERA_VISION_TIMEOUT_MS, 70_000);
   assert.match(appSource, /startCameraVisionTimeout\(visionRequestController/);
   assert.match(appSource, /It never gates the road\/weather analysis or the Phase 7 gallery/);
-  assert.doesNotMatch(appSource, /35_000/);
+  assert.match(appSource, /createCameraOpportunity\(cameraResultPromise, cameraInferenceStartedAt\)/);
 });
 
 test('page load and map or camera selection do not invoke the vision transport', () => {
-  const triggerStart = appSource.indexOf('void fetchCameraVision(');
+  const triggerStart = appSource.indexOf('const cameraResultPromise = fetchCameraVision(');
   const analyzeStart = appSource.indexOf('async function analyzeJourney()');
   const analyzeEnd = appSource.indexOf('\n  useEffect(() => () => {', analyzeStart);
   assert.ok(triggerStart > analyzeStart && triggerStart < analyzeEnd);

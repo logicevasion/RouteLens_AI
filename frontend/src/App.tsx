@@ -12,6 +12,8 @@ import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEv
 import { cameraVisionFailureResult, fetchCameraVision, isCurrentVisionAttempt, retainCurrentCameraVision, startCameraVisionTimeout } from './cameraVision';
 import type { JourneyCameraEvidence, JourneyEvidenceState } from './cameraVision';
 import { deriveCurrentJourneyEvidence } from './journeyEvidence';
+import { createCameraOpportunity, serializeBriefingEvidence, startBriefingRequest } from './journeyBriefing';
+import type { JourneyBriefingState } from './journeyBriefing';
 import {
   routeColor,
   type DrivingRoutesRequest,
@@ -397,6 +399,8 @@ export default function App() {
   const [origin, setOrigin] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [journeyEvidenceState, setJourneyEvidenceState] = useState<JourneyEvidenceState>({ attempt_id: null, trip: null, analysis: initialAnalysisState, camera_vision: null });
+  // Internal 10D handoff: only a validated BriefingResultV1 is stored in the available states.
+  const [journeyBriefingState, setJourneyBriefingState] = useState<JourneyBriefingState>({ status: 'idle' });
   const analysisState = journeyEvidenceState.analysis;
   function setAnalysisState(next: AnalysisState) {
     setJourneyEvidenceState((current) => ({ ...current, analysis: next }));
@@ -425,6 +429,9 @@ export default function App() {
   const nearbyCameraSequence = useRef(0);
   const selectedGalleryIntersectionId = useRef<string | null>(null);
   const nearbyCameraResult = useRef<{ requestKey: string; cameras: string[] } | null>(null);
+  const briefingController = useRef<AbortController | null>(null);
+  const briefingAttempt = useRef<number | null>(null);
+  const cameraOpportunityCancel = useRef<(() => void) | null>(null);
 
   const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
   const selectedRoute = routeState.status === 'ready' ? routeState.selectedRoute : null;
@@ -438,12 +445,19 @@ export default function App() {
     [journeyEvidenceState, currentTrip],
   );
   void journeyEvidenceBundle;
+  void journeyBriefingState;
   const canAnalyze = isAnalysisReady(origin, destination, selectedRoute) && analysisState.status !== 'loading';
   const activeSelectedEvent = analysisState.status === 'success'
     ? activeSelectedEventId(selectedEventId, analysisState.result.findings, analysisState.result.drivebc_findings, analysisState.result.regional_events)
     : null;
 
   function invalidateAnalysis() {
+    briefingAttempt.current = null;
+    briefingController.current?.abort();
+    briefingController.current = null;
+    cameraOpportunityCancel.current?.();
+    cameraOpportunityCancel.current = null;
+    setJourneyBriefingState({ status: 'idle' });
     analysisSequence.current += 1;
     analysisController.current?.abort();
     analysisController.current = null;
@@ -544,6 +558,13 @@ export default function App() {
     const requestKey = JSON.stringify(request);
     analysisSequence.current += 1;
     const requestId = analysisSequence.current;
+    const capturedTripKey = requestKey;
+    briefingAttempt.current = null;
+    briefingController.current?.abort();
+    briefingController.current = null;
+    cameraOpportunityCancel.current?.();
+    cameraOpportunityCancel.current = null;
+    setJourneyBriefingState({ status: 'waiting_for_evidence', attempt_id: requestId });
     visionSequence.current += 1;
     visionController.current?.abort();
     const visionAttemptId = visionSequence.current;
@@ -569,17 +590,20 @@ export default function App() {
     // Vision is one independent request for this explicit Analyze Journey action.
     // It never gates the road/weather analysis or the Phase 7 gallery.
     let visionTimedOut = false;
+    const cameraInferenceStartedAt = performance.now();
     const visionTimeout = startCameraVisionTimeout(visionRequestController, () => {
       visionTimedOut = true;
     });
-    void fetchCameraVision(request, visionRequestController.signal).then((result) => {
+    const cameraResultPromise = fetchCameraVision(request, visionRequestController.signal).then((result) => {
       if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
       setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, requestId, result));
+      return result;
     }).catch((error: unknown) => {
       if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
       if (visionRequestController.signal.aborted && !visionTimedOut) return;
       const fallback = cameraVisionFailureResult(error, visionTimedOut);
       setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, requestId, fallback));
+      return fallback;
     }).finally(() => {
       clearTimeout(visionTimeout);
       if (visionSequence.current === visionAttemptId) visionController.current = null;
@@ -636,9 +660,60 @@ export default function App() {
       }
       if (!isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
       setAnalysisState({ status: 'success', result: analysis, error: null });
+      if (analysisController.current === controller) analysisController.current = null;
+      const cameraOpportunity = createCameraOpportunity(cameraResultPromise, cameraInferenceStartedAt);
+      cameraOpportunityCancel.current = cameraOpportunity.cancel;
+      const cameraResult = await cameraOpportunity.promise;
+      if (cameraOpportunityCancel.current === cameraOpportunity.cancel) cameraOpportunityCancel.current = null;
+      if (!isCurrentAnalysisRequest(requestId, analysisSequence.current, capturedTripKey, activeAnalysisKey.current) || briefingAttempt.current === requestId) return;
+      const activeTripNow = origin && destination && routeState.status === 'ready' && routeState.selectedRoute
+        ? buildAnalysisRequest(origin, destination, routeState.selectedRoute) : null;
+      if (!activeTripNow || JSON.stringify(activeTripNow) !== capturedTripKey) return;
+      const matchingCamera: JourneyCameraEvidence | null = cameraResult ? {
+        attempt_id: requestId, trip: request, camera_vision: { status: 'complete', result: cameraResult },
+      } : {
+        attempt_id: requestId, trip: request, camera_vision: { status: 'pending' },
+      };
+      const frozenBundle = deriveCurrentJourneyEvidence({
+        attempt_id: requestId, trip: request, analysis: { status: 'success', result: analysis, error: null }, camera_vision: matchingCamera,
+      }, request, new Date().toISOString());
+      if (!frozenBundle) return;
+      let briefingRequest;
+      try {
+        briefingRequest = serializeBriefingEvidence(frozenBundle);
+      } catch {
+        setJourneyBriefingState({ status: 'error', attempt_id: requestId, failure_code: 'invalid_response' });
+        return;
+      }
+      // Set the single-use latch before starting the only briefing transport call.
+      briefingAttempt.current = requestId;
+      const briefingOperation = startBriefingRequest(briefingRequest, undefined, 35_000);
+      const briefingControllerValue = briefingOperation.controller;
+      briefingController.current = briefingControllerValue;
+      setJourneyBriefingState({ status: 'in_progress', attempt_id: requestId });
+      try {
+        const result = await briefingOperation.promise;
+        if (briefingControllerValue.signal.aborted || requestId !== analysisSequence.current || briefingAttempt.current !== requestId) return;
+        setJourneyBriefingState(result.status === 'available'
+          ? { status: 'available', attempt_id: requestId, result }
+          : result.status === 'insufficient_evidence'
+            ? { status: 'insufficient_evidence', attempt_id: requestId, result }
+            : result.status === 'error'
+              ? { status: 'error', attempt_id: requestId, failure_code: result.failure_code ?? 'error' }
+              : { status: 'unavailable', attempt_id: requestId, failure_code: result.failure_code ?? 'provider_unavailable' });
+      } catch (error) {
+        const timedOut = briefingOperation.wasTimedOut();
+        if (requestId !== analysisSequence.current || briefingAttempt.current !== requestId || briefingControllerValue.signal.aborted && !timedOut) return;
+        const message = error instanceof Error ? error.message : '';
+        const code = timedOut || message === 'timeout' ? 'timeout' : message === 'invalid_response' ? 'invalid_response' : 'request_failed';
+        setJourneyBriefingState({ status: code === 'timeout' ? 'unavailable' : 'error', attempt_id: requestId, failure_code: code });
+      } finally {
+        if (briefingController.current === briefingControllerValue) briefingController.current = null;
+      }
     } catch (error) {
       if (controller.signal.aborted || !isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
       setAnalysisState({ status: 'error', result: null, error: error instanceof Error ? error.message : 'Road Ahead analysis is temporarily unavailable. Please try again.' });
+      if (briefingAttempt.current !== requestId) setJourneyBriefingState({ status: 'idle' });
     } finally {
       if (analysisSequence.current === requestId) {
         analysisController.current = null;
@@ -657,6 +732,9 @@ export default function App() {
     activeCameraKey.current = null;
     activeVisionKey.current = null;
     visionSequence.current += 1;
+    briefingController.current?.abort();
+    cameraOpportunityCancel.current?.();
+    briefingAttempt.current = null;
   }, []);
 
   useEffect(() => {
