@@ -118,17 +118,22 @@ export type SourceStatus = {
 
 export type WeatherSourceStatus = Omit<SourceStatus, 'records_received' | 'records_normalized' | 'records_skipped'>;
 export type WeatherCondition = { code: number | null; group: string | null; description: string | null };
+export type WeatherCoordinates = { latitude: number; longitude: number };
 export type CurrentWeatherEvidence = {
   source: string; product: string; observed_at: string; fetched_at: string;
+  requested_coordinates?: WeatherCoordinates | null; provider_coordinates?: WeatherCoordinates | null;
   temperature_c: number | null; feels_like_c: number | null; condition: WeatherCondition | null;
   humidity_pct: number | null; wind_speed_m_s: number | null; wind_direction_deg: number | null;
-  wind_gust_m_s: number | null; visibility_m: number | null;
+  wind_gust_m_s: number | null; visibility_m: number | null; rain_1h_mm?: number | null; snow_1h_mm?: number | null;
 };
 export type ForecastInterval = {
   source: string; product: string; forecast_at: string; fetched_at: string;
+  requested_coordinates?: WeatherCoordinates | null;
   precipitation_probability_pct: number | null; temperature_c: number | null;
   feels_like_c: number | null; condition: WeatherCondition | null;
-  humidity_pct: number | null; wind_speed_m_s: number | null; visibility_m: number | null;
+  humidity_pct: number | null; wind_speed_m_s: number | null; wind_direction_deg?: number | null;
+  wind_gust_m_s?: number | null; visibility_m: number | null; rain_1h_mm?: number | null;
+  rain_3h_mm?: number | null; snow_1h_mm?: number | null; snow_3h_mm?: number | null;
 };
 export type ForecastCoverage = {
   evaluation_time: string; window_end: string; first_interval_at: string | null;
@@ -142,6 +147,7 @@ export type MeasuredValue = {
 };
 export type StationObservation = {
   source: string; station_id: string; station_name: string | null; latitude: number | null;
+  station_identifiers?: Record<string, string>; source_record_id?: string;
   longitude: number | null; observed_at: string; retrieved_at: string;
   temperature: MeasuredValue | null; relative_humidity: MeasuredValue | null;
   precipitation: MeasuredValue[]; wind_speed: MeasuredValue | null;

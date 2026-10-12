@@ -27,15 +27,25 @@ function condition(value: unknown) {
   return { code: number(value.code), group: text(value.group), description: text(value.description) };
 }
 
+function coordinates(value: unknown) {
+  if (!isRecord(value)) return null;
+  const latitude = number(value.latitude);
+  const longitude = number(value.longitude);
+  return latitude === null || longitude === null ? null : { latitude, longitude };
+}
+
 function currentEvidence(value: unknown) {
   if (!isRecord(value) || typeof value.observed_at !== 'string' || typeof value.fetched_at !== 'string') return null;
   return {
     source: text(value.source) ?? 'OpenWeather', product: text(value.product) ?? 'onecall4_current',
     observed_at: value.observed_at, fetched_at: value.fetched_at,
+    requested_coordinates: coordinates(value.requested_coordinates),
+    provider_coordinates: coordinates(value.provider_coordinates),
     temperature_c: number(value.temperature_c), feels_like_c: number(value.feels_like_c),
     condition: condition(value.condition), humidity_pct: number(value.humidity_pct),
     wind_speed_m_s: number(value.wind_speed_m_s), wind_direction_deg: number(value.wind_direction_deg),
     wind_gust_m_s: number(value.wind_gust_m_s), visibility_m: number(value.visibility_m),
+    rain_1h_mm: number(value.rain_1h_mm), snow_1h_mm: number(value.snow_1h_mm),
   };
 }
 
@@ -44,10 +54,14 @@ function forecastInterval(value: unknown) {
   return {
     source: text(value.source) ?? 'OpenWeather', product: text(value.product) ?? 'onecall4_timeline_15min',
     forecast_at: value.forecast_at, fetched_at: value.fetched_at,
+    requested_coordinates: coordinates(value.requested_coordinates),
     precipitation_probability_pct: number(value.precipitation_probability_pct),
     temperature_c: number(value.temperature_c), feels_like_c: number(value.feels_like_c),
     condition: condition(value.condition), humidity_pct: number(value.humidity_pct),
-    wind_speed_m_s: number(value.wind_speed_m_s), visibility_m: number(value.visibility_m),
+    wind_speed_m_s: number(value.wind_speed_m_s), wind_direction_deg: number(value.wind_direction_deg),
+    wind_gust_m_s: number(value.wind_gust_m_s), visibility_m: number(value.visibility_m),
+    rain_1h_mm: number(value.rain_1h_mm), rain_3h_mm: number(value.rain_3h_mm),
+    snow_1h_mm: number(value.snow_1h_mm), snow_3h_mm: number(value.snow_3h_mm),
   };
 }
 
@@ -63,12 +77,17 @@ function station(value: unknown) {
   if (!isRecord(value) || !isRecord(value.observation)) return null;
   const row = value.observation;
   if (typeof row.station_id !== 'string' || typeof row.observed_at !== 'string' || typeof row.retrieved_at !== 'string') return null;
+  const stationIdentifiers = isRecord(row.station_identifiers)
+    ? Object.fromEntries(Object.entries(row.station_identifiers).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : undefined;
   const precipitation = Array.isArray(row.precipitation) ? row.precipitation.map(measuredValue).filter((item) => item !== null) : [];
   const measurements = ['temperature', 'relative_humidity', 'wind_speed', 'wind_direction', 'snow_depth'] as const;
   const normalized = Object.fromEntries(measurements.map((key) => [key, measuredValue(row[key])])) as Record<(typeof measurements)[number], ReturnType<typeof measuredValue>>;
   return {
     observation: {
       source: text(row.source) ?? 'ECCC GeoMet/SWOB', station_id: row.station_id,
+      ...(typeof row.source_record_id === 'string' ? { source_record_id: row.source_record_id } : {}),
+      ...(stationIdentifiers ? { station_identifiers: stationIdentifiers } : {}),
       station_name: text(row.station_name), latitude: number(row.latitude), longitude: number(row.longitude),
       observed_at: row.observed_at, retrieved_at: row.retrieved_at,
       ...normalized, precipitation, attribution: text(row.attribution) ?? 'Environment and Climate Change Canada GeoMet/SWOB',

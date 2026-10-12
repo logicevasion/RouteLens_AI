@@ -1,6 +1,6 @@
 # Phase 9A — Journey Evidence Inventory and Contract Design
 
-**Status:** Assignment 9A design proposal; no assembler or application code implemented.
+**Status:** Accepted Assignment 9A contract baseline. Assignment 9A was human accepted; its follow-on 9B implementation is summarized in Section 9.
 **Basis:** Repository source inspected on 2026-10-11, accepted Phase 4–8 notes, current `BUILD_PLAN.md`, and the Phase 9/10 sections of `docs/implementation-plan.md`, `docs/prd.md`, and `docs/technical-design.md`.
 
 ## 1. Evidence-source inventory
@@ -160,7 +160,7 @@ The abbreviated objects above illustrate only bundle organization; implementatio
 - **Essential tests:** same attempt with analysis first/camera pending, camera first/analysis pending, camera failure, late previous attempt, trip or route change invalidation, analysis failure, retained camera result only for matching trip. Existing source-fetch tests stay mocked/offline.
 - **Acceptance:** one current bundle per active Analyze Journey attempt; analysis is not gated on vision; failure remains source-specific; no stale bundle survives trip/route invalidation; Phase 10 can read the stable typed contract.
 
-9B and 9C can share this small pure module: 9B defines and assembles the source sections; 9C adds only tested readiness/relevance rules on the same typed values. 9D is genuinely dependent on the final 9B/9C function signature, but lifecycle integration can be prepared in parallel only after the v1 schema is human-approved. No 9B–9D work is performed by this note.
+9B and 9C can share this small pure module: 9B defines and assembles the source sections; 9C adds only tested readiness/relevance rules on the same typed values. 9D is genuinely dependent on the final 9B/9C function signature, but lifecycle integration can be prepared in parallel only after the v1 schema is human-approved. This was the proposed handoff at the end of 9A; completed 9B work is summarized in Section 9, and 9C/9D remain unstarted.
 
 ## 8. Discrepancies and unresolved decisions
 
@@ -173,6 +173,20 @@ The abbreviated objects above illustrate only bundle organization; implementatio
 - **Bounded omission:** Current inputs have explicit adapter bounds, but no contract-level omission counters for route findings or forecast intervals. Avoid a new arbitrary cap. If Phase 10 payload needs a tighter limit, human review should approve cap and omission metadata before implementation.
 - **Readiness approval:** Proposed `ready_for_briefing` permits Phase 10 to proceed with partial source coverage and camera pending/unavailable. Human approval of this semantic is required before 9B/10 consume the field.
 
+## 9. Assignment 9B implementation note
+
+**Status:** Implemented; pending human acceptance. The three human-approved decisions are: (1) a frontend-owned pure TypeScript assembler consumes normalized journey analysis and validated camera-vision results; (2) readiness is partial-first, retaining usable evidence when another source is pending, failed, or unavailable; and (3) current `BUILD_PLAN.md` defines the MVP, with the older timeline/UI work deferred and Phase 10 owning the user-facing briefing.
+
+`frontend/src/journeyEvidence.ts` exports `JourneyEvidenceBundle`, source-specific evidence section types, `EvidenceAvailability`, and deterministic `assembleJourneyEvidence(inputs)`. It preserves the canonical trip/selected route, explicit attempt and assembly identity, analysis outcome, Road Ahead findings/statuses/unmatchable records, DriveBC route findings/status, independent OpenWeather current and forecast sections, selected SWOB observations, and validated camera result/provenance. Regional map-only events and the analysis summary are omitted. Input trip and attempt identity are checked against successful analysis and supplied camera lifecycle evidence. Assembly time is supplied by the caller.
+
+The bundle adds `identity.analysis_status` (`success | pending | failed | unknown`) to the proposed v1 identity so an analysis that has not completed cannot be confused with a successful empty result. Source sections retain `available | empty | partial | unavailable | pending | failed | unknown`; `insufficient_evidence` camera results are retained with source status `empty`, not positive visual evidence. A stale cached result following a failed refresh maps to `partial`, not `empty`. `ready_for_briefing` is true after successful analysis even when other sections are partial or pending. Failed/unknown analysis has unavailable bundle readiness while any supplied camera evidence remains preserved.
+
+Frontend weather normalization now preserves existing OpenWeather requested/provider coordinates, current rain/snow amounts, and forecast wind and rain/snow fields. SWOB `source_record_id` and `station_identifiers` are preserved as optional fields for compatibility with older fixtures/responses. No backend model, endpoint, provider call, persistence, UI, or Analyze Journey integration changed. The assembler assumes validated normalized source inputs and does not introduce a generic payload cap or evidence graph.
+
+Focused offline tests cover source distinctions, stale-cache outcomes, timestamps, SWOB provenance, one-direction camera provenance, pending/insufficient camera states, unknown/failed analysis, trip identity, immutability, deterministic output, and the additional weather/SWOB normalization fields. Full results and remaining 9C/9D work are recorded in `PROJECT_STATE.md` Section 40. Assignment 9C reconciliation and 9D lifecycle attachment remain unstarted.
+
+The earlier readiness-approval question in Section 8 is resolved by the human-approved partial-first policy above. The timeline/UI scope difference is resolved for the MVP: it remains deferred, and Phase 10 owns the eventual briefing.
+
 ## 9. Scope and deferred work
 
-This note inventories implemented evidence and proposes an internal typed contract and implementation handoff only. No production code, assembler, new endpoint, persistence, provider call, camera inference, briefing, timeline UI, source-relevance algorithm, relationship graph, or new dependency was added. Human approval is required for the contract, readiness semantics, attempt identity handling, camera schema assumption, and Phase 9 scope discrepancy before implementation assignments proceed.
+Sections 1–8 record the Assignment 9A evidence inventory, contract proposal, and handoff; they did not add production code, a new endpoint, persistence, provider calls, camera inference, briefing, timeline UI, source-relevance algorithms, a relationship graph, or dependencies. The contract and readiness/scope decisions were human approved before Assignment 9B. Section 9 records the bounded 9B implementation and identifies its one additional `analysis_status` field. Attempt identity lifecycle attachment remains for 9D; 9C reconciliation and Phase 10 briefing work remain deferred.
