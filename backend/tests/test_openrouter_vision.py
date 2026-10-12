@@ -12,9 +12,13 @@ from PIL import Image
 from pydantic import ValidationError
 
 from app import camera_images as images
+from app import openrouter_vision as vision_module
 from app.models import Location
 from app.openrouter_vision import (
+    INTRO_PROMPT,
     MODEL_ID,
+    PROMPT_VERSION,
+    REQUEST_TIMEOUT_SECONDS,
     AttemptBudget,
     ModelCameraObservation,
     OpenRouterVisionAdapter,
@@ -128,16 +132,44 @@ def test_model_schema_and_order_validation_for_one_four_and_five_views():
         _semantic_validate(parsed, ids)
 
 
-@pytest.mark.parametrize("ids", [["view-a", "view-x"], ["view-a", "view-a"], ["view-b", "view-a"], ["view-a"]])
-def test_rejects_unknown_duplicate_omitted_and_out_of_order_views(ids):
-    if ids == ["view-a", "view-a"]:
-        with pytest.raises(ValidationError):
-            ModelCameraObservation.model_validate(model_output(ids))
-    else:
-        parsed = ModelCameraObservation.model_validate(model_output(ids))
-        with pytest.raises(SemanticValidationError) as exc_info:
-            _semantic_validate(parsed, ["view-a", "view-b"])
-        assert exc_info.value.code == "view_identity_or_order_mismatch"
+def test_prompt_requires_exact_ordered_identity_and_includes_unclear_views(tmp_path, monkeypatch):
+    assert PROMPT_VERSION == "camera-visual-observer-v2"
+    for instruction in (
+        "exactly one view observation for every submitted image",
+        "exact submitted order",
+        "copy each supplied view_id character-for-character",
+        "never invent, abbreviate, normalize, or rename an ID",
+        "Never omit a view when conditions are unclear",
+        "unclear or not_observable",
+        "corresponding labeled image",
+    ):
+        assert instruction.lower() in INTRO_PROMPT.lower()
+
+    camera, _, store, _ = setup_snapshot(tmp_path)
+    included = []
+    for view in camera.directional_views:
+        cached = images.read_current_cached_frame(store, camera, view)
+        assert cached is not None
+        frame, body = cached
+        included.append((view, frame, body))
+    before = vision_module.OpenRouterVisionAdapter._snapshot_identity("intersection-1", included)
+    monkeypatch.setattr(vision_module, "PROMPT_VERSION", "camera-visual-observer-v3")
+    after = vision_module.OpenRouterVisionAdapter._snapshot_identity("intersection-1", included)
+    assert before != after
+
+
+@pytest.mark.parametrize(
+    ("ids", "first_position"),
+    [(["view-a", "view-x"], 2), (["view-a", "view-a"], 2), (["view-b", "view-a"], 1), (["view-a"], 2)],
+)
+def test_rejects_unknown_duplicate_omitted_and_out_of_order_views(ids, first_position):
+    parsed = ModelCameraObservation.model_validate(model_output(ids, evidence=["view-a", "view-b"]))
+    with pytest.raises(SemanticValidationError) as exc_info:
+        _semantic_validate(parsed, ["view-a", "view-b"])
+    assert exc_info.value.code == "view_identity_or_order_mismatch"
+    assert exc_info.value.expected_view_count == 2
+    assert exc_info.value.actual_view_count == len(ids)
+    assert exc_info.value.first_mismatched_position == first_position
 
 
 def test_strict_schema_rejects_extra_fields_enums_lengths_and_duplicate_tags():
@@ -184,14 +216,18 @@ def test_semantic_failures_have_fixed_codes_and_visibility_is_independent():
     _semantic_validate(ModelCameraObservation.model_validate(value), ["view-a"])
 
 
-def test_one_ordered_multi_image_request_uses_automatic_provider_selection(tmp_path):
-    _camera, catalogue, store, selection = setup_snapshot(tmp_path)
+def test_one_ordered_single_image_request_uses_automatic_provider_selection(tmp_path):
+    camera, catalogue, store, selection = setup_snapshot(tmp_path)
+    selection = selection.model_copy(update={"views": list(reversed(selection.views))})
+    _, east_metadata_path = images._frame_paths(store.cache_dir, camera.intersection_id, "view-east")
+    east_frame = images.StoredFrame.model_validate_json(east_metadata_path.read_text())
+    east_metadata_path.write_text(east_frame.model_copy(update={"retrieved_at": NOW - timedelta(seconds=200)}).model_dump_json())
     captured = []
 
     def handler(request: httpx.Request):
         payload = json.loads(request.content)
-        captured.append(payload)
-        return httpx.Response(200, json=provider_response(["view-east", "view-west"]))
+        captured.append((payload, request.extensions["timeout"]))
+        return httpx.Response(200, json=provider_response(["view-east"]))
 
     adapter = OpenRouterVisionAdapter(
         api_key="test-secret", transport=httpx.MockTransport(handler),
@@ -204,7 +240,9 @@ def test_one_ordered_multi_image_request_uses_automatic_provider_selection(tmp_p
     assert result.observation.included_views[0].source_capture_at is None
     assert result.observation.usage.cost_usd == 0.00012
     assert result.observation.actual_endpoint_id is None
-    payload = captured[0]
+    payload, timeouts = captured[0]
+    assert REQUEST_TIMEOUT_SECONDS == 60.0
+    assert set(timeouts.values()) == {60.0}
     assert payload["model"] == MODEL_ID
     assert payload["max_tokens"] == 1024
     assert payload["response_format"]["json_schema"]["strict"] is True
@@ -217,10 +255,91 @@ def test_one_ordered_multi_image_request_uses_automatic_provider_selection(tmp_p
     assert "only" not in provider
     assert "quantizations" not in provider
     parts = payload["messages"][1]["content"]
-    assert [part["type"] for part in parts] == ["text", "text", "image_url", "text", "image_url"]
+    assert [part["type"] for part in parts] == ["text", "text", "image_url"]
     assert "view_id=view-east; direction=East" == parts[1]["text"]
     assert base64.b64decode(parts[2]["image_url"]["url"].split(",", 1)[1]) == jpeg("red")
-    assert "view_id=view-west; direction=West" == parts[3]["text"]
+    assert [view.view_id for view in result.observation.included_views] == ["view-east"]
+    assert [view.view_id for view in result.observation.views] == ["view-east"]
+    _semantic_validate(ModelCameraObservation.model_validate(model_output(["view-east"])), ["view-east"])
+
+
+@pytest.mark.parametrize(
+    ("earlier_frame_state", "expected_reason"),
+    [("missing", "missing"), ("invalid", "invalid_or_mismatched"), ("stale", "stale"), ("oversized", "oversized")],
+)
+def test_skips_ineligible_earlier_catalogue_view_for_next_eligible(earlier_frame_state, expected_reason, tmp_path, monkeypatch):
+    camera, catalogue, store, selection = setup_snapshot(tmp_path)
+    image_path, metadata_path = images._frame_paths(store.cache_dir, camera.intersection_id, "view-east")
+    if earlier_frame_state == "missing":
+        image_path.unlink()
+        metadata_path.unlink()
+    elif earlier_frame_state == "invalid":
+        frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
+        metadata_path.write_text(frame.model_copy(update={"sha256": "f" * 64}).model_dump_json())
+    elif earlier_frame_state == "stale":
+        frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
+        metadata_path.write_text(frame.model_copy(update={"retrieved_at": NOW - timedelta(seconds=store.ttl_seconds)}).model_dump_json())
+    else:
+        def replace_body(view_id: str, body: bytes) -> int:
+            data_path, meta_path = images._frame_paths(store.cache_dir, camera.intersection_id, view_id)
+            frame = images.StoredFrame.model_validate_json(meta_path.read_text())
+            images._atomic_write(data_path, body)
+            images._atomic_write(meta_path, frame.model_copy(update={
+                "byte_length": len(body), "sha256": images.hashlib.sha256(body).hexdigest(),
+            }).model_dump_json().encode())
+            return len(body)
+
+        noisy = bytes((index * 37) % 256 for index in range(320 * 240 * 3))
+        noisy_image = Image.frombytes("RGB", (320, 240), noisy)
+        large_buffer = BytesIO()
+        noisy_image.save(large_buffer, format="JPEG", quality=95)
+        east_size = replace_body("view-east", large_buffer.getvalue())
+        small_buffer = BytesIO()
+        Image.new("RGB", (320, 240), "white").save(small_buffer, format="JPEG", quality=10, optimize=True)
+        west_size = replace_body("view-west", small_buffer.getvalue())
+        assert east_size > west_size
+        monkeypatch.setattr("app.openrouter_vision.MAX_FRAME_BYTES", west_size + 1)
+
+    captured = []
+
+    def handler(request):
+        payload = json.loads(request.content)
+        captured.append(payload)
+        return httpx.Response(200, json=provider_response(["view-west"]))
+
+    result = asyncio.run(OpenRouterVisionAdapter(
+        api_key="test", transport=httpx.MockTransport(handler),
+        budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW,
+    ).analyze_selected_intersection(selection, catalogue, store))
+
+    content = captured[0]["messages"][1]["content"]
+    assert result.observation.status == "partial"
+    assert [view.view_id for view in result.observation.included_views] == ["view-west"]
+    assert [view.view_id for view in result.observation.views] == ["view-west"]
+    assert [(view.view_id, view.reason) for view in result.observation.excluded_views] == [("view-east", expected_reason)]
+    assert [part["type"] for part in content] == ["text", "text", "image_url"]
+    assert content[1]["text"] == "view_id=view-west; direction=West"
+
+
+def test_snapshot_identity_depends_on_selected_frame_and_model_prompt_schema(tmp_path, monkeypatch):
+    camera, _, store, _ = setup_snapshot(tmp_path)
+    included = []
+    for view in camera.directional_views[:1]:
+        cached = images.read_current_cached_frame(store, camera, view)
+        assert cached is not None
+        frame, body = cached
+        included.append((view, frame, body))
+    adapter = OpenRouterVisionAdapter
+    base = adapter._snapshot_identity(camera.intersection_id, included)
+    for constant, changed in (("MODEL_ID", "another/model"), ("PROMPT_VERSION", "another-prompt"), ("SCHEMA_VERSION", "another-schema")):
+        monkeypatch.setattr(vision_module, constant, changed)
+        assert adapter._snapshot_identity(camera.intersection_id, included) != base
+        monkeypatch.undo()
+    west = camera.directional_views[1]
+    cached_west = images.read_current_cached_frame(store, camera, west)
+    assert cached_west is not None
+    frame, body = cached_west
+    assert adapter._snapshot_identity(camera.intersection_id, [(west, frame, body)]) != base
 
 
 def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path):
@@ -230,7 +349,7 @@ def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path):
     def handler(request):
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json=provider_response(["view-east", "view-west"]))
+        return httpx.Response(200, json=provider_response(["view-east"]))
 
     adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(handler), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
     first = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
@@ -290,11 +409,11 @@ def test_truncation_and_missing_content_are_invalid_without_retry(tmp_path, fini
 
 def test_adapter_returns_only_fixed_semantic_diagnostic_code(tmp_path):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
-    unsafe_detail = "unexpected echoed provider content"
+    unsafe_detail = "provider-private-view-id"
 
     def handler(request):
-        output = model_output(["view-east", "view-west"])
-        output["summary_evidence_view_ids"] = [unsafe_detail]
+        output = model_output([unsafe_detail, "view-west"])
+        output["views"][0]["note"] = "private model response phrase"
         return httpx.Response(200, json=provider_response([], content=output))
 
     result = asyncio.run(
@@ -306,8 +425,13 @@ def test_adapter_returns_only_fixed_semantic_diagnostic_code(tmp_path):
         ).analyze_selected_intersection(selection, catalogue, store)
     )
     assert result.observation.failure_code == "invalid_model_output"
-    assert result.semantic_error_code == "unknown_summary_evidence_view"
-    assert unsafe_detail not in str(result.model_dump(mode="json"))
+    assert result.semantic_error_code == "view_identity_or_order_mismatch"
+    assert result.semantic_mismatch.model_dump(mode="json") == {
+        "expected_view_count": 1, "actual_view_count": 2, "first_mismatched_position": 1,
+    }
+    serialized = str(result.model_dump(mode="json"))
+    assert unsafe_detail not in serialized
+    assert "private model response phrase" not in serialized
 
 
 @pytest.mark.parametrize("kind", ["malformed_json", "refusal"])
@@ -336,7 +460,7 @@ def test_malformed_json_and_refusal_are_rejected_without_retry(tmp_path, kind):
 )
 def test_accepts_automatic_provider_and_preserves_safe_identity_or_unknown(tmp_path, provider, expected_provider):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
-    adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east", "view-west"], provider=provider))), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
+    adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east"], provider=provider))), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
     result = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
     assert result.observation.status == "available"
     assert result.observation.actual_provider_id == expected_provider
@@ -344,7 +468,7 @@ def test_accepts_automatic_provider_and_preserves_safe_identity_or_unknown(tmp_p
 
 def test_rejects_model_substitution(tmp_path):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
-    adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east", "view-west"], model="other/model"))), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
+    adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east"], model="other/model"))), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
     result = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
     assert result.observation.failure_code == "provider_error"
 
@@ -504,7 +628,7 @@ def test_http_429_is_rate_limited_and_attempted_once(tmp_path):
     assert len(json.loads(budget_path.read_text())["attempts"]) == 1
 
 
-def test_timeout_maps_to_controlled_status_and_attempt_is_counted(tmp_path):
+def test_transport_timeout_maps_to_controlled_status_and_attempt_is_counted(tmp_path):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
 
     def handler(request):
@@ -516,9 +640,31 @@ def test_timeout_maps_to_controlled_status_and_attempt_is_counted(tmp_path):
     assert len(json.loads(budget_path.read_text())["attempts"]) == 1
 
 
+def test_adapter_outer_deadline_maps_slow_transport_to_timeout_once(tmp_path, monkeypatch):
+    _, catalogue, store, selection = setup_snapshot(tmp_path)
+    monkeypatch.setattr("app.openrouter_vision.REQUEST_TIMEOUT_SECONDS", 0.005)
+    calls = 0
+
+    class SlowTransport(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request):
+            nonlocal calls
+            calls += 1
+            await asyncio.sleep(0.05)
+            return httpx.Response(200, json=provider_response(["view-east"]), request=request)
+
+    budget_path = tmp_path / "slow-budget.json"
+    result = asyncio.run(OpenRouterVisionAdapter(
+        api_key="test", transport=SlowTransport(),
+        budget=AttemptBudget(budget_path, now=lambda: NOW), now=lambda: NOW,
+    ).analyze_selected_intersection(selection, catalogue, store))
+    assert result.observation.failure_code == "timeout"
+    assert calls == 1
+    assert len(json.loads(budget_path.read_text())["attempts"]) == 1
+
+
 def test_provider_reported_output_above_ceiling_is_rejected(tmp_path):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
-    response = provider_response(["view-east", "view-west"])
+    response = provider_response(["view-east"])
     response["usage"]["completion_tokens"] = 1025
     result = asyncio.run(OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=response)), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW).analyze_selected_intersection(selection, catalogue, store))
     assert result.observation.failure_code == "invalid_model_output"
@@ -531,7 +677,7 @@ def test_concurrent_identical_calls_share_one_inflight_request(tmp_path):
     def handler(request):
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json=provider_response(["view-east", "view-west"]))
+        return httpx.Response(200, json=provider_response(["view-east"]))
 
     adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(handler), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
 
@@ -574,13 +720,13 @@ def test_utc_daily_attempt_ceiling_is_independent_of_hourly_ceiling(tmp_path, mo
     assert not budget.reserve()
 
 
-def test_partial_view_set_provenance_and_exclusion(tmp_path):
+def test_single_eligible_frame_retains_provenance(tmp_path):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
     image_path, metadata_path = images._frame_paths(store.cache_dir, "intersection-1", "view-west")
     image_path.unlink()
     metadata_path.unlink()
-    selection = selection.model_copy(update={"views": selection.views[:1]})
     result = asyncio.run(OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east"]))), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW).analyze_selected_intersection(selection, catalogue, store))
-    assert result.observation.status == "partial"
+    assert result.observation.status == "available"
     assert [view.view_id for view in result.observation.included_views] == ["view-east"]
-    assert [(view.view_id, view.reason) for view in result.observation.excluded_views] == [("view-west", "missing")]
+    assert [view.view_id for view in result.observation.views] == ["view-east"]
+    assert result.observation.excluded_views == []

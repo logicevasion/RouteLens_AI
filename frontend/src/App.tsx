@@ -9,6 +9,8 @@ import { fetchDestinationCamera, fetchNearbyCameras, isCurrentCameraRequest, isC
 import type { CameraState, NearbyCameraState } from './cameras';
 import { activeSelectedEventId, buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
 import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
+import { cameraVisionFailureResult, fetchCameraVision, isCurrentVisionAttempt, retainCurrentCameraVision, startCameraVisionTimeout } from './cameraVision';
+import type { JourneyCameraEvidence, JourneyEvidenceState } from './cameraVision';
 import {
   routeColor,
   type DrivingRoutesRequest,
@@ -393,7 +395,17 @@ export default function App() {
   const [routeState, setRouteState] = useState<RouteRequestState>(initialRouteState);
   const [origin, setOrigin] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
-  const [analysisState, setAnalysisState] = useState<AnalysisState>(initialAnalysisState);
+  const [journeyEvidenceState, setJourneyEvidenceState] = useState<JourneyEvidenceState>({ analysis: initialAnalysisState, camera_vision: null });
+  const analysisState = journeyEvidenceState.analysis;
+  function setAnalysisState(next: AnalysisState) {
+    setJourneyEvidenceState((current) => ({ ...current, analysis: next }));
+  }
+  function setJourneyCameraEvidence(next: JourneyCameraEvidence | null | ((current: JourneyCameraEvidence | null) => JourneyCameraEvidence | null)) {
+    setJourneyEvidenceState((current) => ({
+      ...current,
+      camera_vision: typeof next === 'function' ? next(current.camera_vision) : next,
+    }));
+  }
   const [cameraState, setCameraState] = useState<CameraState>({ status: 'idle' });
   const [nearbyCameraState, setNearbyCameraState] = useState<NearbyCameraState>({ status: 'idle' });
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -403,6 +415,9 @@ export default function App() {
   const analysisSequence = useRef(0);
   const analysisController = useRef<AbortController | null>(null);
   const activeAnalysisKey = useRef<string | null>(null);
+  const visionSequence = useRef(0);
+  const visionController = useRef<AbortController | null>(null);
+  const activeVisionKey = useRef<string | null>(null);
   const cameraSequence = useRef(0);
   const cameraController = useRef<AbortController | null>(null);
   const activeCameraKey = useRef<string | null>(null);
@@ -422,6 +437,11 @@ export default function App() {
     analysisController.current?.abort();
     analysisController.current = null;
     activeAnalysisKey.current = null;
+    visionSequence.current += 1;
+    visionController.current?.abort();
+    visionController.current = null;
+    activeVisionKey.current = null;
+    setJourneyCameraEvidence(null);
     cameraSequence.current += 1;
     nearbyCameraSequence.current += 1;
     cameraController.current?.abort();
@@ -512,6 +532,14 @@ export default function App() {
     const requestKey = JSON.stringify(request);
     analysisSequence.current += 1;
     const requestId = analysisSequence.current;
+    visionSequence.current += 1;
+    visionController.current?.abort();
+    const visionAttemptId = visionSequence.current;
+    const visionAttemptKey = `${requestKey}:${requestId}`;
+    const visionRequestController = new AbortController();
+    visionController.current = visionRequestController;
+    activeVisionKey.current = visionAttemptKey;
+    setJourneyCameraEvidence({ attempt_id: visionAttemptId, trip: request, camera_vision: { status: 'pending' } });
     const controller = new AbortController();
     analysisController.current = controller;
     activeAnalysisKey.current = requestKey;
@@ -525,6 +553,25 @@ export default function App() {
     setCameraState({ status: 'loading', requestKey: cameraDisplayKey });
     setAnalysisState({ status: 'loading', result: null, error: null });
     setSelectedEventId(null);
+
+    // Vision is one independent request for this explicit Analyze Journey action.
+    // It never gates the road/weather analysis or the Phase 7 gallery.
+    let visionTimedOut = false;
+    const visionTimeout = startCameraVisionTimeout(visionRequestController, () => {
+      visionTimedOut = true;
+    });
+    void fetchCameraVision(request, visionRequestController.signal).then((result) => {
+      if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
+      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, visionAttemptId, result));
+    }).catch((error: unknown) => {
+      if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
+      if (visionRequestController.signal.aborted && !visionTimedOut) return;
+      const fallback = cameraVisionFailureResult(error, visionTimedOut);
+      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, visionAttemptId, fallback));
+    }).finally(() => {
+      clearTimeout(visionTimeout);
+      if (visionSequence.current === visionAttemptId) visionController.current = null;
+    });
 
     selectedGalleryIntersectionId.current = null;
     nearbyCameraResult.current = null;
@@ -591,10 +638,13 @@ export default function App() {
   useEffect(() => () => {
     routingController.current?.abort();
     analysisController.current?.abort();
+    visionController.current?.abort();
     cameraController.current?.abort();
     cameraSequence.current += 1;
     nearbyCameraSequence.current += 1;
     activeCameraKey.current = null;
+    activeVisionKey.current = null;
+    visionSequence.current += 1;
   }, []);
 
   useEffect(() => {

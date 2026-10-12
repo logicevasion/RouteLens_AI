@@ -148,7 +148,7 @@ def setup_api(monkeypatch, tmp_path, *, adapter=None, destination=DESTINATION, w
     service = FakeService()
     test_adapter = adapter or OpenRouterVisionAdapter(
         api_key="test-key",
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east", "view-west"]))),
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(["view-east"]))),
         budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW),
         now=lambda: NOW,
     )
@@ -164,7 +164,7 @@ def post(path: str, body: dict | None = None) -> httpx.Response:
     return asyncio.run(request())
 
 
-def test_observe_returns_validated_provenance_for_each_ordered_direction(monkeypatch, tmp_path):
+def test_observe_returns_validated_provenance_for_selected_direction(monkeypatch, tmp_path):
     service, _adapter, _catalogue, _store, _selection = setup_api(monkeypatch, tmp_path)
 
     response = post("/api/cameras/observe", trip_payload())
@@ -178,12 +178,12 @@ def test_observe_returns_validated_provenance_for_each_ordered_direction(monkeyp
     assert observation["street_names"] == ["Cambie St", "W Broadway"]
     assert observation["distance_from_destination_metres"] == 0
     assert observation["source_name"] == "City of Vancouver Open Data Portal"
-    assert [view["view_id"] for view in observation["included_views"]] == ["view-east", "view-west"]
-    assert [view["direction_label"] for view in observation["included_views"]] == ["East", "West"]
+    assert [view["view_id"] for view in observation["included_views"]] == ["view-east"]
+    assert [view["direction_label"] for view in observation["included_views"]] == ["East"]
     assert all(view["retrieved_at"] == NOW.isoformat().replace("+00:00", "Z") for view in observation["included_views"])
     assert all(view["source_capture_at"] is None for view in observation["included_views"])
-    assert len({view["sha256"] for view in observation["included_views"]}) == 2
-    assert [view["view_id"] for view in observation["views"]] == ["view-east", "view-west"]
+    assert len({view["sha256"] for view in observation["included_views"]}) == 1
+    assert [view["view_id"] for view in observation["views"]] == ["view-east"]
     assert observation["requested_model_id"] == MODEL_ID
     assert observation["actual_provider_id"] == "CoreWeave"
     assert observation["usage"]["cost_usd"] == 0.00012
@@ -252,7 +252,7 @@ def test_invalid_model_output_and_provider_errors_expose_only_bounded_diagnostic
     invalid = OpenRouterVisionAdapter(
         api_key="test-key",
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json=provider_response(
-            ["view-east", "view-west"], valid=False,
+            ["view-east"], valid=False,
         ))),
         budget=AttemptBudget(tmp_path / "invalid-budget.json", now=lambda: NOW), now=lambda: NOW,
     )
@@ -275,6 +275,36 @@ def test_invalid_model_output_and_provider_errors_expose_only_bounded_diagnostic
     assert failure_body["provider_error"]["category"] == "other_provider_error"
     assert "secret provider body" not in serialized
     assert "encoded image data" not in serialized
+
+
+def test_view_identity_mismatch_response_contains_only_integer_diagnostics(monkeypatch, tmp_path):
+    returned_id = "model-invented-view-id"
+    untrusted_text = "unfiltered model explanation"
+    output = model_output([returned_id])
+    output["views"][0]["note"] = untrusted_text
+    adapter = OpenRouterVisionAdapter(
+        api_key="test-key",
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={
+            "model": MODEL_ID,
+            "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(output)}}],
+        })),
+        budget=AttemptBudget(tmp_path / "mismatch-budget.json", now=lambda: NOW), now=lambda: NOW,
+    )
+    setup_api(monkeypatch, tmp_path, adapter=adapter)
+
+    response = post("/api/cameras/observe", trip_payload())
+    body = response.json()
+    serialized = json.dumps(body)
+    assert response.status_code == 200
+    assert body["semantic_error_code"] == "view_identity_or_order_mismatch"
+    assert body["semantic_mismatch"] == {
+        "expected_view_count": 1,
+        "actual_view_count": 1,
+        "first_mismatched_position": 1,
+    }
+    assert body["observation"]["failure_code"] == "invalid_model_output"
+    assert returned_id not in serialized
+    assert untrusted_text not in serialized
 
 
 def test_destination_and_catalogue_identity_mismatches_stop_before_inference(monkeypatch, tmp_path):

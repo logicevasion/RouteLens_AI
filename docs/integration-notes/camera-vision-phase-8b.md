@@ -4,6 +4,8 @@
 **Research check:** OpenRouter model/endpoint metadata and provider-routing/privacy documentation checked 2026-10-11 and rechecked for the final diagnostic continuation.
 **Image-transfer boundary:** No real City of Vancouver camera frame was sent externally. The live probe entry point can select only the two named developer-owned Phase 0D synthetic illustrations.
 
+**MVP supersession note:** Assignment 8D now sends only the first eligible directional frame in canonical Phase 7 catalogue order per inference request. This supersedes the multi-image request policy described in the historical implementation and test records below. The accepted observation schema and semantic validator remain capable of handling multiple views for future expansion; the Phase 7 gallery still displays all available directional images.
+
 ## 1. Files and callable interface
 
 Implemented:

@@ -2,22 +2,25 @@
 
 ## 1. Current Phase
 
-**Phase:** 8 — Multi-View Camera AI Analysis
-**Phase status:** Planned; not yet implemented. Each assignment requires separate human authorization and acceptance.
-**Source:** `docs/implementation-plan.md` Phase 8; `docs/prd.md`; `docs/technical-design.md`; accepted Phase 7 camera contracts and `docs/data-licensing-and-commercialization.md`. Where documents differ, inspect the repository and report the discrepancy rather than silently rewriting accepted authority.
-**Previous phase:** Phase 7 — Vancouver Camera Pipeline, Assignments 7A–7E complete and human accepted on 2026-10-11; final Git checkpoint committed and pushed by the developer.
+**Phase:** 9 — Journey Evidence Organization and Reconciliation
+
+**Phase status:** Phase 9 is the next planned development phase; implementation has not started. Phase 8 — Camera AI Analysis is complete and human accepted (2026-10-11). Assignments 8A–8D have all been accepted, including successful end-to-end real-camera inference using the single-image MVP policy. Phase 8D changes are pending the developer's final Git commit/push unless completed separately.
+
+**Source:** `docs/implementation-plan.md` Phase 9; `docs/prd.md`; `docs/technical-design.md`; accepted Phase 8 camera-vision contracts and `docs/data-licensing-and-commercialization.md`. Where documents differ, inspect the repository and report the discrepancy rather than silently rewriting accepted authority.
+
+**Previous phase:** Phase 8 — Camera AI Analysis, Assignments 8A–8D complete and human accepted on 2026-10-11. The accepted MVP analyzes the first eligible directional image from the backend-selected destination intersection using Gemma 4 31B through OpenRouter, retaining validated observations as internal journey evidence. Two successful real-camera inference tests confirmed the workflow. Final Git checkpoint pending developer commit/push unless completed separately.
 
 ### Objective
 
 Convert the **currently retrieved directional images from the one selected destination camera intersection** into **one conservative, structured, source-attributed `CameraObservation`**, through a controlled OpenRouter multimodal request.
 
-**Accepted Phase 7 current frames → bounded image eligibility/snapshot → one multi-image vision call → strict schema and provenance validation → internal `CameraObservation` evidence → Phase 9 evidence organization → Phase 10 AI Journey Briefing.**
+**Accepted Phase 7 current frames → bounded image eligibility/snapshot → one single-image vision call → strict schema and provenance validation → internal `CameraObservation` evidence → Phase 9 evidence organization → Phase 10 AI Journey Briefing.**
 
 The phase must deliver:
 
 - verified OpenRouter multimodal model and provider capabilities, with actual image payload and structured-output contract evidence;
 - a small, controlled visual-observation schema and task prompt that distinguish visible facts, tentative interpretations and unknowns;
-- exactly **one logical model assessment per explicit journey-analysis operation for the selected intersection**, containing all eligible current directional frames from that intersection; no per-direction model calls;
+- exactly **one logical model assessment per explicit journey-analysis operation for the selected intersection**, containing the first eligible current directional frame in canonical Phase 7 catalogue order; no per-direction model calls;
 - strict grounding in the supplied pixels: no invented conditions, unsupported traffic severity, route-specific conclusions or extrapolation beyond what is visible;
 - deterministic Pydantic validation, provenance, status and failure/degraded states;
 - bounded model request time, input size, output size, upstream attempts and cost, plus intentional handling of repeat Analyze Journey actions;
@@ -31,7 +34,7 @@ The phase must deliver:
 
 - **Driving only**, City of Vancouver canonical destination, selected route and manual **Analyze Journey** remain authoritative.
 - **One selected camera intersection** per analyzed destination. Use the already-selected intersection, not a second nearest-camera search invented by the AI layer. Do not analyze nearby map-marker cameras.
-- Use **all eligible fresh directional views** from that selected intersection in **one logical OpenRouter request**. Support variable view counts (including one and five); preserve each original source direction label. Do not stitch images into misleading panoramas.
+- For the datathon MVP, send **exactly one eligible fresh directional view** from that selected intersection in **one logical OpenRouter request**: walk the catalogue's directional views in canonical Phase 7 order and choose the first frame that passes the existing freshness, content, decoding, integrity, size, and snapshot checks. Do not rank by retrieval recency or substitute another intersection. The Phase 7 gallery continues to display all available directional images. The schema remains multi-view capable for future expansion; multi-image inference is deferred beyond the MVP.
 - Observation describes what is **visually discernible near the camera intersection**, not the exact destination or the entire driving route.
 - **No automated weather verification, traffic speeds, crash detection, road closure declaration, pedestrian identification or license-plate interpretation.** No inference of precipitation or congestion merely because a scene looks dark/wet/occupied.
 - **No archive or time series** of submitted images, prompts containing image bytes, or raw model responses. No background inference, polling or automatic repeat calls.
@@ -75,7 +78,7 @@ Phase 8 consists of four separately authorized assignments. Completing one does 
 - Connect the accepted Phase 7 selected-intersection current frames to the 8B adapter through a **narrow backend operation** tied to the canonical destination and explicit journey analysis lifecycle.
 - Prefer a **separate typed camera-observation API** from `POST /api/trips/analyze` so road/weather results and the image gallery are not blocked by model latency. Inspect existing route and camera contracts before finalizing endpoint and request schema.
 - Prevent user-provided arbitrary image references or unrelated intersection IDs from inducing model processing. Define a short-lived, server-validated selection/snapshot identity or equally narrow correlation mechanism appropriate to the existing code.
-- Require one logical model call for all eligible views from the **one selected intersection**, not a call per frame; handle zero qualifying views without calling OpenRouter.
+- Original accepted 8C request policy: one logical model call for all eligible views from the **one selected intersection**, not a call per frame; handle zero qualifying views without calling OpenRouter. **Superseded for the datathon MVP by Assignment 8D's first-eligible-single-frame policy.**
 - Respect request cancellation and stale-response identities; return source-specific statuses and metadata, not raw frames or unvalidated model prose.
 - Bound repeated clicks and concurrency: no implicit inference on page load, destination typing, marker hover/click or camera image GET requests. Any inference cache, if needed, is short-lived and bounded by frame identities and model/prompt/schema versions; no historical accumulation.
 - Preserve existing camera image delivery, nearby metadata markers, Road Ahead/DriveBC findings, weather and selected-route behavior.
@@ -85,7 +88,7 @@ Phase 8 consists of four separately authorized assignments. Completing one does 
 
 ### Assignment 8D — Internal Vision Pipeline Integration and Human Acceptance
 
-- Complete and verify the end-to-end **CameraObservation telemetry pipeline**. Eligible directional camera frames from the already-selected intersection produce one schema-validated, provenance-bearing result from the approved OpenRouter adapter.
+- Complete and verify the end-to-end **CameraObservation telemetry pipeline**. The first eligible directional camera frame in canonical catalogue order from the already-selected intersection produces one schema-validated, provenance-bearing result from the approved OpenRouter adapter. This single-image MVP policy supersedes earlier Phase 8 multi-image request requirements; the observation schema and exact identity/order validation remain unchanged.
 - Treat `CameraObservation` as **internal machine-readable evidence** for Phases 9–10, not a standalone user-facing report. Do not create a Camera AI Observation card, expose raw JSON in Journey Intelligence, or add a new map layer/dashboard.
 - Preserve backend-controlled intersection/view identities, original direction labels, source attribution, frame retrieval and verified source-capture times if available, observation generation time, selected model/provider, coverage, and status. Never trust the model to invent provenance.
 - Support honest **available**, **partial**, **insufficient evidence**, **stale imagery**, **unavailable** and **error** outcomes with explicit unknown/not-observable values. Structural validation is required but does not establish the truth of image claims.
@@ -238,7 +241,7 @@ No production adapter or frontend code in 8A.
 
 - Server-only OpenRouter calls with a backend-held key; do not expose key or frame bytes to browser or logs.
 - Use the eligible current frames already validated and stored by Phase 7; encode/transmit in the provider-supported format.
-- One user message may contain introductory task instructions, per-view original direction labels and each corresponding image; **one request** processes all eligible images.
+- Original 8B request policy: one user message may contain introductory task instructions, per-view original direction labels and each corresponding image; **one request** processes all eligible images. Assignment 8D supersedes multi-image transmission for the MVP; the adapter sends only the first eligible catalogue-order image.
 - Do not submit camera marker locations, unrelated City frames or saved historical versions.
 - Reject zero frames, invalid/stale-only frames according to the 8A policy, oversized requests and mixed-intersection snapshots before upstream transmission.
 - No arbitrary model or prompt selection by the frontend.
@@ -392,10 +395,10 @@ Phase 8 does **not** authorize:
 
 Phase 8 is eligible for human acceptance only when:
 
-- [ ] The actual selected OpenRouter model/provider supports the accepted multi-image input and response constraints, or the tested fallback is explicitly approved.
+- [ ] The actual selected OpenRouter model/provider supports the accepted image input and response constraints, or the tested fallback is explicitly approved.
 - [ ] `CameraObservation` schema and prompt semantics are documented, strict enough for **downstream validated telemetry consumption** and allow genuine uncertainty.
 - [ ] Any transmission of real City frames to OpenRouter received a distinct human decision, with outstanding provider/source rights clearly recorded.
-- [ ] Only current eligible directional frames from **one selected intersection** are submitted in **one logical request** per authorized analysis.
+- [ ] Only the first current eligible directional frame in canonical Phase 7 catalogue order from **one selected intersection** is submitted in **one logical request** per authorized analysis; the Phase 7 gallery continues displaying all available directional images.
 - [ ] Original direction labels, view IDs and times are preserved; the application, not model prose, owns authoritative provenance.
 - [ ] Validated observations remain within image-visible evidence; no invented closure, exact rainfall or route-wide congestion claims.
 - [ ] Malformed, incomplete, stale or source-incompatible observations are rejected/degraded instead of shown as reliable facts.
