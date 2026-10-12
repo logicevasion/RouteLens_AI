@@ -55,6 +55,20 @@ export type JourneyEvidenceInputs = {
   camera_vision: JourneyCameraEvidence | null;
 };
 
+/** The single internal handoff: current active evidence, or null after journey invalidation. */
+export function deriveCurrentJourneyEvidence(
+  state: { attempt_id: number | null; trip: AnalysisRequest | null; analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null },
+  trip: AnalysisRequest | null,
+  assembled_at: string,
+): JourneyEvidenceBundle | null {
+  if (state.attempt_id === null || !state.trip || !trip || tripIdentity(state.trip) !== tripIdentity(trip)) return null;
+  try {
+    return assembleJourneyEvidence({ trip, attempt_id: state.attempt_id, assembled_at, analysis: state.analysis, camera_vision: state.camera_vision });
+  } catch {
+    return null;
+  }
+}
+
 const clone = <T>(value: T): T => structuredClone(value);
 
 function tripIdentity(trip: AnalysisRequest): string {

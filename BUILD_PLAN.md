@@ -2,13 +2,15 @@
 
 ## 1. Current Phase
 
-**Phase:** 9 — Journey Evidence Organization and Reconciliation
+**Phase:** 10 — AI Journey Briefing
 
-**Phase status:** Planning and specification preparation. Phase 9 implementation has not started. Phase 8 — Camera AI Analysis is complete and human accepted. Assignments 8A–8D were accepted on 2026-10-11, including two successful end-to-end single-image inference tests using current City of Vancouver traffic-camera imagery. The developer has completed the Phase 8 Git checkpoint.
+**Phase status:** Planning and specification preparation. Phase 10 implementation has not started. Phase 9 — Journey Evidence Organization and Reconciliation is human accepted and complete (2026-10-11). Assignments 9A–9D delivered the typed, source-attributed `JourneyEvidenceBundle v1`, deterministic evidence assembly, conservative readiness semantics, and lifecycle-safe handoff in `frontend/src/App.tsx`. The final Phase 9 Git checkpoint remains pending the developer's commit/push unless completed separately.
 
-**Source:** `docs/implementation-plan.md` Phase 9; `docs/prd.md`; `docs/technical-design.md`; accepted Phase 4–8 implementation contracts; `PROJECT_STATE.md`; and applicable integration notes. Where this proposed build plan differs materially from accepted project authority, inspect the repository, identify the discrepancy, and obtain human resolution before implementation.
+**Source:** `docs/implementation-plan.md` Phase 10; `docs/prd.md`; `docs/technical-design.md`; accepted Phase 8 camera-vision and Phase 9 journey-evidence contracts; `PROJECT_STATE.md`; and associated integration notes. Where documents differ, inspect the repository and report material discrepancies before changing accepted implementation authority. A dedicated Phase 10 build plan must be prepared and human approved before implementation.
 
-**Previous phase:** Phase 8 — Camera AI Analysis, human accepted and committed/pushed. The accepted MVP analyzes the first eligible directional image from the backend-selected destination intersection through `google/gemma-4-31b-it` using OpenRouter automatic provider routing. Validated observations remain internal journey evidence, with backend-controlled provenance, strict schema and semantic validation, bounded inference costs, and isolated failure behavior.
+**Previous phase:** Phase 9 — Journey Evidence Organization and Reconciliation, Assignments 9A–9D human accepted and complete on 2026-10-11. The accepted implementation uses a frontend-owned pure TypeScript assembler and memoized active-journey handoff. `journeyEvidenceBundle` is derived from canonical Trip/route identity, analysis attempt generation, normalized road/weather/SWOB evidence, and matching Phase 8 camera observations. Partial evidence remains usable; stale or mismatched journey results are rejected. Phase 9 introduced no additional external provider calls, user-facing evidence UI, or LLM inference.
+
+**Next objective:** Design and implement one concise, validated, source-grounded AI Journey Briefing displayed at the **top of Journey Intelligence**. The briefing should explain important journey conditions using the accepted evidence bundle, distinguish official road events, weather observations/forecasts, and single-direction camera interpretations, and disclose unavailable or uncertain evidence. Phase 10 must define its own model/API contract, cost controls, single-generation lifecycle, error/fallback handling, and frontend presentation without duplicating Phase 8 camera inference or Phase 9 source reconciliation.
 
 ### Objective
 

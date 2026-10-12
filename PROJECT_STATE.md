@@ -2,15 +2,23 @@
 
 ## 1. Current Status
 
-**Project:** RouteLens AI  
-**Planning:** Substantially complete — authoritative documents established; Phase 9 scope and Assignment 9A contract accepted.
-**Current phase:** Phase 9 — Journey Evidence Organization and Reconciliation
-**Phase status:** Phases 0–8 and Assignments 9A–9B are human accepted. Assignment 9C is implemented and pending human review; Assignment 9D has not started. Phase 10 has not started.
-**Human review:** Phase 8 acceptance, including two successful real-camera inference checks, and Assignment 9B acceptance are complete. Assignment 9C verification is recorded in Section 41.
-**Next action:** Human review and acceptance of Assignment 9C. Do not begin 9D before acceptance.
-**Git checkpoint:** Phase 7 accepted changes, including Assignment 7E and the approved Phase 7 build-plan amendment, were committed and pushed by the human developer on 2026-10-11. Earlier recorded checkpoints include Phase 4 `3c2600a`, Phase 5 plan `c7c31f2`, Assignment 5A `1ff1a6d`, Assignment 5B `18aa6b8`, Assignment 5C `a2c7a69`, Assignment 6B `5dcfaaa`, and Assignment 6C (hash not recorded here).
-**Repository baseline:** Originally inspected in Assignment 0A; subsequent accepted implementation and Git checkpoints supersede that initial scaffold baseline.
-**MVP scope decision (2026-10-11):** RouteLens AI remains driving-only for the datathon. Transit Mode is deferred beyond the MVP. Phase 8 extracts structured camera observations for internal downstream AI reasoning; Phase 9 refines journey relevance and evidence organization; Phase 10 generates the user-facing AI Journey Briefing; Phases 11–12 cover integration hardening and presentation/demo polish.
+**Project:** RouteLens AI
+
+**Planning:** Substantially complete — authoritative documents and accepted implementation contracts established through Phase 9. Phase 10-specific planning is the next step.
+
+**Current phase:** Phase 10 — AI Journey Briefing
+
+**Phase status:** Phases 0–9 are human accepted and complete. Phase 9 Assignments 9A–9D delivered the accepted `JourneyEvidenceBundle v1`, including source normalization, conservative readiness/reconciliation, canonical journey identity, and active lifecycle integration. Phase 10 implementation has not started.
+
+**Human review:** Assignment 9D and Phase 9 were human accepted on 2026-10-11. Automated lifecycle and frontend regression verification passed. Direct browser inspection of the internal evidence bundle was not performed; Phase 10 consumption remains unverified.
+
+**Next action:** Complete the human Phase 9 Git checkpoint, then prepare and approve a dedicated Phase 10 build plan. Phase 10 will consume the accepted evidence bundle and generate the single user-facing AI Journey Briefing at the top of Journey Intelligence. No Phase 10 implementation is authorized until its scope is approved.
+
+**Git checkpoint:** The accepted Phase 9D changes and documentation are pending the developer's final commit/push. Earlier Phase 9 checkpoints were committed and pushed, including Assignment 9B (`aa23627`) and Assignment 9C (`a21467a`). Phase 8 camera-vision integration was committed and pushed (`62bd6be`). Earlier Phase 7 and preceding implementation checkpoints remain recorded in Git history. No unperformed Phase 9D Git operation is claimed.
+
+**Repository baseline:** Originally inspected in Assignment 0A. Subsequent accepted phases and human-controlled Git checkpoints supersede the initial scaffold baseline. The accepted Phase 9 code provides the current internal evidence handoff for Phase 10.
+
+**MVP scope decision (2026-10-11):** RouteLens AI remains driving-only for the datathon. Transit Mode is deferred beyond the MVP. Phase 8 extracts structured single-direction camera observations through the accepted OpenRouter/Gemma workflow. Phase 9 organizes route, road-event, destination-weather, station-observation, and camera evidence into a source-attributed internal journey bundle. Phase 10 generates and displays one primary AI Journey Briefing. Richer timeline visualization and cross-source reasoning features are deferred; Phases 11–12 cover integration hardening and presentation/demo polish.
 
 ### Accepted implementation summary
 
@@ -1395,3 +1403,27 @@ The Phase 7 camera gallery continues displaying all available directional views;
 **Project state:** **Assignment 9C is human accepted and complete.** Assignment 9D is next, pending separate authorization. Phase 9 remains in progress; Phase 10 AI Journey Briefing implementation has not started.
 
 **Git/review:** Codex performed no Git staging, commits, pushes, or history modifications. The developer is responsible for reviewing, staging, committing, and pushing the accepted Assignment 9C changes. The Git checkpoint remains pending until those operations succeed.
+
+## 42. Assignment 9D — Journey Evidence Lifecycle Integration and Handoff
+
+**Assignment status:** **Human accepted and complete (2026-10-11).** Phase 9 — Journey Evidence Organization and Reconciliation is human accepted and complete. Assignments 9A–9D have all been accepted. The `JourneyEvidenceBundle v1` handoff is implemented and available for Phase 10. No Phase 10 functionality has been implemented.
+
+**Lifecycle integration and Phase 10 handoff:** `frontend/src/App.tsx` memoizes the current typed evidence bundle as `journeyEvidenceBundle`, using `deriveCurrentJourneyEvidence(...)` from `frontend/src/journeyEvidence.ts`. The function returns `JourneyEvidenceBundle | null`; `null` indicates no active attempt or a mismatch between the active canonical Trip and the attempt's captured Trip. The bundle preserves the canonical Trip and selected-route geometry, shared analysis attempt ID, normalized Road Ahead/DriveBC findings, OpenWeather current and forecast conditions, SWOB station observations, camera-vision evidence, authoritative source provenance, explicit assembly timestamp, source availability, and readiness. Phase 10 can consume this bundle without repeating source retrieval or camera inference.
+
+**Identity and failure behavior:** `JourneyEvidenceState` owns the active analysis attempt ID and captured canonical Trip alongside the existing analysis and camera evidence. The analysis request generation is reused as the camera evidence attempt identity. Existing camera sequence/key checks, cancellation, timeouts, and conditional result retention remain active. Origin/destination edits, Find Routes, and route-selection changes invalidate the prior journey evidence. A live canonical Trip comparison additionally suppresses incompatible handoff values. Late analysis and camera responses remain subject to generation and identity checks and cannot attach to a superseded journey.
+
+**Partial-first readiness:** Once main journey analysis succeeds, the bundle is eligible for downstream briefing even if camera inference remains pending or a supporting source is unavailable. A pending camera request produces a `partial` bundle with `ready_for_briefing: true`; matching camera completion updates that same active journey's derived evidence. Camera timeout, provider failure, unavailability, or `insufficient_evidence` does not discard valid road/weather results. Successful analysis with all applicable sources available or validly empty produces `ready` status. Pending, failed, or unknown main analysis remains ineligible. Source-specific errors, unknowns, timestamps, and limitations are preserved rather than converted into positive findings.
+
+**Implementation boundary:** The handoff is a memoized pure derivation from existing in-memory frontend state. It adds no endpoint, network request, OpenRouter inference, provider retry, background process, persistence, or user-facing evidence component. Existing Road Ahead, DriveBC, weather, selected route, destination camera gallery, nearby camera markers, and map interactions remain unchanged. The temporary `void journeyEvidenceBundle;` reference in `App.tsx` prevents an unused-variable warning until Phase 10 consumes the value directly.
+
+**Verification:** Focused journey-evidence lifecycle tests passed. The full frontend test suite passed across **8 test files with 0 failures**. TypeScript checks and the Vite production build passed; the existing nonblocking advisory for a minified JavaScript chunk exceeding 500 kB remains. `git diff --check` passed. Tests used local fixtures and mocked requests. Backend regression was not required because no backend code changed. No real external API calls or paid inference occurred during 9D.
+
+**Human acceptance:** The developer accepted the shared attempt identity, canonical Trip/route binding, deterministic bundle derivation, partial-first readiness, stale-result rejection, and Phase 10 internal handoff. Automated lifecycle verification was accepted as sufficient for this MVP checkpoint. No separate manual browser inspection of the internal bundle was performed; that limitation remains recorded rather than being presented as completed testing.
+
+**Known limitations and deferred work:** The repository does not have a React DOM integration-test harness; lifecycle tests use extracted pure helpers and narrow App source-wiring assertions. Phase 9 does not independently validate camera visual accuracy, generate cross-source conclusions, predict delays, calculate a future journey timeline, or create a user-facing briefing. The `ready_for_briefing` flag expresses evidence eligibility, not an instruction to trigger an OpenRouter call. Phase 10 must define a single controlled briefing-generation boundary, validated output contract, and user-facing presentation. End-to-end consumption of the evidence bundle by Phase 10 remains untested.
+
+**Files changed:** `frontend/src/App.tsx`, `frontend/src/cameraVision.ts`, `frontend/src/journeyEvidence.ts`, `frontend/tests/journeyEvidence.test.mjs`, `docs/integration-notes/journey-evidence-phase-9a.md`, and `PROJECT_STATE.md`.
+
+**Project state:** **Phase 9 is human accepted and complete (2026-10-11).** Assignments 9A, 9B, 9C, and 9D are complete. Phase 10 — AI Journey Briefing is the next development phase, currently awaiting its phase-specific planning and separately authorized implementation. Phases 11–12 remain deferred.
+
+**Git/review:** Assignment 9D was implemented by Codex without Git staging, commits, pushes, or history modifications. The developer has accepted the implementation and will perform the Phase 9 final Git checkpoint. Commit/push completion must be confirmed separately; no completed checkpoint is claimed in this section.

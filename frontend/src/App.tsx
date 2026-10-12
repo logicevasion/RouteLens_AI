@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
@@ -11,6 +11,7 @@ import { activeSelectedEventId, buildAnalysisRequest, isAnalysisReady, isCurrent
 import type { AnalysisFinding, AnalysisState, DriveBCAnalysisFinding, RegionalEvent } from './analysisTypes';
 import { cameraVisionFailureResult, fetchCameraVision, isCurrentVisionAttempt, retainCurrentCameraVision, startCameraVisionTimeout } from './cameraVision';
 import type { JourneyCameraEvidence, JourneyEvidenceState } from './cameraVision';
+import { deriveCurrentJourneyEvidence } from './journeyEvidence';
 import {
   routeColor,
   type DrivingRoutesRequest,
@@ -395,7 +396,7 @@ export default function App() {
   const [routeState, setRouteState] = useState<RouteRequestState>(initialRouteState);
   const [origin, setOrigin] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
-  const [journeyEvidenceState, setJourneyEvidenceState] = useState<JourneyEvidenceState>({ analysis: initialAnalysisState, camera_vision: null });
+  const [journeyEvidenceState, setJourneyEvidenceState] = useState<JourneyEvidenceState>({ attempt_id: null, trip: null, analysis: initialAnalysisState, camera_vision: null });
   const analysisState = journeyEvidenceState.analysis;
   function setAnalysisState(next: AnalysisState) {
     setJourneyEvidenceState((current) => ({ ...current, analysis: next }));
@@ -427,6 +428,16 @@ export default function App() {
 
   const canFindRoutes = Boolean(origin && destination && routeState.status !== 'loading');
   const selectedRoute = routeState.status === 'ready' ? routeState.selectedRoute : null;
+  const currentTrip = useMemo(
+    () => origin && destination && selectedRoute ? buildAnalysisRequest(origin, destination, selectedRoute) : null,
+    [origin, destination, selectedRoute],
+  );
+  // Phase 10's internal handoff is this typed, current-attempt value; it has no UI or request side effects.
+  const journeyEvidenceBundle = useMemo(
+    () => deriveCurrentJourneyEvidence(journeyEvidenceState, currentTrip, new Date().toISOString()),
+    [journeyEvidenceState, currentTrip],
+  );
+  void journeyEvidenceBundle;
   const canAnalyze = isAnalysisReady(origin, destination, selectedRoute) && analysisState.status !== 'loading';
   const activeSelectedEvent = analysisState.status === 'success'
     ? activeSelectedEventId(selectedEventId, analysisState.result.findings, analysisState.result.drivebc_findings, analysisState.result.regional_events)
@@ -441,6 +452,7 @@ export default function App() {
     visionController.current?.abort();
     visionController.current = null;
     activeVisionKey.current = null;
+    setJourneyEvidenceState({ attempt_id: null, trip: null, analysis: initialAnalysisState, camera_vision: null });
     setJourneyCameraEvidence(null);
     cameraSequence.current += 1;
     nearbyCameraSequence.current += 1;
@@ -539,7 +551,7 @@ export default function App() {
     const visionRequestController = new AbortController();
     visionController.current = visionRequestController;
     activeVisionKey.current = visionAttemptKey;
-    setJourneyCameraEvidence({ attempt_id: visionAttemptId, trip: request, camera_vision: { status: 'pending' } });
+    setJourneyEvidenceState({ attempt_id: requestId, trip: request, analysis: { status: 'loading', result: null, error: null }, camera_vision: { attempt_id: requestId, trip: request, camera_vision: { status: 'pending' } } });
     const controller = new AbortController();
     analysisController.current = controller;
     activeAnalysisKey.current = requestKey;
@@ -562,12 +574,12 @@ export default function App() {
     });
     void fetchCameraVision(request, visionRequestController.signal).then((result) => {
       if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
-      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, visionAttemptId, result));
+      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, requestId, result));
     }).catch((error: unknown) => {
       if (!isCurrentVisionAttempt(visionAttemptId, visionSequence.current, visionAttemptKey, activeVisionKey.current)) return;
       if (visionRequestController.signal.aborted && !visionTimedOut) return;
       const fallback = cameraVisionFailureResult(error, visionTimedOut);
-      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, visionAttemptId, fallback));
+      setJourneyCameraEvidence((current) => retainCurrentCameraVision(current, requestId, fallback));
     }).finally(() => {
       clearTimeout(visionTimeout);
       if (visionSequence.current === visionAttemptId) visionController.current = null;

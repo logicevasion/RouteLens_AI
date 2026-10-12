@@ -64,7 +64,7 @@ export type JourneyCameraEvidence = {
   trip: AnalysisRequest;
   camera_vision: { status: 'pending' } | { status: 'complete'; result: CameraVisionResult };
 };
-export type JourneyEvidenceState = { analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null };
+export type JourneyEvidenceState = { attempt_id: number | null; trip: AnalysisRequest | null; analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null };
 
 const failureCodes: VisionFailureCode[] = [
   'no_selected_intersection', 'journey_context_mismatch', 'no_eligible_frames', 'stale_frames_only',
