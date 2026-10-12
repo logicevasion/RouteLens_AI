@@ -192,6 +192,24 @@ button, input { font: inherit; }
 .panel-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; color: #81909d; font-size: 8px; white-space: nowrap; }
 .panel-status span { width: 6px; height: 6px; background: #83929e; }
 
+.briefing-card { margin: 13px 14px 6px; padding: 15px; border: 1px solid rgb(86 200 194 / 23%); border-radius: 9px; background: linear-gradient(135deg, rgb(86 200 194 / 9%), rgb(255 255 255 / 2%) 62%, rgb(15 22 29 / 72%)); box-shadow: inset 0 1px rgb(255 255 255 / 2%); }
+.briefing-card-waiting_for_evidence, .briefing-card-in_progress { border-color: rgb(191 211 232 / 12%); background: rgb(6 12 17 / 28%); }
+.briefing-card-insufficient_evidence, .briefing-card-unavailable, .briefing-card-error { border-color: rgb(213 174 103 / 19%); }
+.briefing-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.briefing-heading .eyebrow { margin-bottom: 5px; color: #76aaa6; }
+.briefing-heading h3 { margin: 0; color: #e6edf2; font-size: 14px; font-weight: 620; letter-spacing: -.02em; }
+.briefing-badge { flex: 0 0 auto; padding: 4px 7px; border: 1px solid rgb(85 197 139 / 25%); border-radius: 99px; color: #84c9a1; font-size: 8px; }
+.briefing-overview { margin: 11px 0 0; color: #d4e0e6; font-size: 11px; font-weight: 520; line-height: 1.55; overflow-wrap: anywhere; }
+.briefing-highlights { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+.briefing-highlights li { display: flex; align-items: flex-start; gap: 8px; color: #aebbc5; font-size: 9px; line-height: 1.5; }
+.briefing-category { min-width: 48px; flex: 0 0 auto; padding: 2px 5px; border: 1px solid rgb(191 211 232 / 10%); border-radius: 4px; color: #9caeba; font-size: 7px; text-align: center; text-transform: capitalize; }
+.briefing-category-road { border-color: rgb(238 121 102 / 20%); color: #e99a8a; }
+.briefing-category-weather { border-color: rgb(126 177 213 / 22%); color: #9fc3dc; }
+.briefing-category-camera { border-color: rgb(180 148 224 / 22%); color: #c1a7e7; }
+.briefing-category-general { color: #a9b7c1; }
+.briefing-limitations { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid rgb(191 211 232 / 8%); color: #84929d; font-size: 8px; line-height: 1.45; overflow-wrap: anywhere; }
+.briefing-message { margin: 9px 0 0; color: #98a6b1; font-size: 9px; line-height: 1.55; }
+
 .journey-overview { display: flex; align-items: center; gap: 13px; margin: 14px 14px 6px; padding: 14px 13px; border: 1px solid rgb(191 211 232 / 9%); border-radius: 8px; background: linear-gradient(115deg, rgb(86 200 194 / 6%), rgb(255 255 255 / 1%)); }
 .overview-route { display: flex; height: 37px; flex: 0 0 17px; flex-direction: column; align-items: center; justify-content: center; }
 .overview-dot { width: 7px; height: 7px; border: 1.5px solid #93a5b4; border-radius: 50%; }

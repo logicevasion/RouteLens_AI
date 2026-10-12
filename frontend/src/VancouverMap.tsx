@@ -97,7 +97,7 @@ function syncRoutes(
       id: 'routelens-route-selected', type: 'line', source: routeSourceId,
       filter: ['==', ['get', 'selected'], true],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#51d5cc', 'line-width': 5.5, 'line-opacity': 1 },
+      paint: { 'line-color': '#B794F6', 'line-width': 5.5, 'line-opacity': 1 },
     });
   }
 
@@ -144,7 +144,10 @@ function ensureRoadAheadLayers(map: MapLibreMapType) {
     map.addLayer({
       id: 'routelens-road-ahead-selected-fill', type: 'fill', source: roadAheadSourceId,
       filter: ['==', ['get', 'selected'], true],
-      paint: { 'fill-color': '#fff06a', 'fill-opacity': 0.12 },
+      paint: {
+        'fill-color': ['case', ['==', ['get', 'classification'], 'direct_overlap'], '#ee7966', '#e5ba70'],
+        'fill-opacity': 0.12,
+      },
     });
   }
   if (!map.getLayer('routelens-road-ahead-selected-casing')) {
@@ -160,7 +163,10 @@ function ensureRoadAheadLayers(map: MapLibreMapType) {
       id: 'routelens-road-ahead-selected-line', type: 'line', source: roadAheadSourceId,
       filter: ['==', ['get', 'selected'], true],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#fff06a', 'line-width': 7, 'line-opacity': 1 },
+      paint: {
+        'line-color': ['case', ['==', ['get', 'classification'], 'direct_overlap'], '#ee7966', '#e5ba70'],
+        'line-width': 7, 'line-opacity': 1,
+      },
     });
   }
 }

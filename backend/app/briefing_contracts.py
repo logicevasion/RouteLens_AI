@@ -82,7 +82,8 @@ def _status_succeeded(status: SourceStatus | None) -> bool:
 
 
 class RoadFinding(StrictModel):
-    source_id: StrictStr = Field(min_length=1, max_length=125, pattern=r"^[A-Za-z0-9_.-]+$")
+    source_id: StrictStr = Field(min_length=1, max_length=125, pattern=r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
+    event_type: StrictStr | None = Field(default=None, max_length=80)
     title: StrictStr = Field(min_length=1, max_length=160)
     description: StrictStr | None = Field(max_length=320)
     classification: RoadClass
@@ -280,7 +281,7 @@ class EcccSwob(StrictModel):
 
 
 class CameraView(StrictModel):
-    view_id: StrictStr = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_.-]+$")
+    view_id: StrictStr = Field(min_length=1, max_length=128, pattern=r"^(?:view:)?[A-Za-z0-9_.-]+$")
     direction_label: StrictStr | None = Field(max_length=80)
     retrieved_at: datetime
     source_capture_at: datetime | None
@@ -433,35 +434,34 @@ class BriefingEvidenceRequestV1(StrictModel):
         return False
 
 
-class ModelHighlightV1(StrictModel):
-    category: Literal["road", "weather", "camera", "general"]
-    text: StrictStr = Field(min_length=1, max_length=220)
-    evidence_refs: list[StrictStr] = Field(min_length=1, max_length=3)
+class ModelBriefingOutputV1(BaseModel):
+    """Minimal provider output; topic identity and references are backend-owned."""
 
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
 
-class ModelBriefingV1(StrictModel):
     status: Literal["available", "insufficient_evidence"]
     overview: StrictStr = Field(max_length=360)
-    overview_evidence_refs: list[StrictStr] = Field(max_length=4)
-    highlights: list[ModelHighlightV1] = Field(max_length=4)
+    camera_text: StrictStr = Field(max_length=300)
+    weather_text: StrictStr = Field(max_length=300)
+    construction_text: StrictStr = Field(max_length=300)
 
-    @model_validator(mode="after")
-    def content_matches_status(self) -> ModelBriefingV1:
-        if len(self.overview_evidence_refs) != len(set(self.overview_evidence_refs)):
-            raise ValueError("overview evidence references must be unique")
-        if any(len(item.evidence_refs) != len(set(item.evidence_refs)) for item in self.highlights):
-            raise ValueError("highlight evidence references must be unique")
-        if self.status == "available":
-            if not self.overview.strip() or not self.overview_evidence_refs:
-                raise ValueError("available briefing requires a referenced overview")
-        elif self.overview or self.overview_evidence_refs or self.highlights:
-            raise ValueError("insufficient evidence response must be empty")
-        return self
+    @field_validator("overview", "camera_text", "weather_text", "construction_text")
+    @classmethod
+    def reject_external_material(cls, value: str) -> str:
+        if any(marker in value.casefold() for marker in ("data:image/", "http://", "https://")):
+            raise ValueError("URLs and embedded image data are not accepted")
+        return value
+
+
+class BriefingTopicV1(StrictModel):
+    category: Literal["camera", "weather", "road"]
+    text: StrictStr = Field(min_length=1, max_length=300)
+    evidence_refs: list[StrictStr] = Field(max_length=3)
 
 
 class BriefingUsage(StrictModel):
     input_tokens: StrictInt | None = Field(ge=0, le=10_000_000)
-    output_tokens: StrictInt | None = Field(ge=0, le=512)
+    output_tokens: StrictInt | None = Field(ge=0, le=1024)
     total_tokens: StrictInt | None = Field(ge=0, le=10_000_000)
     cost_usd: float | None = Field(ge=0, le=100)
     latency_ms: StrictInt = Field(ge=0, le=30_000)
@@ -481,7 +481,7 @@ class BriefingResultV1(StrictModel):
     provider: StrictStr | None = Field(max_length=80)
     overview: StrictStr = Field(max_length=360)
     overview_evidence_refs: list[StrictStr] = Field(max_length=4)
-    highlights: list[ModelHighlightV1] = Field(max_length=4)
+    highlights: list[BriefingTopicV1] = Field(max_length=3)
     limitations: list[StrictStr] = Field(max_length=12)
     usage: BriefingUsage
 
@@ -489,3 +489,32 @@ class BriefingResultV1(StrictModel):
     @classmethod
     def timestamp_timezone(cls, value: datetime) -> datetime:
         return _aware(value)
+
+    @model_validator(mode="after")
+    def fixed_topic_contract(self) -> BriefingResultV1:
+        if self.status == "available":
+            expected_categories = ["camera", "weather", "road"]
+            if [item.category for item in self.highlights] != expected_categories:
+                raise ValueError("available briefing requires the fixed topic order")
+            placeholders = {
+                "camera": {
+                    "Camera interpretation was pending and was not included.",
+                    "Camera interpretation is stale and was not used for this briefing.",
+                    "Camera interpretation unavailable for this journey.",
+                },
+                "weather": {"Destination weather data unavailable."},
+                "road": {
+                    "Road Ahead construction evidence is unavailable for this journey.",
+                    "No qualifying construction report is available in the current Road Ahead evidence.",
+                },
+            }
+            for item in self.highlights:
+                if len(item.evidence_refs) != len(set(item.evidence_refs)):
+                    raise ValueError("topic evidence references must be unique")
+                if not item.evidence_refs and item.text not in placeholders[item.category]:
+                    raise ValueError("empty topic references are reserved for fixed availability messages")
+                if item.evidence_refs and item.text in placeholders[item.category]:
+                    raise ValueError("availability messages cannot contain evidence references")
+        elif self.highlights or self.overview or self.overview_evidence_refs:
+            raise ValueError("non-available briefing must not contain generated prose")
+        return self

@@ -52,11 +52,6 @@ const intelligenceSections = [
     icon: 'transit',
     message: 'Service alerts available after journey selection',
   },
-  {
-    title: 'AI journey briefing',
-    icon: 'spark',
-    message: 'Analysis not yet available',
-  },
 ] as const;
 
 function SectionIcon({ name }: { name: (typeof intelligenceSections)[number]['icon'] }) {
@@ -81,8 +76,6 @@ function SectionIcon({ name }: { name: (typeof intelligenceSections)[number]['ic
       return <svg {...common}><rect x="5" y="3" width="14" height="16" rx="3" /><path d="M8 19l-2 2m10-2 2 2M8 7h8M8 12h.01M16 12h.01M8 16h8" /></svg>;
     case 'camera':
       return <svg {...common}><path d="M14 5h-4l-2 3H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></svg>;
-    case 'spark':
-      return <svg {...common}><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z" /><path d="m19 15 1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /></svg>;
   }
 }
 
@@ -299,11 +292,12 @@ type IntelligencePanelProps = {
   onSelectRoute: (route: RouteCandidate) => void;
   analysisState: AnalysisState;
   cameraState: CameraState;
+  briefingState: JourneyBriefingState;
   selectedEventId: string | null;
   onSelectFinding: (eventId: string) => void;
 };
 
-function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
+function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraState, briefingState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -313,6 +307,46 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
         </div>
         <span className="panel-status"><span /> {routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'Waiting for a journey'}</span>
       </div>
+
+      <section className={`briefing-card briefing-card-${briefingState.status}`} aria-labelledby="briefing-title" aria-live="polite">
+        <div className="briefing-heading">
+          <div>
+            <p className="eyebrow">AI ASSISTED · SOURCE GROUNDED</p>
+            <h3 id="briefing-title">AI Journey Briefing</h3>
+          </div>
+          {briefingState.status === 'available' && <span className="briefing-badge">Ready</span>}
+        </div>
+        {briefingState.status === 'available' ? (
+          <>
+            <p className="briefing-overview">{briefingState.result.overview}</p>
+            {briefingState.result.highlights.length === 3 && (
+              <ul className="briefing-highlights">
+                {briefingState.result.highlights.map((highlight, index) => (
+                  <li key={`${highlight.category}-${index}`}>
+                    <span className={`briefing-category briefing-category-${highlight.category}`}>
+                      {highlight.category === 'camera' ? 'Camera conditions' : highlight.category === 'weather' ? 'Destination weather' : 'Construction'}
+                    </span>
+                    <span>{highlight.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {briefingState.result.limitations.slice(0, 2).length > 0 && (
+              <p className="briefing-limitations">{briefingState.result.limitations.slice(0, 2).join(' ')}</p>
+            )}
+          </>
+        ) : briefingState.status === 'idle' ? (
+          <p className="briefing-message">Analyze a selected journey to prepare a source-grounded briefing.</p>
+        ) : briefingState.status === 'waiting_for_evidence' ? (
+          <p className="briefing-message">Preparing the available journey evidence for your briefing…</p>
+        ) : briefingState.status === 'in_progress' ? (
+          <p className="briefing-message">Generating a briefing from the available journey evidence…</p>
+        ) : briefingState.status === 'insufficient_evidence' ? (
+          <p className="briefing-message">Available source evidence is not sufficient to prepare a briefing. Your journey information remains below.</p>
+        ) : (
+          <p className="briefing-message">The briefing is unavailable right now. Your journey information remains below.</p>
+        )}
+      </section>
 
       <div className="journey-overview">
         <div className="overview-route" aria-hidden="true">
@@ -356,7 +390,7 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
                     aria-label={`${label}, ${formatDistance(route.distance_meters)}, estimated driving time ${formatDuration(route.duration_seconds)}${selected ? ', selected' : ''}`}
                     onClick={() => onSelectRoute(route)}
                   >
-                    <span className={`candidate-swatch${selected ? ' candidate-swatch-selected' : ''}`} style={{ backgroundColor: selected ? '#51d5cc' : routeColor(route.id) }} aria-hidden="true" />
+                    <span className={`candidate-swatch${selected ? ' candidate-swatch-selected' : ''}`} style={{ backgroundColor: selected ? '#B794F6' : routeColor(route.id) }} aria-hidden="true" />
                     <span className="candidate-copy">
                       <span className="candidate-title">{label}</span>
                       <span className="candidate-metadata">{formatDistance(route.distance_meters)} · {formatDuration(route.duration_seconds)} driving</span>
@@ -804,7 +838,7 @@ export default function App() {
             selectedCameraId={cameraState.status === 'success' ? cameraState.result.intersection?.intersection_id ?? null : null}
           />
         </div>
-        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
+        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} briefingState={journeyBriefingState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
       </div>
     </main>
   );

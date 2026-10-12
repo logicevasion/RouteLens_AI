@@ -5,7 +5,7 @@ import type { JourneyEvidenceBundle, EvidenceAvailability } from './journeyEvide
 export type BriefingAvailability = 'available' | 'insufficient_evidence' | 'unavailable' | 'error';
 export type BriefingFailureCode = 'configuration_missing' | 'budget_exhausted' | 'timeout' | 'provider_unavailable' |
   'invalid_model_output' | 'duplicate_attempt' | 'error' | 'request_failed' | 'invalid_response';
-export type BriefingHighlightV1 = { category: 'road' | 'weather' | 'camera' | 'general'; text: string; evidence_refs: string[] };
+export type BriefingHighlightV1 = { category: 'road' | 'weather' | 'camera'; text: string; evidence_refs: string[] };
 export type BriefingResultV1 = {
   contract_version: 'journey-briefing-v1'; prompt_version: 'journey-briefing-prompt-v1';
   status: BriefingAvailability; failure_code: BriefingFailureCode | null; generated_at: string; attempt_id: number;
@@ -37,7 +37,7 @@ export type BriefingEvidenceRequestV1 = {
 };
 type PlaceV1 = { name: string; latitude: number; longitude: number };
 type SourceStatusV1 = { source: string; dataset_id: string; success: boolean; available: boolean; fetched_at: string | null; stale: boolean; cache_stale: boolean | null };
-type RoadFindingV1 = { source_id: string; title: string; description: string | null; classification: 'direct_overlap' | 'nearby'; distance_meters: number; location: string | null; severity: string | null; status: string | null; schedule_text: string | null; restriction_text: string | null; observed_at: string | null; updated_at: string | null; direction_assessment: string | null; temporal_applicability: string | null; current_impact: string | null; geometry_basis: 'linestring_intersection' | 'linestring_proximity' | 'point_proximity' | null };
+type RoadFindingV1 = { source_id: string; event_type: string; title: string; description: string | null; classification: 'direct_overlap' | 'nearby'; distance_meters: number; location: string | null; severity: string | null; status: string | null; schedule_text: string | null; restriction_text: string | null; observed_at: string | null; updated_at: string | null; direction_assessment: string | null; temporal_applicability: string | null; current_impact: string | null; geometry_basis: 'linestring_intersection' | 'linestring_proximity' | 'point_proximity' | null };
 type ConditionV1 = { code: number | null; group: 'clear' | 'clouds' | 'rain' | 'drizzle' | 'thunderstorm' | 'snow' | 'mist' | 'fog' | 'atmosphere' | 'unknown' | null; description: string | null };
 type MeasurementV1 = { value: number; unit: string };
 type CurrentObservationV1 = { source: 'OpenWeather'; product: 'onecall4_current'; observed_at: string; fetched_at: string; condition: ConditionV1 | null; temperature_c: MeasurementV1 | null; feels_like_c: MeasurementV1 | null; humidity_pct: number | null; wind_speed_m_s: number | null; wind_direction_deg: number | null; wind_gust_m_s: number | null; visibility_m: number | null; rain_1h_mm: number | null; snow_1h_mm: number | null };
@@ -80,7 +80,7 @@ const conditionGroup = (group: string | null): ConditionV1['group'] => {
 const condition = (value: { code: number | null; group: string | null; description: string | null } | null): ConditionV1 | null => value ? {
   code: value.code, group: conditionGroup(value.group), description: text(value.description, 120),
 } : null;
-type AnalysisFindingEvent = { source_record_id: string; title: string; description: string | null; severity: string | null; status: string | null; schedule_text: string | null; restriction_text: string | null; observed_at: string | null; updated_at: string | null };
+type AnalysisFindingEvent = { source_record_id: string; event_type: string; title: string; description: string | null; severity: string | null; status: string | null; schedule_text: string | null; restriction_text: string | null; observed_at: string | null; updated_at: string | null };
 type RoadInput = {
   event: AnalysisFindingEvent; classification: 'direct_overlap' | 'nearby'; distance_meters: number;
   detail?: { title?: string | null; location?: string | null; description?: string | null; status?: string | null; schedule_text?: string | null; restriction_text?: string | null };
@@ -94,7 +94,7 @@ const sortedRoads = <T extends RoadInput>(rows: T[]) => [...rows].sort((a, b) =>
 function roadFinding(row: RoadInput): RoadFindingV1 {
   const e = row.event;
   return {
-    source_id: e.source_record_id, title: requiredText(row.detail?.title ?? e.title, 160, 'road finding title'),
+    source_id: e.source_record_id, event_type: requiredText(e.event_type, 80, 'road event type'), title: requiredText(row.detail?.title ?? e.title, 160, 'road finding title'),
     description: text(row.detail?.description ?? e.description, 320), classification: row.classification,
     distance_meters: row.distance_meters, location: text(row.detail?.location, 160), severity: text(e.severity, 80),
     status: text(row.detail?.status ?? e.status, 80), schedule_text: text(row.detail?.schedule_text ?? e.schedule_text, 320),
@@ -219,15 +219,27 @@ export function normalizeBriefingResult(value: unknown): BriefingResultV1 | null
   const usage = v.usage as Record<string, unknown>;
   const boundedInteger = (n: unknown, max: number) => n === null || typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max;
   if (!boundedInteger(usage.input_tokens, 10_000_000) || !boundedInteger(usage.total_tokens, 10_000_000) ||
-      !boundedInteger(usage.output_tokens, 512) ||
+      !boundedInteger(usage.output_tokens, 1024) ||
       !(usage.cost_usd === null || typeof usage.cost_usd === 'number' && Number.isFinite(usage.cost_usd) && usage.cost_usd >= 0 && usage.cost_usd <= 100) ||
       !Number.isInteger(usage.latency_ms) || (usage.latency_ms as number) < 0 || (usage.latency_ms as number) > 30_000) return null;
-  if (v.overview.length > 360 || v.overview_evidence_refs.length > 4 || v.highlights.length > 4 || v.limitations.length > 12) return null;
+  if (v.overview.length > 360 || v.overview_evidence_refs.length > 4 || v.highlights.length > 3 || v.limitations.length > 12) return null;
   const highlights = v.highlights.map((h) => h && typeof h === 'object' ? h as Record<string, unknown> : null);
-  if (highlights.some((h) => !h || !['road', 'weather', 'camera', 'general'].includes(String(h.category)) || typeof h.text !== 'string' || h.text.length > 220 || !Array.isArray(h.evidence_refs) || !h.evidence_refs.length || h.evidence_refs.length > 3 || !h.evidence_refs.every((x) => typeof x === 'string'))) return null;
+  const topicOrder = ['camera', 'weather', 'road'];
+  const fixedAvailabilityText: Record<string, string[]> = {
+    camera: ['Camera interpretation was pending and was not included.', 'Camera interpretation is stale and was not used for this briefing.', 'Camera interpretation unavailable for this journey.'],
+    weather: ['Destination weather data unavailable.'],
+    road: ['Road Ahead construction evidence is unavailable for this journey.', 'No qualifying construction report is available in the current Road Ahead evidence.'],
+  };
+  if (highlights.some((h, index) => !h || h.category !== topicOrder[index] || typeof h.text !== 'string' || !h.text.length || h.text.length > 300 ||
+      !Array.isArray(h.evidence_refs) || h.evidence_refs.length > 3 || !h.evidence_refs.every((x) => typeof x === 'string' && x.length > 0) ||
+      new Set(h.evidence_refs as string[]).size !== h.evidence_refs.length ||
+      (h.evidence_refs.length === 0 && !fixedAvailabilityText[String(h.category)]?.includes(h.text)) ||
+      (h.evidence_refs.length > 0 && fixedAvailabilityText[String(h.category)]?.includes(h.text)))) return null;
+  if (v.status === 'available' && highlights.length !== 3) return null;
   if (![...v.overview_evidence_refs, ...v.limitations].every((x) => typeof x === 'string') ||
       (v.status === 'available' && (!v.overview.trim() || v.overview_evidence_refs.length === 0)) ||
-      (v.status === 'insufficient_evidence' && (v.overview !== '' || v.overview_evidence_refs.length > 0 || v.highlights.length > 0))) return null;
+      (v.status === 'insufficient_evidence' && (v.overview !== '' || v.overview_evidence_refs.length > 0 || v.highlights.length > 0)) ||
+      (v.status !== 'available' && v.highlights.length > 0)) return null;
   return v as unknown as BriefingResultV1;
 }
 

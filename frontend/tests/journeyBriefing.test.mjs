@@ -44,6 +44,7 @@ test('serializes a realistic Phase 9 bundle into the full backend request DTO', 
   assert.equal(payload.attempt_id, 44);
   assert.deepEqual(payload.journey.route, { candidate_id: 'route-1', label: 'Route 1', distance_meters: 12000 });
   assert.equal(payload.sources.road_ahead.findings[0].source_id, 'ra-1');
+  assert.equal(payload.sources.road_ahead.findings[0].event_type, 'construction');
   assert.equal(payload.sources.drivebc_open511.findings[0].geometry_basis, 'point_proximity');
   assert.equal(payload.sources.openweather_current.observation.temperature_c.value, 8);
   assert.equal(payload.sources.openweather_current.observation.feels_like_c, null);
@@ -130,6 +131,33 @@ test('camera opportunity honors start-time deadline, completion-first, late comp
   assert.equal(typeof cancelled, 'function');
 });
 
+test('frozen briefing evidence includes a matching camera when it finishes before or after analysis', async () => {
+  const freezeWithCameraResult = (result) => evidence.assembleJourneyEvidence({
+    trip: trip(), attempt_id: 44, assembled_at: '2026-10-11T12:04:00Z',
+    analysis: { status: 'success', result: analysis(), error: null },
+    camera_vision: { attempt_id: 44, trip: trip(), camera_vision: { status: 'complete', result } },
+  });
+
+  // The camera promise is already fulfilled when analysis completes and asks for its opportunity.
+  const cameraFinishedFirst = Promise.resolve(cameraResult());
+  const early = await briefing.createCameraOpportunity(cameraFinishedFirst, 100, 15_000, () => 200, () => 1).promise;
+  assert.equal(freezeWithCameraResult(early).sources.camera_vision.availability, 'available');
+
+  // Main analysis has completed, but the initiated camera request is still inside its original window.
+  let finishCamera;
+  const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 100, 15_000, () => 200, () => 2);
+  finishCamera(cameraResult('available', 'Southbound'));
+  const later = await opportunity.promise;
+  const frozen = freezeWithCameraResult(later);
+  assert.equal(frozen.sources.camera_vision.availability, 'available');
+  assert.equal(frozen.sources.camera_vision.result.observation.included_views[0].direction_label, 'Southbound');
+
+  assert.match(appSource, /const cameraInferenceStartedAt = performance\.now\(\);[\s\S]*?const cameraResultPromise = fetchCameraVision\(/);
+  assert.match(appSource, /const cameraResult = await cameraOpportunity\.promise;[\s\S]*?const matchingCamera:[\s\S]*?= cameraResult \?/);
+  assert.match(appSource, /const frozenBundle = deriveCurrentJourneyEvidence\(\{[\s\S]*?camera_vision: matchingCamera/);
+});
+
 test('briefing transport posts once, validates response identity, and deadline cancellation is isolated', async () => {
   const request = briefing.serializeBriefingEvidence(makeBundle());
   const reply = { contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1', status: 'unavailable', failure_code: 'budget_exhausted', generated_at: '2026-10-11T12:05:00Z', attempt_id: 44, origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it', returned_model: null, provider: null, overview: '', overview_evidence_refs: [], highlights: [], limitations: [], usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null, latency_ms: 0 } };
@@ -153,6 +181,44 @@ test('briefing transport posts once, validates response identity, and deadline c
     assert.equal(timed.wasTimedOut(), true);
     assert.equal(controller.signal.aborted, false);
   } finally { globalThis.fetch = originalAgain; }
+});
+
+test('accepts briefing usage within the raised 1024-token output bound', () => {
+  const result = briefing.normalizeBriefingResult({
+    contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1',
+    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: 44,
+    origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it',
+    returned_model: 'google/gemma-4-31b-it', provider: 'TestProvider', overview: 'Supported overview',
+    overview_evidence_refs: ['ra-event-7'], highlights: [
+      { category: 'camera', text: 'Camera interpretation was pending and was not included.', evidence_refs: [] },
+      { category: 'weather', text: 'Destination weather data unavailable.', evidence_refs: [] },
+      { category: 'road', text: 'Construction is reported nearby.', evidence_refs: ['ra-event-7'] },
+    ], limitations: [],
+    usage: { input_tokens: 120, output_tokens: 900, total_tokens: 1020, cost_usd: 0.001, latency_ms: 15000 },
+  });
+
+  assert.equal(result?.usage.output_tokens, 900);
+});
+
+test('accepts 300-character briefing highlights and rejects longer text', () => {
+  const response = {
+    contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1',
+    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: 44,
+    origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it',
+    returned_model: 'google/gemma-4-31b-it', provider: 'TestProvider', overview: 'Supported overview',
+    overview_evidence_refs: ['ra-event-7'],
+    highlights: [
+      { category: 'camera', text: 'x'.repeat(300), evidence_refs: ['camera-view-1'] },
+      { category: 'weather', text: 'Destination weather data unavailable.', evidence_refs: [] },
+      { category: 'road', text: 'No qualifying construction report is available in the current Road Ahead evidence.', evidence_refs: [] },
+    ],
+    limitations: [], usage: { input_tokens: 120, output_tokens: 900, total_tokens: 1020, cost_usd: 0.001, latency_ms: 15000 },
+  };
+
+  assert.equal(briefing.normalizeBriefingResult(response)?.highlights[0].text.length, 300);
+  assert.equal(briefing.normalizeBriefingResult({ ...response, highlights: [{ ...response.highlights[0], text: 'x'.repeat(301) }, ...response.highlights.slice(1)] }), null);
+  assert.equal(briefing.normalizeBriefingResult({ ...response, highlights: response.highlights.slice(0, 2) }), null);
+  assert.equal(briefing.normalizeBriefingResult({ ...response, highlights: [...response.highlights, response.highlights[0]] }), null);
 });
 
 test('App owns one latched briefing request and invalidates/aborts its attempt with journey changes', () => {
