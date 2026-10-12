@@ -1,9 +1,11 @@
 """Focused geocoding and destination validation endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
+from pydantic import ValidationError
 
 from app.analysis import JourneyAnalysis, Trip, analyze_journey
+from app.briefing_contracts import BriefingEvidenceRequestV1, BriefingResultV1
 from app.camera_images import (
     CameraImageConfigurationError,
     DestinationCameraRequest,
@@ -20,6 +22,7 @@ from app.geocoding import (
 )
 from app.geography import validate_destination
 from app.models import DestinationValidation, DrivingRouteRequest, DrivingRoutesResponse, Location
+from app.openrouter_briefing import OpenRouterBriefingAdapter
 from app.openrouter_vision import (
     PROMPT_VERSION,
     SCHEMA_VERSION,
@@ -40,6 +43,8 @@ from app.routing import (
 router = APIRouter(prefix="/api")
 camera_service: DestinationCameraService | None = None
 vision_adapter: OpenRouterVisionAdapter | None = None
+briefing_adapter: OpenRouterBriefingAdapter | None = None
+MAX_BRIEFING_REQUEST_BYTES = 32 * 1024
 
 
 def _camera_service() -> DestinationCameraService:
@@ -54,6 +59,37 @@ def _vision_adapter() -> OpenRouterVisionAdapter:
     if vision_adapter is None:
         vision_adapter = OpenRouterVisionAdapter()
     return vision_adapter
+
+
+def _briefing_adapter() -> OpenRouterBriefingAdapter:
+    global briefing_adapter
+    if briefing_adapter is None:
+        briefing_adapter = OpenRouterBriefingAdapter()
+    return briefing_adapter
+
+
+@router.post("/briefings/generate", response_model=BriefingResultV1)
+async def generate_briefing(request: Request) -> BriefingResultV1:
+    """Validate a compact evidence snapshot, then make at most one paid call."""
+    length = request.headers.get("content-length")
+    if length is not None:
+        try:
+            if int(length) > MAX_BRIEFING_REQUEST_BYTES:
+                raise HTTPException(status_code=413, detail={"code": "request_too_large"})
+        except ValueError:
+            raise HTTPException(status_code=400, detail={"code": "invalid_content_length"}) from None
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_BRIEFING_REQUEST_BYTES:
+            raise HTTPException(status_code=413, detail={"code": "request_too_large"})
+    if not body:
+        raise HTTPException(status_code=400, detail={"code": "invalid_request"})
+    try:
+        evidence = BriefingEvidenceRequestV1.model_validate_json(bytes(body))
+    except (ValidationError, ValueError):
+        raise HTTPException(status_code=422, detail={"code": "invalid_briefing_request"}) from None
+    return await _briefing_adapter().generate(evidence)
 
 
 def _vision_failure(code: str, *, status: str = "unavailable") -> AdapterResult:
