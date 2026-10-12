@@ -4,22 +4,13 @@
 
 RouteLens AI brings public road, weather, and camera evidence together around a journey you have already planned. It helps answer **“What should I know before I leave?”** with a map, current destination context, and a concise AI Journey Briefing. It complements navigation apps; it does not provide turn-by-turn directions or choose the best route.
 
-> **Datathon MVP:** Human accepted and implementation-complete through Phase 10. This is a locally run, desktop-oriented web application for driving journeys with a destination inside the City of Vancouver.
+> This is a locally run, desktop-oriented web application for driving journeys with a destination inside the City of Vancouver.
 
 ## Demo
 
-> **Demo video:** _Placeholder — add an approved demo video link._
+> **Demo video:** (https://youtu.be/ExTeYvr00d0)
 
 <!-- TODO: Replace the demo video placeholder after adding the approved video. -->
-
-<details>
-<summary>Optional application screenshot</summary>
-
-_Placeholder — add a project screenshot when one is available._
-
-<!-- TODO: Add an approved screenshot and concise alt text. -->
-
-</details>
 
 ## What the MVP does
 
