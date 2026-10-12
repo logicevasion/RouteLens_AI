@@ -20,6 +20,13 @@ from app.geocoding import (
 )
 from app.geography import validate_destination
 from app.models import DestinationValidation, DrivingRouteRequest, DrivingRoutesResponse, Location
+from app.openrouter_vision import (
+    PROMPT_VERSION,
+    SCHEMA_VERSION,
+    AdapterResult,
+    CameraObservation,
+    OpenRouterVisionAdapter,
+)
 from app.routing import (
     OpenRouteServiceRouter,
     RoutingAuthenticationError,
@@ -32,6 +39,7 @@ from app.routing import (
 
 router = APIRouter(prefix="/api")
 camera_service: DestinationCameraService | None = None
+vision_adapter: OpenRouterVisionAdapter | None = None
 
 
 def _camera_service() -> DestinationCameraService:
@@ -39,6 +47,25 @@ def _camera_service() -> DestinationCameraService:
     if camera_service is None:
         camera_service = DestinationCameraService()
     return camera_service
+
+
+def _vision_adapter() -> OpenRouterVisionAdapter:
+    global vision_adapter
+    if vision_adapter is None:
+        vision_adapter = OpenRouterVisionAdapter()
+    return vision_adapter
+
+
+def _vision_failure(code: str, *, status: str = "unavailable") -> AdapterResult:
+    """Return a fixed, provenance-free result for failures before adapter validation."""
+    return AdapterResult(
+        observation=CameraObservation(
+            schema_version=SCHEMA_VERSION,
+            prompt_version=PROMPT_VERSION,
+            status=status,
+            failure_code=code,
+        )
+    )
 
 
 @router.get("/geocoding/search", response_model=list[Location])
@@ -141,6 +168,33 @@ async def nearest_destination_camera(request: DestinationCameraRequest) -> Desti
             status_code=503,
             detail={"code": "camera_configuration_invalid", "message": "Camera retrieval is unavailable."},
         ) from None
+
+
+@router.post("/cameras/observe", response_model=AdapterResult)
+async def observe_destination_cameras(trip: Trip) -> AdapterResult:
+    """Return internal vision evidence for the backend-selected destination intersection."""
+    service = _camera_service()
+    try:
+        selection = await service.nearest(trip.destination)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "unsupported_destination", "message": str(error)},
+        ) from None
+    except CameraImageConfigurationError:
+        return _vision_failure("configuration_missing")
+
+    # Selection and request travel together through this stateless operation. A
+    # changed or substituted destination cannot reuse the selection's frames.
+    if selection.destination != trip.destination:
+        return _vision_failure("journey_context_mismatch", status="error")
+
+    catalogue_result = await service.catalogue_store.get_catalogue()
+    return await _vision_adapter().analyze_selected_intersection(
+        selection,
+        catalogue_result.catalogue,
+        service.image_store,
+    )
 
 
 @router.post("/cameras/nearby", response_model=NearbyCameraResult)

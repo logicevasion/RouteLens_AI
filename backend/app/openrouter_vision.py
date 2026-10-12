@@ -55,7 +55,8 @@ Condition = Literal["visible_precipitation", "fog_or_haze", "glare", "obstructio
 Uncertainty = Literal["low", "moderate", "high"]
 ObservationStatus = Literal["available", "partial", "insufficient_evidence", "unavailable", "error"]
 FailureCode = Literal[
-    "no_eligible_frames", "stale_frames_only", "configuration_missing", "provider_unavailable",
+    "no_selected_intersection", "journey_context_mismatch", "no_eligible_frames", "stale_frames_only",
+    "configuration_missing", "provider_unavailable",
     "rate_limited", "timeout", "provider_error", "invalid_model_output", "budget_exhausted",
     "insufficient_evidence",
 ]
@@ -454,15 +455,21 @@ class OpenRouterVisionAdapter:
     async def analyze_selected_intersection(
         self,
         selection: DestinationCameraResult,
-        catalogue: CameraCatalogue,
+        catalogue: CameraCatalogue | None,
         image_store: CameraImageStore,
     ) -> AdapterResult:
         """Analyze only the already selected intersection and its validated current cache."""
         selected = selection.intersection
-        if selected is None or selection.status != "available" or not validate_destination(selection.destination).valid:
+        if selected is None:
+            return _failure("no_selected_intersection")
+        if selection.status != "available" or not validate_destination(selection.destination).valid:
             code: FailureCode = "stale_frames_only" if selection.status == "stale" else "no_eligible_frames"
             return _failure(code, selected=selected)
-        camera = next((item for item in catalogue.intersections if item.intersection_id == selected.intersection_id), None)
+        camera = (
+            next((item for item in catalogue.intersections if item.intersection_id == selected.intersection_id), None)
+            if catalogue
+            else None
+        )
         if camera is None or camera.name != selected.name or camera.official_page_url != selected.official_page_url:
             return _failure("no_eligible_frames", selected=selected)
         calculated_distance = _distance_metres(selection.destination.latitude, selection.destination.longitude, camera.latitude, camera.longitude)

@@ -5,9 +5,9 @@
 **Project:** RouteLens AI  
 **Planning:** Substantially complete — authoritative documents established; Phase 8 execution plan prepared
 **Current phase:** Phase 8 — Multi-View Camera AI Analysis
-**Phase status:** Phases 0–7 are complete and human accepted. Phase 7 Assignments 7A–7E were accepted on 2026-10-11 and committed/pushed by the human developer. Assignment 8A is accepted; Assignment 8B is implemented and pending human acceptance. No 8C, 8D, frontend, Phase 9, or Phase 10 work has started.
+**Phase status:** Phases 0–7 and Assignments 8A–8B are human accepted. Assignment 8B was committed and pushed by the human developer. Assignment 8C is implemented and pending human acceptance; Assignment 8D, frontend vision wiring, Phase 9, and Phase 10 work have not started.
 **Human review:** Phase 7 human acceptance is complete. The developer verified the directional camera gallery, nearby camera markers, intersection hover labels, direct official-page navigation, and removal of unwanted map decorations. Remaining Road Ahead highlight persistence is an accepted nonblocking MVP limitation. Manual camera failure-isolation testing and comprehensive narrow-screen verification remain deferred.
-**Next assignment:** Assignment 8C requires separate bounded authorization after human review and acceptance of 8B. The 8B adapter is an internal callable only and has no journey endpoint or UI integration.
+**Next assignment:** Assignment 8D is the next bounded assignment after human review and acceptance of 8C. The new 8C camera-observation endpoint is an explicit backend operation; existing Analyze Journey and camera gallery/image requests do not invoke vision.
 **Git checkpoint:** Phase 7 accepted changes, including Assignment 7E and the approved Phase 7 build-plan amendment, were committed and pushed by the human developer on 2026-10-11. Earlier recorded checkpoints include Phase 4 `3c2600a`, Phase 5 plan `c7c31f2`, Assignment 5A `1ff1a6d`, Assignment 5B `18aa6b8`, Assignment 5C `a2c7a69`, Assignment 6B `5dcfaaa`, and Assignment 6C (hash not recorded here).
 **Repository baseline:** Originally inspected in Assignment 0A; subsequent accepted implementation and Git checkpoints supersede that initial scaffold baseline.
 **MVP scope decision (2026-10-11):** RouteLens AI remains driving-only for the datathon. Transit Mode is deferred beyond the MVP. Phase 8 extracts structured camera observations for internal downstream AI reasoning; Phase 9 refines journey relevance and evidence organization; Phase 10 generates the user-facing AI Journey Briefing; Phases 11–12 cover integration hardening and presentation/demo polish.
@@ -29,6 +29,8 @@ The selected intersection's available directional camera frames will be assessed
 The structured camera observations are intended as an input to the later AI Journey Briefing pipeline, alongside independently sourced weather, route-relevant road events, and journey context. Camera-derived claims must remain distinguishable from official event reports and weather measurements.
 
 **Phase 8 does not require a separate user-visible camera AI analysis card or raw telemetry JSON display.** The existing camera image gallery remains available as supporting visual evidence. Phase 8 may expose minimal operational status where necessary, but the detailed observation payload is intended for downstream processing.
+
+**Image-transfer authorization:** The human explicitly approved sending current Phase 7 validated City of Vancouver traffic-camera frames to OpenRouter for the private, noncommercial prototype on 2026-10-11. This authorization does not cover bulk collection, new raw-image persistence, public redistribution, or commercial use. No real City frame or paid inference request was used during Assignment 8C implementation or automated verification.
 
 **Phase 10 presentation direction:** The AI Journey Briefing should appear at the top of the Journey Intelligence panel as the primary summary. It should provide sufficient actionable journey context on its own, with the map, Road Ahead and DriveBC findings, destination weather, and camera imagery available below as optional supporting detail. The briefing must distinguish supported evidence from uncertainty and avoid fabricating conditions or recommendations.
 
@@ -1253,3 +1255,29 @@ This authorization is bounded as follows:
 **Git status:** Codex performed no staging, commit, push, or history operation. Human Git commit/push is pending unless completed separately.
 
 **Review status:** **Assignment 8B human accepted (2026-10-11). Assignment 8C authorized to proceed**, including bounded real City of Vancouver camera-image transmission to OpenRouter for the private, noncommercial prototype. Phase 8C must preserve internal telemetry-only behavior and must not implement the final AI Journey Briefing or an independent frontend AI observations card.
+
+## 37. Assignment 8C — Journey Camera-Vision Contract
+
+**Assignment status:** Assignment 8C **human accepted and complete (2026-10-11)**. It adds the explicit `POST /api/cameras/observe` operation, which accepts the canonical `Trip` request shape, performs Phase 7 destination-camera selection server-side, and returns the accepted 8B `AdapterResult` contract. The caller cannot choose an intersection, image source, model, or provider. The accepted adapter continues to validate the current-frame cache, preserve ordered directional provenance, validate model output, enforce attempt limits, and reuse only identical current snapshots.
+
+**API compatibility:** The operation is separate from `POST /api/trips/analyze`. Existing journey-analysis, route, road-event, weather, gallery, and camera-image response fields remain unchanged. Ordinary journey analysis, health checks, nearest-camera selection, and image retrieval do not invoke the vision adapter. The existing Analyze Journey frontend lifecycle remains unwired to the new operation, intentionally reserving orchestration for 8D.
+
+**Bounded outcomes:** Existing adapter status and diagnostic fields are returned without provider response bodies, raw model text, image content, secrets, or model-echoed identifiers. The adapter's accepted failure vocabulary now includes `no_selected_intersection` and `journey_context_mismatch`, alongside existing frame, configuration, provider, budget, and invalid-model-output failures. The operation rejects a camera selection whose destination differs from the submitted trip and delegates intersection, catalogue, and snapshot matching to the accepted adapter.
+
+**Verification:** Focused Assignment 8C API, 8B adapter, and Phase 7 camera tests **passed (71 tests)**. Full backend pytest regression **passed (383 tests)**. Ruff across `backend/app` and `backend/tests` **passed**. Import smoke checks for `app.routes` and `app.openrouter_vision` **passed**. `git diff --check` **passed**. Tests used locally generated JPEG frames and mocked OpenRouter transport; no real City camera images were transmitted and no paid inference occurred during 8C. No frontend files were changed, and no frontend build was required.
+
+**Accepted integration boundary:** The backend now exposes a camera-specific observation operation backed by the accepted 8B adapter. Its result provides validated internal camera telemetry and authoritative intersection, directional-view, frame, and model provenance. This establishes the backend contract needed for subsequent journey integration without altering existing journey-analysis behavior.
+
+**Deferred to 8D:** Connect the explicit Analyze Journey workflow to camera-vision inference; coordinate journey and destination identities across requests; prevent cancelled or stale observation results from contaminating a newer journey; preserve independently sourced road, weather, route, and camera evidence when vision is unavailable; and complete the internal camera-telemetry handoff for subsequent Phase 9 evidence processing.
+
+Phase 8D may implement and deliberately test real City of Vancouver camera-image inference through OpenRouter under the **human authorization recorded in Section 36**, limited to the private, noncommercial prototype. Existing frame validation, usage controls, and provenance requirements remain mandatory. No Phase 9 reasoning, Phase 10 AI Journey Briefing, or standalone frontend AI observations card is authorized within 8D.
+
+**Known limitations:** Assignment 8C was verified with mocked transport and generated images, not live City-camera inference. The separate camera observation endpoint and existing journey-analysis operation are not yet coordinated into one user-facing lifecycle. Stale-result handling and end-to-end integration remain unverified until 8D.
+
+**Files:** `backend/app/openrouter_vision.py`, `backend/app/routes.py`, `backend/tests/test_camera_vision_api.py`, `docs/integration-notes/camera-vision-phase-8c.md`, and `PROJECT_STATE.md`.
+
+**Git/review:** Codex performed no staging, commit, push, or Git-history operation during implementation. Human staging, commit, and push remain the developer's responsibility.
+
+**Project state:** Assignment 8C is **human accepted and complete**. The accepted backend camera-vision API contract is the implementation baseline for Assignment 8D.
+
+**Review status:** **Assignment 8C human accepted (2026-10-11). Assignment 8D authorized to proceed**, within its accepted orchestration, failure-isolation, stale-response protection, real-camera validation, and internal telemetry-handoff scope. Phase 9 and Phase 10 remain deferred.
