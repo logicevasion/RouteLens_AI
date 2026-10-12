@@ -1,502 +1,154 @@
 # RouteLens AI
 
-**Public city telemetry, interpreted for your journey.**
+**A source-grounded briefing for the drive into Vancouver.**
 
-RouteLens AI is a Vancouver-focused journey intelligence application that adds real-time context to a trip you are already planning.
+RouteLens AI brings public road, weather, and camera evidence together around a journey you have already planned. It helps answer **“What should I know before I leave?”** with a map, current destination context, and a concise AI Journey Briefing. It complements navigation apps; it does not provide turn-by-turn directions or choose the best route.
 
-Google Maps and other navigation tools are already excellent at answering:
-
-> **How do I get there?**
-
-RouteLens focuses on a different question:
-
-> **What is happening around my journey that I should know before I leave?**
-
-The application combines public city, transportation, environmental, and visual telemetry around an estimated travel corridor into a concise view of current conditions.
-
-Rather than replacing a navigation app, RouteLens acts as a companion to it.
-
----
-
-## Why RouteLens?
-
-Vancouver is a particularly good environment for this idea.
-
-Weather can vary significantly across relatively short distances. A forecast showing a 50% chance of rain does not necessarily answer whether it is currently dry, drizzling, or pouring at your destination.
-
-At the same time, useful information about the city is spread across multiple systems:
-
-- public street cameras
-- construction and road closures
-- road incidents
-- highway cameras
-- observed weather conditions
-- transit service information
-
-Individually, these sources are useful.
-
-RouteLens brings them together around a specific journey.
-
-A recent street-camera image near the destination can provide immediate visual evidence of current conditions. Construction and incident data can highlight potential disruptions along the way. Weather observations provide environmental context, while transit data can surface relevant service issues when travelling by public transport.
-
-The result is a focused answer to:
-
-> **What should I know about this trip right now?**
-
----
-
-## Intended User Flow
-
-RouteLens is designed for **journeys into the City of Vancouver**, with origins potentially elsewhere in Metro Vancouver.
-
-A typical workflow is:
-
-1. Enter a starting point.
-2. Enter a Vancouver destination.
-3. Select a travel mode:
-   - Drive
-   - Transit
-4. RouteLens generates a small set of estimated route corridors.
-5. Select the route that most closely resembles the journey you are already planning.
-6. RouteLens gathers relevant public telemetry around that route and destination.
-7. The application presents:
-   - current destination conditions
-   - relevant construction and road events
-   - nearby public camera imagery
-   - weather observations
-   - transit issues when applicable
-   - a concise AI-generated journey briefing
-
-RouteLens does **not** attempt to replace turn-by-turn navigation or determine the best route.
-
-The selected route is used primarily as a **relevance filter** for city telemetry.
-
-Users remain free to explore cameras, construction zones, incidents, and other visible information outside the selected corridor directly from the map.
-
----
-
-## Core Product Idea
-
-RouteLens separates the journey into three contexts:
-
-### Starting Point
-
-What are conditions like where the journey begins?
-
-### Along the Route
-
-Are there noteworthy conditions such as:
-
-- active construction
-- road closures
-- incidents
-- unusual road conditions
-- transit disruptions
-
-### Destination
-
-What does the destination actually look and feel like right now?
-
-This is where public camera imagery and current weather observations become especially valuable.
-
-A nearby camera may show:
-
-- visible rain
-- wet or dry road surfaces
-- reduced visibility
-- traffic conditions
-
-These visual observations can then be considered alongside official weather telemetry.
-
----
-
-## Planned Core Data Sources
-
-The initial RouteLens build is planned around six public data integrations.
-
-### 1. Vancouver Webcams
-
-Public street and traffic camera imagery providing near-current visual conditions, typically refreshed approximately every few minutes.
-
-This is a central RouteLens data source because it provides direct visual evidence of conditions near a destination or journey corridor.
-
-### 2. Vancouver Road Ahead
-
-City of Vancouver information covering:
-
-- active construction
-- road closures
-- affected streets and road segments
-
-This allows RouteLens to identify municipal work that may be relevant to a selected journey.
-
-### 3. DriveBC Open511
-
-Dynamic road-event information including:
-
-- incidents
-- closures
-- construction
-- maintenance
-- road and weather-related events
-
-This extends RouteLens beyond City of Vancouver datasets and helps provide context along approaches into Vancouver.
-
-### 4. DriveBC Cameras (Deferred / future enhancement; not included in the MVP.)
-
-Public highway, bridge, and major-route camera imagery.
-
-These cameras complement Vancouver municipal cameras, particularly for journeys involving major approaches, bridges, or provincial highways.
-
-### 5. Environment and Climate Change Canada GeoMet / SWOB
-
-Current observed environmental conditions from official weather stations.
-
-Relevant observations may include:
-
-- temperature
-- precipitation
-- humidity
-- wind speed
-- wind direction
-- observation timestamp
-
-These observations provide an authoritative environmental signal that can be combined with nearby camera imagery.
-
-### 6. TransLink GTFS-Realtime
-
-Used when the selected travel mode is **Transit**.
-
-Planned use focuses primarily on:
-
-- service alerts
-- trip updates
-- delay information
-
-RouteLens is not intended to reproduce full transit navigation or tell users where to transfer or when to get off. Existing navigation applications remain responsible for those tasks.
-
----
-
-## AI in RouteLens
-
-AI is used as an **interpretation layer**, not as the source of geographic truth.
-
-### Multimodal Camera Analysis
-
-Recent public camera imagery can be analyzed for observable conditions such as:
-
-- apparent precipitation
-- wet or dry road surfaces
-- visibility
-- approximate traffic density
-
-Camera analysis is treated as one source of evidence rather than an authoritative weather measurement.
-
-Where possible, visual observations are considered alongside official environmental telemetry.
-
-### Journey Briefing
-
-Once RouteLens has deterministically gathered and filtered telemetry relevant to the selected journey, an LLM produces a short human-readable briefing.
-
-For example:
-
-> **Your trip looks mostly clear.**
->
-> Light rain appears likely near your destination, with wet road surfaces visible on a recent nearby camera. One active construction project is located near the selected corridor. No major DriveBC incidents were identified.
-
-The LLM does not determine which events are geographically relevant.
-
-Route relevance is handled through conventional geospatial logic before data is provided to the model.
-
----
-
-## Map Experience
-
-The map is intended to remain useful even when the automatically selected journey corridor is only an approximation.
-
-The route guides prioritization.
-
-It does not restrict exploration.
-
-Users can directly inspect nearby:
-
-- camera locations
-- camera imagery
-- construction zones
-- road incidents
-- environmental observations
-
-Telemetry considered most relevant to the selected journey is emphasized, while nearby information remains available for manual inspection.
-
-This allows RouteLens to remain useful even when a user's actual navigation route differs somewhat from the estimated route shown in the application.
-
----
-
-## Planned Interface
-
-RouteLens uses a desktop-first, dark **city intelligence** visual style.
-
-The primary interface is divided into three areas:
-
-### Journey Input
-
-A compact control area for:
-
-- origin
-- destination
-- travel mode
-- journey analysis
-
-Address and place inputs are planned to use autocomplete to simplify Metro Vancouver location selection.
-
-### Interactive Map
-
-The main map displays:
-
-- estimated journey corridor
-- public cameras
-- construction
-- incidents
-- other relevant telemetry
-
-Telemetry directly relevant to the selected journey is visually emphasized.
-
-### Journey Intelligence Panel
-
-The side panel prioritizes:
-
-1. destination camera and current conditions
-2. overall journey status
-3. important route issues
-4. journey timeline
-5. AI journey briefing
-6. source provenance and freshness
-
-Selecting a camera transitions the panel into a dedicated camera-detail view containing a larger image and current-condition analysis.
-
----
-
-## Journey Timeline
-
-A compact journey timeline provides a second way to understand the trip:
-
-```text
-START
-  │
-  ● Current conditions
-  │
-  ● Construction / incident
-  │
-  ● Relevant camera
-  │
-DESTINATION
-  ● Current camera + weather conditions
-```
-
-The timeline is intentionally selective.
-
-Only a small number of noteworthy events are surfaced automatically so that RouteLens remains an insight tool rather than a raw telemetry dashboard.
-
----
-
-## Design Principles
-
-### Navigation Is Not the Product
-
-RouteLens does not attempt to outperform Google Maps, Apple Maps, Waze, or dedicated transit applications.
-
-Those products determine how to get somewhere.
-
-RouteLens enriches the journey with public city-state information.
-
-### The Route Is an Estimate
-
-The selected route is primarily used to identify which telemetry is likely relevant.
-
-Users choose the candidate corridor that most closely resembles their planned journey.
-
-Exact navigation remains the responsibility of the user's preferred navigation application.
-
-### No News Is Good News
-
-RouteLens should not create noise merely because many APIs are available.
-
-If no significant conditions are found, the appropriate result may simply be:
-
-> **Your journey looks clear. No significant construction, incidents, or transit disruptions were identified.**
-
-### Current Conditions Matter
-
-Data freshness is treated as an important part of the result.
-
-Where possible, RouteLens displays how recently information was:
-
-- observed
-- captured
-- reported
-- updated
-
-### Partial Success Is Better Than Total Failure
-
-External public-data services may occasionally be unavailable.
-
-RouteLens is designed so that one unavailable source does not invalidate the entire journey analysis.
-
-Other available data should still be presented.
-
-### Map for Exploration, Panel for Interpretation
-
-The map answers:
-
-> **Where is everything?**
-
-The journey panel answers:
-
-> **What matters to me?**
-
----
-
-## Data Provenance and Usage
-
-RouteLens relies on public and open-government information from multiple organizations.
-
-Data provenance is treated as part of the application rather than hidden implementation detail.
-
-Where applicable, RouteLens aims to preserve:
-
-- original source
-- observation or update timestamp
-- attribution requirements
-- data freshness
-- distinction between reported, observed, and AI-inferred information
-
-Core government datasets are reviewed for applicable usage rights before being treated as application dependencies.
-
-Public accessibility alone is not assumed to imply unrestricted reuse.
-
-Camera imagery is treated separately from camera metadata, and source-specific usage terms remain relevant when determining how imagery may be fetched, processed, stored, or redistributed.
-
----
-
-## Current Status
-
-Planning and the initial SDD harness are complete. Phase 0 — Integration Readiness and Assignment 1A are accepted. Assignment 1B adds the interactive Vancouver basemap and is ready for human review; the final desktop shell and journey tools remain future work.
-
-## Local Development
-
-The application runs as two local development servers. The Vancouver basemap requires a MapTiler key; backend-only credentials are not exposed to the frontend.
-
-### Requirements
-
-- Python 3.10 or newer
-- Node.js 20.19 or newer and npm
-- A MapTiler API key for the interactive basemap
-
-### Backend
-
-From the repository root:
-
-```bash
-python3 -m venv backend/.venv
-backend/.venv/bin/python -m pip install -e "./backend[dev]"
-backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
-```
-
-The API runs at `http://localhost:8000`; its health endpoint is `http://localhost:8000/api/health`.
-The backend reads `MAPTILER_API_KEY` and `OPENROUTESERVICE_API_KEY` from the root `.env` file or its process environment.
-
-Assignment 2A adds these location endpoints:
-
-- `GET /api/geocoding/search?q=<query>` returns up to five normalized `Location` candidates. Each candidate has `name`, `latitude`, `longitude`, optional `address`, and optional `provider_id`. The search restricts results to Canada and uses Vancouver proximity as a ranking bias; neither defines an enforceable Lower Mainland origin boundary.
-- `POST /api/locations/validate-destination` accepts one canonical `Location` object and returns `{"valid": true, "reason": null}` when its coordinates are covered by the City of Vancouver boundary, or `{"valid": false, "reason": "..."}` otherwise. Boundary points are included.
-
-Search returns `[]` when there are no usable matches. Invalid query shapes return HTTP 422, missing server credentials return HTTP 503, and upstream provider failures return a sanitized HTTP 502 response.
-
-Assignment 3A adds `POST /api/routes/driving`, which accepts `{"origin": <Location>, "destination": <Location>}`. The destination must be within Vancouver; origins retain the supported regional scope without a newly invented boundary. A successful response is `{"routes": [...]}` with up to three normalized candidates containing a request-scoped `id`, GeoJSON `LineString` geometry, `distance_meters`, `duration_seconds`, and an optional label. An empty `routes` list means no usable candidates were returned in a successful provider response. ORS's explicit unroutable-point response maps to HTTP 422 with `no_route_found`; other configuration, authentication, rate-limit, timeout, and provider failures use sanitized machine-readable error codes. The backend requests metres and ORS's `driving-car` profile; duration is a provider estimate, not a live traffic ETA.
-
-Run the backend checks from the repository root:
-
-```bash
-backend/.venv/bin/python -m pytest backend/tests
-backend/.venv/bin/ruff check backend/app backend/tests
-```
-
-### Frontend
-
-In a second terminal, from the repository root:
-
-```bash
-cd frontend
-npm ci
-npm run dev
-```
-
-Set `MAPTILER_API_KEY` in the ignored project-root `.env` before starting the backend and Vite. The backend keeps it server-side; Vite selectively reads that one value and makes it available to the browser map code for basemap requests, where the key is visible in browser requests and generated frontend assets by design. Use a browser-appropriate key and review account-supported restrictions before sharing or publishing the app. If the browser key is missing, the rest of the page remains available and the map displays a configuration message.
-
-Open `http://localhost:5173`. Vite forwards `/api` requests to the backend on port 8000.
-
-Run the TypeScript check and production build with:
-
-```bash
-npm run build
-```
-
-The page reports whether the backend health check succeeded and displays the interactive MapTiler `streets-v4-dark` map centered on Vancouver. Route candidates are currently available through the backend API only; route rendering and selection controls remain future authorized work.
-
----
+> **Datathon MVP:** Human accepted and implementation-complete through Phase 10. This is a locally run, desktop-oriented web application for driving journeys with a destination inside the City of Vancouver.
 
 ## Demo
 
-> **TODO:** Add live demo link and demonstration video.
+> **Demo video:** _Placeholder — add an approved demo video link._
 
----
+<!-- TODO: Replace the demo video placeholder after adding the approved video. -->
 
-## Screenshots
+<details>
+<summary>Optional application screenshot</summary>
 
-> **TODO:** Add RouteLens journey overview, map, destination camera analysis, and journey briefing screenshots.
+_Placeholder — add a project screenshot when one is available._
 
----
+<!-- TODO: Add an approved screenshot and concise alt text. -->
 
-## Technology
+</details>
 
-Implementation details will be documented as development progresses.
+## What the MVP does
 
-The project is expected to use a lightweight web architecture built around:
+1. Choose an origin and a destination in Vancouver using place search.
+2. Request approximate driving-route candidates and explicitly select the one closest to the journey you intend to take.
+3. Select **Analyze Journey** to gather the available route and destination evidence.
+4. Review the map and supporting panels, then read the source-grounded AI Journey Briefing.
 
-- a Python API backend
-- a browser-based TypeScript frontend
-- interactive geospatial visualization
-- local lightweight persistence
-- geospatial relevance filtering
-- external public-data adapters
-- multimodal and text LLM APIs
+The briefing has three fixed topics:
 
-The emphasis is on a small, understandable architecture appropriate for rapidly integrating heterogeneous public telemetry.
+- **Camera and weather:** describes visible conditions at the selected destination-area camera and compares them with current or forecast weather only when the evidence is sufficiently close in place and time.
+- **Destination weather:** summarizes available current and near-term weather, with nearby ECCC station measurements kept distinct from OpenWeather conditions and forecasts.
+- **Closest relevant construction:** describes one selected Vancouver Road Ahead construction finding, prioritizing direct route overlap before proximity and distinguishing nearby events from route overlap.
 
----
+Each topic can report that evidence is unavailable or insufficient. AI text is an interpretation of the evidence selected by the application, not an authoritative observation. The map and supporting panels also show route context such as municipal road events and regional DriveBC Open511 events; those are separate from the three briefing topics.
 
-## Project Scope
+## Architecture and data flow
 
-The initial scope is intentionally narrow:
+```mermaid
+flowchart LR
+  U[User selects locations and route] --> FE[React and TypeScript app]
+  FE -->|Analyze Journey| API[FastAPI analysis API]
+  API --> GEO[MapTiler geocoding and openrouteservice routes]
+  API --> SOURCES[Road Ahead, DriveBC Open511, OpenWeather, ECCC SWOB, Vancouver cameras]
+  SOURCES --> N[Normalize, track freshness, and match evidence to journey]
+  N --> CV[OpenRouter camera interpretation]
+  N --> BR[OpenRouter three-topic briefing]
+  CV --> API
+  BR --> API
+  API --> FE
+  FE --> MAP[MapLibre map and evidence panels]
+```
 
-> **Provide current public-data insights for journeys into Vancouver.**
+The React/Vite frontend sends application requests to the local FastAPI backend. The backend calls external providers, normalizes source responses, tracks source status and timestamps, filters journey evidence, and makes AI requests. Provider credentials stay in the backend environment; only the MapTiler key needed by the browser map is exposed through Vite. Camera images are handled as current frames with a short-lived cache, not as a historical image archive.
 
-RouteLens is not currently intended to become:
+## Technology and data sources
 
-- a full navigation platform
-- a turn-by-turn directions system
-- a traffic-routing optimizer
-- a citywide simulation
-- a general-purpose municipal dashboard
+| Area | Implemented technology or source | Role |
+| --- | --- | --- |
+| Web app | React, TypeScript, Vite, Tailwind CSS | Journey inputs, analysis state, and evidence panels |
+| Map | MapLibre GL JS with MapTiler | Vancouver basemap, geocoding, and place search |
+| API | Python, FastAPI, Pydantic, httpx, Shapely | Provider access, validation, normalization, and geographic relevance |
+| Driving routes | openrouteservice | Approximate route candidates for explicit user selection |
+| Municipal road data | City of Vancouver Road Ahead | Construction and road closures |
+| Regional road data | DriveBC Open511 | Regional road events and route-relevant findings |
+| Weather | OpenWeather and ECCC GeoMet/SWOB | Current/near-term weather and measured station observations |
+| Camera data | City of Vancouver traffic-camera catalogue and linked views | Destination-area imagery and camera evidence |
+| AI | OpenRouter with Google Gemma 4 31B Instruct | Structured camera interpretation and the three-topic briefing |
 
-Additional telemetry sources or broader functionality will only be considered where they materially improve the core journey-intelligence experience.
+## Local setup
 
----
+You will need Python 3.10 or newer, Node.js with npm, and provider credentials for the integrations you want to use. The application runs as separate local backend and frontend development servers.
 
-## Summary
+1. Create a root `.env` file from the template and add your own credentials. Do not commit `.env`.
 
-RouteLens AI explores a simple idea:
+   ```bash
+   cp .env.example .env
+   ```
 
-> **Google Maps is already good at telling you how to get somewhere. What happens when Vancouver's public real-time data is layered around the journey you're already planning?**
+   The implemented provider variables are:
 
-By combining current camera imagery, roadwork, road incidents, environmental observations, and transit information, RouteLens aims to turn fragmented public telemetry into a concise understanding of what a traveller can expect before heading into Vancouver.
+   | Variable | Used for |
+   | --- | --- |
+   | `MAPTILER_API_KEY` | Place search and map style/resources |
+   | `OPENROUTESERVICE_API_KEY` | Driving-route candidates |
+   | `OPENWEATHER_API_KEY` | Current and near-term weather |
+   | `OPENROUTER_API_KEY` | Camera interpretation and AI briefing |
+
+   The backend also accepts optional settings `OPENWEATHER_DAILY_REQUEST_LIMIT`, `SWOB_BBOX`, `SWOB_CACHE_TTL_SECONDS`, and `CAMERA_IMAGE_CACHE_TTL_SECONDS`. ECCC SWOB and DriveBC Open511 do not require credentials in the current implementation. Transit is deferred and its template key is not used by the MVP. The AI model is configured in the backend; the model identifier is not an environment setting.
+
+2. Install backend dependencies from the repository root:
+
+   ```bash
+   python3 -m venv backend/.venv
+   backend/.venv/bin/python -m pip install -e "backend[dev]"
+   ```
+
+3. Install frontend dependencies:
+
+   ```bash
+   npm --prefix frontend install
+   ```
+
+4. Start the API in one terminal from the repository root:
+
+   ```bash
+   backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
+   ```
+
+5. Start the frontend in a second terminal:
+
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+   Open the local URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` requests to the backend at `http://localhost:8000`.
+
+## Data credits and licensing
+
+The application labels its evidence sources and displays the ECCC attribution. This README credits the providers below. When reusing data, follow the terms that apply to the specific dataset, API plan, and asset:
+
+- **City of Vancouver Road Ahead and camera catalogue metadata:** “Contains information licensed under the [Open Government Licence – Vancouver](https://opendata.vancouver.ca/pages/help/).” The licence for metadata does not by itself establish reuse rights for separately linked camera images. Camera imagery has distinct terms and rights considerations.
+- **DriveBC Open511:** “Contains information licensed under the [Open Government Licence – British Columbia](https://pub.data.gov.bc.ca/license/OGL-vbc2.0.pdf). Source: DriveBC Open511 (Government of British Columbia).”
+- **Environment and Climate Change Canada GeoMet/SWOB:** “Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada). Source: Environment and Climate Change Canada GeoMet/SWOB.”
+- **OpenWeather:** Visible attribution is required; use **“Weather data © OpenWeather”** with a link to [OpenWeather](https://openweathermap.org/) and follow the current API subscription terms.
+- **MapTiler and openrouteservice:** These provide map/geocoding and routing services; follow their current terms and attribution requirements. The rendered map also presents its provider/source attribution.
+
+This portfolio MVP is not a legal determination of data or image rights. Review current provider terms before redistribution, public deployment, or commercial use. See [`docs/data-licensing-and-commercialization.md`](docs/data-licensing-and-commercialization.md) for the project's licensing notes.
+
+## Scope and limitations
+
+- Supported journeys are driving journeys into the City of Vancouver. Origins may be elsewhere in the surrounding region; destinations outside Vancouver and journeys out of Vancouver are unsupported.
+- Route candidates are approximate context, not navigation directions, an ETA, or a guarantee that the route matches another navigation service.
+- Camera coverage is limited to available Vancouver views near the selected destination. A camera view is local evidence, not a description of the whole route or destination, and AI interpretation can be uncertain.
+- Data sources refresh on different schedules and may be missing, stale, delayed, or unavailable. The UI reports source status and freshness where available; a missing source does not mean conditions are clear.
+- Weather observations, forecasts, and camera appearance represent different kinds of evidence and should not be treated as interchangeable.
+
+## MVP and future ideas
+
+**Implemented MVP:** driving-route selection; Vancouver destination validation; interactive map; municipal and regional road context; destination camera views and structured camera interpretation; destination weather from OpenWeather and ECCC/SWOB; and the source-grounded three-topic AI Journey Briefing.
+
+**Deferred or future work:** transit and GTFS alerts, DriveBC cameras, journeys whose destination is outside Vancouver, richer timeline and cross-source analysis, and further integration/presentation hardening. These are not current MVP capabilities.
+
+## Project notes
+
+- [Application specification](APP_SPEC.md)
+- [Current project state](PROJECT_STATE.md)
+- [Implementation plan](docs/implementation-plan.md)
+- [License](LICENSE)
+
+Automated tests and fixtures are maintained in `backend/tests/`, `frontend/tests/`, and `fixtures/`.
