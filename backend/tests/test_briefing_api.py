@@ -684,6 +684,31 @@ def test_rolling_hour_daily_caps_corrupt_ledger_and_project_guard(tmp_path):
     assert not budget.reserve()
 
 
+def test_failed_budget_replacement_prevents_provider_dispatch(tmp_path, monkeypatch):
+    path, vision_path = tmp_path / "briefing.json", tmp_path / "vision.json"
+    path.write_text(json.dumps({"attempts": [], "estimated_project_usd": 0.0, "estimated_daily": {}}))
+    vision_path.write_text(json.dumps({"attempts": [], "estimated_project_usd": 0.0, "estimated_daily": {}}))
+    prior = path.read_bytes()
+    calls = []
+
+    def fail_replace(source, target):
+        raise OSError("injected atomic replacement failure")
+
+    monkeypatch.setattr("app.openrouter_vision.os.replace", fail_replace)
+    adapter = OpenRouterBriefingAdapter(
+        api_key="key",
+        transport=httpx.MockTransport(lambda request: calls.append(request)),
+        budget=BriefingAttemptBudget(path, vision_path=vision_path, now=lambda: NOW),
+        now=lambda: NOW,
+    )
+
+    result = asyncio.run(adapter.generate(valid_request()))
+
+    assert result.failure_code == "budget_exhausted"
+    assert calls == []
+    assert path.read_bytes() == prior
+
+
 def test_duplicate_attempt_dispatches_only_once(tmp_path):
     calls = []
     adapter = OpenRouterBriefingAdapter(api_key="key", transport=httpx.MockTransport(lambda _: (calls.append(1), completion())[1]),

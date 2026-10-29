@@ -5,7 +5,7 @@
 - **Repository checkpoint:** At the start of the SDD consistency update on 2026-10-28, `main` was at `27a0aaa` and the working tree was clean. This is a dated checkpoint, not a permanent current-revision claim. The authorized update now changes only `AGENTS.md`, `APP_SPEC.md`, and this file.
 - **Completed documentation compaction:** The SDD compaction is complete. The pre-compaction `BUILD_PLAN.md` and `PROJECT_STATE.md` are preserved as [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). Detailed accepted Phase 8–10 decisions and evidence remain in the integration notes listed below.
 - **Git control:** No staging, commit, push, reset, or other history operation was performed for this update. Human developers retain control of Git history.
-- **Current assignment:** QAR-1 is planned and awaiting human review. Implementation has not started and requires a separate human-approved implementation prompt. See `BUILD_PLAN.md` for the bounded specification. USER-001, USER-002, QAR-2, and other architecture findings remain pending/deferred and are outside QAR-1.
+- **Current assignment:** QAR-1 implementation is complete and ready for human review; it has not been human accepted. USER-001, USER-002, QAR-2, and other architecture findings remain pending/deferred and outside QAR-1.
 
 ## Accepted implementation baseline
 
@@ -13,11 +13,11 @@ Phases 0–10 are human accepted and complete; RouteLens AI MVP v1 is implementa
 
 **Phase 10 status:** Human acceptance is explicit in archived `PROJECT_STATE_pre-QAR1.md`, Section 53: Assignment 10D and Phase 10 are accepted and complete, following two successful live end-to-end briefing tests after the final reliability hotfix. The older pending-acceptance language in Sections 51–52 is historical and superseded by Section 53. Acceptance is not used to infer a Git commit.
 
-## Current QAR-1 planning and authorization
+## QAR-1 implementation status
 
-QAR-1 addresses the reproduced possibility that separate vision and briefing estimated-spending ledgers together exceed the accepted project-wide under-US$5 limit. The plan preserves both role ledgers and their separate safeguards and calls for shared inter-process coordination across every reservation path. The full accepted thresholds, error behavior, crash/write semantics, regression matrix, acceptance criteria, and exclusions are in `BUILD_PLAN.md`.
+Vision and briefing reservations now use one deterministic operating-system lock derived from their canonical ledger-path pair. Under that lock, each role validates both persisted ledgers, applies its existing role safeguards and the strict combined estimate limit, then atomically replaces only its own JSON ledger. A valid-state ARCH-004 regression and repeated separate-process concurrency coverage are in place. Full thresholds, error behavior, crash/write semantics, acceptance criteria, and exclusions remain in `BUILD_PLAN.md`.
 
-The shared-coordination plan is prepared for human review; implementation is not authorized by this documentation update. A separate human implementation prompt is required. No external API or paid provider was used for this documentation task.
+No external API or paid provider was used. QAR-1 is ready for human review; human acceptance remains pending. Local ledger estimates do not represent historical or authoritative provider/account spending.
 
 ## Outstanding investigations and deferred findings
 
@@ -49,11 +49,11 @@ The shared-coordination plan is prepared for human review; implementation is not
 
 **Documentation compaction verification at the 2026-10-28 checkpoint:** The archives were compared byte-for-byte with the original active documents before compaction (948 and 1,609 lines). Local markdown links and headings were checked, the expected four paths were the only changed documentation files, and `git diff --check` passed. No application tests, frontend build, live API, or paid provider checks were run for that compaction.
 
-**Current SDD consistency update:** This human-approved documentation-only update changes `AGENTS.md`, `APP_SPEC.md`, and `PROJECT_STATE.md`. The diff scope, local document references, and `git diff --check` passed. No application tests, build, external API, or paid provider checks were required or run.
+**QAR-1 corrective verification (2026-10-28):** Focused aggregate, vision, camera-vision API, and briefing API tests passed (138 total); Ruff and `git diff --check` passed. The compatibility-aware ARCH-004 regression was also run against the original adapters from `HEAD`; it failed at the expected budget assertion after the original logic accepted the sequence and persisted $5.002. Oversized valid JSON, semantically invalid ledgers, extreme numeric values, and process lock blocking are covered. No external provider requests or paid calls were made. QAR-1 remains ready for human review, not accepted.
 
 ## Next action
 
-Human review of the post-MVP SDD consistency update. QAR-1 remains pending and must not begin until separately authorized by the human developer.
+Human review of QAR-1 implementation. Human acceptance and Git checkpoint remain pending.
 
 ## Archive and integration-note references
 

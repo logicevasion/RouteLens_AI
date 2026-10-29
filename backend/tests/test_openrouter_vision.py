@@ -708,6 +708,25 @@ def test_budget_rolls_hour_and_day_and_corrupt_state_fails_closed(tmp_path):
     assert not AttemptBudget(corrupt, now=lambda: now[0]).reserve()
 
 
+def test_aggregate_budget_rejection_prevents_provider_dispatch(tmp_path):
+    _, catalogue, store, selection = setup_snapshot(tmp_path)
+    vision_path, briefing_path = tmp_path / "vision.json", tmp_path / "briefing.json"
+    vision_path.write_text(json.dumps({"attempts": [], "estimated_project_usd": 4.80, "estimated_daily": {}}))
+    briefing_path.write_text(json.dumps({"attempts": [], "estimated_project_usd": 0.18, "estimated_daily": {}}))
+    adapter = OpenRouterVisionAdapter(
+        api_key="test",
+        transport=httpx.MockTransport(lambda request: pytest.fail("provider called after aggregate rejection")),
+        budget=AttemptBudget(vision_path, briefing_path=briefing_path, now=lambda: NOW),
+        now=lambda: NOW,
+    )
+
+    result = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
+
+    assert result.observation.failure_code == "budget_exhausted"
+    assert json.loads(vision_path.read_text())["estimated_project_usd"] == 4.80
+    assert json.loads(briefing_path.read_text())["estimated_project_usd"] == 0.18
+
+
 def test_utc_daily_attempt_ceiling_is_independent_of_hourly_ceiling(tmp_path, monkeypatch):
     monkeypatch.setattr("app.openrouter_vision.ESTIMATED_USD_PER_ATTEMPT", 0.0)
     now = [NOW]

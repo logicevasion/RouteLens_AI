@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import fcntl
 import hashlib
 import json
-import math
 import os
 import tempfile
 import time
@@ -38,6 +36,7 @@ from app.camera_images import (
     read_current_cached_frame,
 )
 from app.geography import validate_destination
+from app.openrouter_budget import read_ledger, reservation_lock
 from app.vancouver_cameras import ATTRIBUTION, CameraCatalogue, CameraIntersection, CameraView
 
 MODEL_ID = "google/gemma-4-31b-it"
@@ -55,6 +54,7 @@ MAX_ESTIMATED_DAILY_USD = 1.0
 ESTIMATED_USD_PER_ATTEMPT = 0.02
 MAX_ESTIMATED_PROJECT_USD = 4.90
 DEFAULT_BUDGET_PATH = Path(__file__).resolve().parents[1] / "data" / "cache" / "openrouter_vision" / "request-budget.json"
+BRIEFING_BUDGET_PATH = Path(__file__).resolve().parents[1] / "data" / "cache" / "openrouter_briefing" / "request-budget.json"
 
 RoadSurface = Literal["dry_looking", "wet_looking", "snow_or_ice_looking", "unclear", "not_observable"]
 Visibility = Literal["adequate", "limited", "obscured", "not_observable"]
@@ -424,37 +424,32 @@ def _semantic_validate(value: ModelCameraObservation, expected_ids: list[str]) -
 
 
 class AttemptBudget:
-    """Small independent persistent attempt ledger; fails closed on corrupt state."""
+    """Vision ledger; pair custom paths with BriefingAttemptBudget.vision_path."""
 
-    def __init__(self, path: Path | str = DEFAULT_BUDGET_PATH, *, now=None) -> None:
+    def __init__(self, path: Path | str = DEFAULT_BUDGET_PATH, *, briefing_path: Path | str | None = None, now=None) -> None:
         self.path = Path(path)
+        self.briefing_path = Path(briefing_path) if briefing_path is not None else (
+            BRIEFING_BUDGET_PATH if self.path == DEFAULT_BUDGET_PATH else self.path.parent / "briefing-request-budget.json"
+        )
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def reserve(self) -> bool:
         now = self.now().astimezone(timezone.utc)
         timestamp = now.timestamp()
         day = now.date().isoformat()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        lock_path = self.path.with_suffix(self.path.suffix + ".lock")
-        with lock_path.open("a+b") as lock:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-            try:
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with reservation_lock(self.path, self.briefing_path):
                 try:
-                    record = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {"attempts": [], "estimated_project_usd": 0.0, "estimated_daily": {}}
-                    attempts = record["attempts"]
-                    project = float(record["estimated_project_usd"])
-                    daily = record["estimated_daily"]
-                    if not isinstance(attempts, list) or not isinstance(daily, dict) or not math.isfinite(project) or project < 0:
-                        raise ValueError
-                    timestamps = [float(item) for item in attempts]
-                    daily_values = [float(item) for item in daily.values()]
-                    if any(not math.isfinite(item) or item < 0 for item in daily_values):
-                        raise ValueError
-                    if any(not math.isfinite(item) or not (0 <= item <= timestamp + 60) for item in timestamps):
-                        raise ValueError
+                    record = read_ledger(self.path, timestamp)
+                    briefing = read_ledger(self.briefing_path, timestamp)
                 except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
                     return False
-                timestamps = [item for item in timestamps if timestamp - item < 86_400]
+                attempts = record["_validated_timestamps"]
+                project = record["estimated_project_usd"]
+                daily = record["estimated_daily"]
+                combined = briefing["estimated_project_usd"] + project
+                timestamps = [item for item in attempts if timestamp - item < 86_400]
                 today_estimate = float(daily.get(day, 0.0))
                 hourly_count = sum(timestamp - item < 3600 for item in timestamps)
                 daily_count = sum(datetime.fromtimestamp(item, timezone.utc).date().isoformat() == day for item in timestamps)
@@ -463,15 +458,16 @@ class AttemptBudget:
                     or daily_count >= MAX_ATTEMPTS_PER_UTC_DAY
                     or round(today_estimate + ESTIMATED_USD_PER_ATTEMPT, 8) > MAX_ESTIMATED_DAILY_USD
                     or round(project + ESTIMATED_USD_PER_ATTEMPT, 8) > MAX_ESTIMATED_PROJECT_USD
+                    or round(combined + ESTIMATED_USD_PER_ATTEMPT, 8) >= 5.0
                 ):
                     return False
                 timestamps.append(timestamp)
                 daily[day] = today_estimate + ESTIMATED_USD_PER_ATTEMPT
-                record = {"attempts": timestamps, "estimated_project_usd": project + ESTIMATED_USD_PER_ATTEMPT, "estimated_daily": daily}
+                result = {"attempts": timestamps, "estimated_project_usd": project + ESTIMATED_USD_PER_ATTEMPT, "estimated_daily": daily}
                 fd, tmp_name = tempfile.mkstemp(prefix=".vision-budget-", dir=self.path.parent)
                 try:
                     with os.fdopen(fd, "w", encoding="utf-8") as stream:
-                        json.dump(record, stream, separators=(",", ":"))
+                        json.dump(result, stream, separators=(",", ":"))
                         stream.flush()
                         os.fsync(stream.fileno())
                     os.replace(tmp_name, self.path)
@@ -479,8 +475,8 @@ class AttemptBudget:
                     if os.path.exists(tmp_name):
                         os.unlink(tmp_name)
                 return True
-            finally:
-                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            return False
 
 
 class OpenRouterVisionAdapter:
