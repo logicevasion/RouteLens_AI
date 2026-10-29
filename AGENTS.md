@@ -37,6 +37,8 @@ If material requirements conflict, stop affected work and report the discrepancy
 
 Implement only the current bounded assignment as defined by `BUILD_PLAN.md` and the accompanying task prompt.
 
+External architecture reviews, independent verification reports, and human-reported issues are inputs to triage, not implementation authorization. Remediation requires a bounded, human-approved SDD assignment. Independent Claude verification may be used when proportionate to the change's risk; it is not required for every task.
+
 You may independently make routine local implementation decisions, including:
 
 - function and variable naming;
@@ -71,6 +73,7 @@ Favor narrow vertical slices that produce observable working behavior.
 - Preserve source provenance and distinguish missing data from known values.
 - Handle external-source failures without unnecessarily breaking unrelated functionality.
 - Avoid unrelated cleanup, formatting sweeps, or premature optimization.
+- Reproduce suspected defects when safely feasible before choosing a correction. Use focused regression tests that exercise the intended failure mechanism. Distinguish functional defects from architectural preferences, preserve accepted contracts, and avoid unrelated refactoring.
 
 For external integrations, inspect actual source behavior when practical, retain representative fixtures, and test parsers deterministically.
 
@@ -132,6 +135,8 @@ The human developer reviews and manually commits accepted phases.
 ## 7. Documentation Ownership
 
 You may update `PROJECT_STATE.md` after meaningful bounded implementation work.
+
+`BUILD_PLAN.md` contains the current bounded assignment. Keep `PROJECT_STATE.md` a concise record of implementation reality, verification, limitations, and next action. Record detailed completed-assignment evidence in integration notes or archives rather than appending extensive implementation transcripts.
 
 Record factual repository state, including:
 

@@ -52,7 +52,7 @@ Camera-based visual intelligence remains the MVP's primary differentiating capab
 7. Application gathers current and near-term road and weather evidence.
 8. Deterministic logic identifies geographically and temporally relevant evidence.
 9. Application selects the nearest usable Vancouver camera intersection and retrieves available directional images.
-10. Multimodal AI interprets those camera views together.
+10. The backend selects exactly one eligible directional image from that intersection for each camera inference attempt and retains its provenance. The gallery may still display multiple directional views.
 11. Application presents the map, destination conditions, journey-specific findings, source statuses, and AI briefing.
 
 The selected route provides geographic context; RouteLens does not provide authoritative navigation or route optimization.
@@ -135,7 +135,7 @@ Additional lightweight libraries are permitted where justified by a current-phas
 
 TransLink GTFS Static and GTFS-Realtime Service Alerts are deferred beyond the datathon MVP.
 
-OpenRouter model identifiers are configurable rather than permanently fixed.
+The accepted MVP uses `google/gemma-4-31b-it` for camera inference and journey briefing through OpenRouter, which automatically selects a compatible provider. Vision requests retain compatible-provider fallbacks and required-parameter enforcement; briefing requests require compatible structured-output parameters and do not retry or configure a model fallback. Changing the model or routing policy requires an approved assignment.
 
 All AI inference requests originate from the backend. Secret API credentials must not be exposed to the frontend.
 
@@ -165,7 +165,7 @@ The application operates on RouteLens-owned normalized models. External provider
 - `CityEvent` — normalized construction, closure, road incident, or advisory, preserving relevant geometry and applicability information.
 - `CameraIntersection` — Vancouver camera location and associated views.
 - `CameraView` — directional camera image reference and retrieval context.
-- `CameraObservation` — structured assessment of available directional views at one intersection.
+- `CameraObservation` — structured visual assessment and associated provenance for camera views at one intersection.
 - `WeatherObservation` — measured weather evidence, including source, location, time, and measurement semantics.
 - `WeatherForecast` — structured forecast evidence for an appropriate location and future interval.
 
@@ -174,7 +174,8 @@ The application operates on RouteLens-owned normalized models. External provider
 - `SourceMetadata` — source identity, record provenance, and relevant timestamps.
 - `SourceStatus` — availability, success/failure, freshness, and stale-source context.
 - `JourneyBriefing` — structured, evidence-grounded AI synthesis.
-- `JourneyAnalysis` — primary analysis result aggregating journey context, selected evidence, source statuses, timeline information, and briefing.
+- `JourneyAnalysis` — normalized road and weather analysis response with source findings and statuses.
+- `JourneyEvidenceBundle v1` — frontend-owned deterministic internal handoff associating source-specific evidence, provenance, uncertainty, readiness, and lifecycle identity with one canonical Trip, selected route, and Analyze Journey attempt.
 
 These are conceptual model contracts. Exact fields, relationships, and API schemas are defined or refined through the technical design and authorized implementation phases.
 
@@ -211,9 +212,9 @@ Required behavior:
 - Enrich catalogue records through official camera pages to discover directional image URLs.
 - Find nearby camera intersections and select the nearest usable intersection.
 - An intersection is usable when at least one valid current directional image can be retrieved.
-- Retrieve all usable directional views from the selected intersection.
-- Perform one combined multimodal assessment across the available views.
-- Associate the assessment with the selected intersection and contributing views.
+- Retrieve and display usable directional views from the selected intersection in the camera gallery.
+- For each inference attempt, send exactly one eligible directional image selected by the backend from that intersection in canonical catalogue order. Do not substitute another intersection.
+- Associate the assessment with the backend-selected intersection and image provenance.
 
 Camera AI may assess:
 
@@ -356,21 +357,23 @@ RouteLens uses OpenRouter for two distinct AI capabilities.
 
 Input:
 
-- available directional images from one selected Vancouver intersection;
-- associated image/view context.
+- exactly one eligible directional image, selected by the backend from the already selected Vancouver intersection in canonical catalogue order;
+- associated backend-controlled image, view, intersection, and retrieval provenance.
 
 Output:
 
 - structured `CameraObservation`;
 - conservative visual interpretation;
 - uncertainty and image-quality indicators;
-- contributing-view provenance.
+- provenance for the single contributing view.
 
-Perform one combined assessment for the selected intersection rather than independent full inference calls per directional view.
+The image is selected and validated by the backend. The gallery can continue to display multiple views, but they are not combined into an inference request. The model provides structured visual interpretation, not authoritative traffic or weather measurement.
 
 Do not present visual inference as direct instrument measurement.
 
 ### Journey Briefing
+
+The frontend deterministically assembles `JourneyEvidenceBundle v1` from normalized source results. It preserves source-specific provenance, availability, freshness, and uncertainty and binds evidence to the canonical Trip, selected route, and current analysis attempt. Readiness is partial-first: successful journey analysis may proceed while sources, including camera inference, are pending or degraded. Stale or superseded lifecycle results are excluded. Bundle assembly makes no source request and performs no additional inference. A fuller normalized timeline remains deferred.
 
 Input:
 
@@ -378,6 +381,22 @@ Input:
 - journey context;
 - source freshness and uncertainty;
 - relevant observations and advisories.
+
+After successful analysis, the application waits only for the remainder of the 15-second opportunity for matching camera evidence, measured from camera inference initiation, then freezes the briefing evidence snapshot. Camera inference has an independent 70-second frontend deadline. Briefing dispatch has a 30-second backend deadline and a 35-second frontend deadline.
+
+The product presents one primary AI Journey Briefing card and makes one controlled briefing request per valid logical Analyze Journey attempt. Failed analysis does not dispatch a briefing. There are no automatic retries or regenerations.
+
+The briefing has exactly three topics, in fixed order:
+
+1. Camera conditions, with a camera/weather comparison only when the evidence supports it.
+2. Destination weather.
+3. The closest relevant Road Ahead construction report.
+
+The backend deterministically selects topic evidence and authoritative references, controls topic order and availability wording, and validates model output. The strict provider response contains only status, overview, and the three topic text fields (`camera_text`, `weather_text`, and `construction_text`). The model does not choose topic categories, references, ordering, or dynamic topics. The public result uses the existing overview/highlights response with the fixed three topics.
+
+#### OpenRouter limits and accounting
+
+The accepted project objective is to keep combined estimated spending for camera vision and briefing strictly below US$5. Vision and briefing retain independent role ledgers, attempt quotas, and estimated-cost safeguards. These local estimates do not establish cumulative account spending or authoritative charges; provider/account billing is authoritative, and cumulative usage must be reconciled before further paid inference. The accepted current MVP image transfer is limited to validated City of Vancouver camera frames sent to OpenRouter for the private, noncommercial prototype under existing controls.
 
 Output:
 
@@ -479,12 +498,12 @@ Telemetry overlays and journey information should remain visually prominent.
 
 Prioritize:
 
-1. Destination camera/current conditions.
-2. Overall journey status.
-3. Route-related issues.
-4. Supporting telemetry, provenance, and source freshness.
+1. AI Journey Briefing as the primary journey summary.
+2. Journey overview and route context.
+3. Supporting road events, destination weather, and camera imagery.
+4. Source provenance, freshness, availability, and uncertainty.
 
-The panel may present a journey overview, destination conditions, along-route findings, timeline, and AI briefing.
+The panel presents the AI Journey Briefing, journey overview, destination conditions, and along-route findings, with supporting source details. A richer journey timeline remains deferred beyond the MVP.
 
 Do not overwhelm users with every available source record.
 
@@ -543,9 +562,9 @@ TransLink licensing and access considerations remain documented separately for t
 
 ### Deployment Boundary
 
-The approved MVP is a local/portfolio application.
+The approved MVP is a local/portfolio application. Human approval permits validated City of Vancouver camera frames to be sent to OpenRouter solely for the private, noncommercial prototype under existing controls.
 
-Public or commercial deployment requires review of current provider terms, attribution obligations, and image/AI processing rights.
+This does not authorize bulk or historical image collection, public redistribution, commercial deployment, or broader external sharing. Public or commercial deployment requires review of current provider terms, attribution obligations, and image/AI processing rights.
 
 Detailed research and unresolved legal questions remain in `docs/data-licensing-and-commercialization.md`.
 
@@ -599,6 +618,8 @@ This document is a condensed operational specification, not a replacement for th
 | `PROJECT_STATE.md` | Actual repository state and verified implementation facts |
 
 If this specification conflicts materially with an authoritative planning document, report the discrepancy instead of silently overriding either source.
+
+Later explicitly human-accepted architectural decisions recorded in integration notes may supersede conflicting historical planning language for those specific accepted behaviors. Unaccepted proposals and implementation observations do not automatically redefine intended architecture. If accepted sources remain contradictory, flag the conflict for human decision rather than silently choosing one.
 
 If implementation reveals facts requiring changes to product intent, architecture, source strategy, or scope, escalate the discovery for human/planning review.
 

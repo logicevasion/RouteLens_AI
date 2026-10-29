@@ -2,22 +2,22 @@
 
 ## Current repository and SDD status
 
-- **Revision at inspection:** `99ab8ec` on `main`, aligned with `origin/main`. Recent history includes `77d4e2f` (`feat: complete RouteLens AI MVP journey briefing`). The observed human acceptance record for Phase 10 is in this file's archived predecessor, Section 53; acceptance alone is not used to infer a particular commit.
-- **Working tree:** This documentation compaction modifies `BUILD_PLAN.md` and `PROJECT_STATE.md` and adds the two specified archive files. No application source or tests are changed.
-- **Git control:** No staging, commit, push, reset, or other history operation was performed. Human developers retain control of Git history.
+- **Repository checkpoint:** At the start of the SDD consistency update on 2026-10-28, `main` was at `27a0aaa` and the working tree was clean. This is a dated checkpoint, not a permanent current-revision claim. The authorized update now changes only `AGENTS.md`, `APP_SPEC.md`, and this file.
+- **Completed documentation compaction:** The SDD compaction is complete. The pre-compaction `BUILD_PLAN.md` and `PROJECT_STATE.md` are preserved as [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). Detailed accepted Phase 8–10 decisions and evidence remain in the integration notes listed below.
+- **Git control:** No staging, commit, push, reset, or other history operation was performed for this update. Human developers retain control of Git history.
 - **Current assignment:** QAR-1 is planned and awaiting human review. Implementation has not started and requires a separate human-approved implementation prompt. See `BUILD_PLAN.md` for the bounded specification. USER-001, USER-002, QAR-2, and other architecture findings remain pending/deferred and are outside QAR-1.
 
 ## Accepted implementation baseline
 
 Phases 0–10 are human accepted and complete; RouteLens AI MVP v1 is implementation-complete. The accepted product is a local, driving-only Vancouver journey companion with explicit route selection and on-demand analysis. The implementation covers the app/map and journey workflow (Phases 1–3), Road Ahead and DriveBC road evidence (4–5), OpenWeather and ECCC/SWOB weather evidence (6), Vancouver destination cameras (7), validated camera vision (8), the internal evidence bundle (9), and the three-topic AI Journey Briefing (10). This is a milestone summary; detailed acceptance evidence and limitations are preserved in the archive and integration notes.
 
-**Phase 10 status:** Human acceptance is explicit in archived `PROJECT_STATE_pre-QAR1.md`, Section 53: Assignment 10D and Phase 10 are accepted and complete, following two successful live end-to-end briefing tests after the final reliability hotfix. The older pending-acceptance language in Sections 51–52 is historical and superseded by Section 53. The current Git revision is reported independently above; no commit is inferred from the acceptance record.
+**Phase 10 status:** Human acceptance is explicit in archived `PROJECT_STATE_pre-QAR1.md`, Section 53: Assignment 10D and Phase 10 are accepted and complete, following two successful live end-to-end briefing tests after the final reliability hotfix. The older pending-acceptance language in Sections 51–52 is historical and superseded by Section 53. Acceptance is not used to infer a Git commit.
 
 ## Current QAR-1 planning and authorization
 
 QAR-1 addresses the reproduced possibility that separate vision and briefing estimated-spending ledgers together exceed the accepted project-wide under-US$5 limit. The plan preserves both role ledgers and their separate safeguards and calls for shared inter-process coordination across every reservation path. The full accepted thresholds, error behavior, crash/write semantics, regression matrix, acceptance criteria, and exclusions are in `BUILD_PLAN.md`.
 
-Planning is prepared for human review; implementation is not authorized by this compaction. A separate human implementation prompt is required. No external API or paid provider was used for this documentation task.
+The shared-coordination plan is prepared for human review; implementation is not authorized by this documentation update. A separate human implementation prompt is required. No external API or paid provider was used for this documentation task.
 
 ## Outstanding investigations and deferred findings
 
@@ -47,11 +47,13 @@ Planning is prepared for human review; implementation is not authorized by this 
 
 **Historical application verification (final Phase 10 record, 2026-10-11):** Focused briefing API tests passed (48); one full backend regression run passed (439 tests); Ruff passed; the full frontend suite passed (11 test files); and the TypeScript/Vite production build passed with the existing large-bundle advisory. A subsequent repeated backend run stalled and was interrupted as described above. The developer recorded two successful live end-to-end briefing tests after the final model-output hotfix and accepted the MVP. These are historical results, not checks rerun during this compaction.
 
-**Current documentation verification:** The archives were compared byte-for-byte with the original active documents before compaction (948 and 1,609 lines). Final active files are 66 and 60 lines. Local markdown links and headings were checked, the expected four paths are the only changed documentation files, and `git diff --check` passes. No application tests, frontend build, live API, or paid provider checks were run for this documentation-only work.
+**Documentation compaction verification at the 2026-10-28 checkpoint:** The archives were compared byte-for-byte with the original active documents before compaction (948 and 1,609 lines). Local markdown links and headings were checked, the expected four paths were the only changed documentation files, and `git diff --check` passed. No application tests, frontend build, live API, or paid provider checks were run for that compaction.
+
+**Current SDD consistency update:** This human-approved documentation-only update changes `AGENTS.md`, `APP_SPEC.md`, and `PROJECT_STATE.md`. The diff scope, local document references, and `git diff --check` passed. No application tests, build, external API, or paid provider checks were required or run.
 
 ## Next action
 
-Human review of the compacted SDD harness and QAR-1 plan. Do not begin QAR-1 implementation until separately authorized by the human developer.
+Human review of the post-MVP SDD consistency update. QAR-1 remains pending and must not begin until separately authorized by the human developer.
 
 ## Archive and integration-note references
 
