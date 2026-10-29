@@ -522,14 +522,23 @@ def test_openweather_products_are_reported_independently(monkeypatch: pytest.Mon
                 status=SwobSourceStatus(success=True, available=True)),
             [],
         )
+    road_result = RoadAheadResult(events=[], source_statuses=source_statuses())
+    road_ahead_calls = 0
+    async def road_ahead():
+        nonlocal road_ahead_calls
+        road_ahead_calls += 1
+        return road_result
+
     monkeypatch.setattr("app.analysis._destination_openweather", weather)
     monkeypatch.setattr("app.analysis._destination_swob", swob)
+    monkeypatch.setattr("app.analysis.get_road_ahead_data", road_ahead)
     monkeypatch.setattr("app.analysis.RoadAheadDetailEnricher", lambda: FakeEnricher())
     weather_body = api(payload()).json()["destination_weather"]
     assert weather_body["openweather_current"]["status"]["available"] is current_available
     assert weather_body["openweather_forecast"]["status"]["available"] is forecast_available
     assert weather_body["eccc_status"]["available"] is True
     assert weather_body["eccc_observations"] == []
+    assert road_ahead_calls == 1
 
 
 @pytest.mark.parametrize("failed_source", ["openweather", "swob"])
