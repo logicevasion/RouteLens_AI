@@ -2,10 +2,10 @@
 
 ## Current repository and SDD status
 
-- **Repository checkpoint:** At the start of the SDD consistency update on 2026-10-28, `main` was at `27a0aaa` and the working tree was clean. This is a dated checkpoint, not a permanent current-revision claim. The authorized update now changes only `AGENTS.md`, `APP_SPEC.md`, and this file.
+- **Repository checkpoint:** USER-001 implementation began on 2026-10-29 at `45015aa` on `main`, with a clean working tree. This is a dated checkpoint, not a permanent current-revision claim.
 - **Completed documentation compaction:** The SDD compaction is complete. The pre-compaction `BUILD_PLAN.md` and `PROJECT_STATE.md` are preserved as [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). Detailed accepted Phase 8–10 decisions and evidence remain in the integration notes listed below.
-- **Git control:** No staging, commit, push, reset, or other history operation was performed for this update. Human developers retain control of Git history.
-- **Current assignment:** QAR-1 was human accepted and committed/pushed at `d1bbcd4`. QAR-2's narrowly scoped test-isolation correction is implemented and ready for human review; it has not been accepted. USER-001, USER-002, and other architecture findings remain pending/deferred.
+- **Git control:** Human developers retain control of Git history. No staging, commit, push, reset, or other history operation was performed for USER-001.
+- **Current assignment:** QAR-1 was human accepted and committed/pushed at `d1bbcd4`. QAR-2 was human accepted and committed at `45015aa`. USER-001 is implemented and ready for human review; it has not been accepted. USER-002 and other architecture findings remain pending/deferred.
 
 ## Accepted implementation baseline
 
@@ -21,9 +21,8 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Outstanding investigations and deferred findings
 
-- **USER-001 — Duplicate briefing attempts:** Browser-local numeric attempt IDs may be reused after reloads while the backend deduplicates across its process lifetime, potentially rejecting legitimate new briefing attempts. Investigate and reproduce before approving a session-scoped identity correction; preserve one paid briefing dispatch per logical attempt.
+- **USER-001 — Duplicate briefing attempts:** Confirmed cross-session numeric-ID collision is corrected. Each explicit Analyze Journey operation now gets one UUID v4 logical attempt ID carried through JourneyEvidenceBundle v1 and briefing request/result contracts. Numeric lifecycle IDs remain for camera matching and stale-response guards. The adapter still deduplicates in process memory; restart resets that state, multiple workers do not share it, and the set grows for the process lifetime. USER-001 is ready for human review, not accepted.
 - **USER-002 — Camera interpretation timing:** The briefing freezes evidence after a 15-second camera opportunity while vision may continue toward its 70-second frontend deadline. Investigate late-arriving results and actual latency before deciding whether to preserve the window, extend it, or introduce a controlled update. Any change to the single-request policy requires explicit approval.
-- **QAR-2 — Analysis test-suite reliability:** The weather-product test omitted a mock for `app.analysis.get_road_ahead_data`, and both parameter variants attempted two Road Ahead GETs. The test now supplies an empty `RoadAheadResult` with valid source statuses and asserts the patched loader is called once. The unintended requests are confirmed; their relationship to the earlier historical stall remains unproven. QAR-2 is ready for human review, not accepted.
 - **Deferred implementation findings:** Road Ahead selected-event emphasis may remain bold after journey-input edits or route regeneration until a new Analyze Journey operation. Camera failure-isolation improvements, exhaustive narrow-screen/source-combination review, and optional performance work remain deferred. They do not change the accepted MVP status.
 - **Architecture scope:** The Phase 9 normalized timeline and richer cross-source reasoning/UI described in older roadmap material remain deferred; the accepted implementation uses the internal evidence bundle and Phase 10 briefing. Multi-view inference remains deferred; the MVP briefing uses one selected camera direction.
 
@@ -51,11 +50,13 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 **QAR-1 corrective verification (2026-10-28):** Focused aggregate, vision, camera-vision API, and briefing API tests passed (138 total); Ruff and `git diff --check` passed. The compatibility-aware ARCH-004 regression was also run against the original adapters from `HEAD`; it failed at the expected budget assertion after the original logic accepted the sequence and persisted $5.002. Oversized valid JSON, semantically invalid ledgers, extreme numeric values, and process lock blocking are covered. No external provider requests or paid calls were made. QAR-1 was subsequently human accepted and committed/pushed at `d1bbcd4`.
 
-**QAR-2 test-isolation verification (2026-10-29):** Both weather-product variants passed (2); the complete analysis API module passed (24); and the full backend suite passed (473) with 24 existing multiprocessing fork deprecation warnings. Every pytest run used a temporary socket/DNS guard; zero outbound attempts were recorded. Ruff on `test_analysis_api.py` and `git diff --check` passed. No live external or paid provider calls were made. The historical stall's exact cause remains unproven. QAR-2 is ready for human review, not accepted.
+**QAR-2 test-isolation verification (2026-10-29):** Both weather-product variants passed (2); the complete analysis API module passed (24); and the full backend suite passed (473) with 24 existing multiprocessing fork deprecation warnings. Every pytest run used a temporary socket/DNS guard; zero outbound attempts were recorded. Ruff on `test_analysis_api.py` and `git diff --check` passed. No live external or paid provider calls were made. The historical stall's exact cause remains unproven. QAR-2 was subsequently human accepted and committed at `45015aa`.
+
+**USER-001 correction verification (2026-10-29):** The full backend suite passed (475) under a socket/DNS guard with zero outbound attempts; focused briefing API tests passed (51); Ruff and `git diff --check` passed; all 11 frontend test files passed; and the TypeScript/Vite production build passed with the existing large-bundle advisory. Regression coverage exercises default UUID v4 generation and uniqueness across a reset lifecycle counter, UUID v4 request/result validation, same-UUID concurrent deduplication with one provider dispatch and budget reservation, and failed-analysis no-dispatch wiring. The full frontend suite and app/Vite TypeScript no-emit checks were rerun for the default-generator coverage correction. No external service or paid provider was contacted.
 
 ## Next action
 
-Human review of the QAR-2 test-isolation correction. Human acceptance and Git checkpoint remain pending.
+Human review of USER-001. Human acceptance and Git checkpoint remain pending.
 
 ## Archive and integration-note references
 

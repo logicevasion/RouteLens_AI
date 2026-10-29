@@ -8,7 +8,7 @@ export type BriefingFailureCode = 'configuration_missing' | 'budget_exhausted' |
 export type BriefingHighlightV1 = { category: 'road' | 'weather' | 'camera'; text: string; evidence_refs: string[] };
 export type BriefingResultV1 = {
   contract_version: 'journey-briefing-v1'; prompt_version: 'journey-briefing-prompt-v1';
-  status: BriefingAvailability; failure_code: BriefingFailureCode | null; generated_at: string; attempt_id: number;
+  status: BriefingAvailability; failure_code: BriefingFailureCode | null; generated_at: string; attempt_id: string;
   origin_name: string; destination_name: string; requested_model: 'google/gemma-4-31b-it';
   returned_model: string | null; provider: string | null; overview: string; overview_evidence_refs: string[];
   highlights: BriefingHighlightV1[]; limitations: string[];
@@ -16,15 +16,15 @@ export type BriefingResultV1 = {
 };
 export type JourneyBriefingState =
   | { status: 'idle' }
-  | { status: 'waiting_for_evidence'; attempt_id: number }
-  | { status: 'in_progress'; attempt_id: number }
-  | { status: 'available'; attempt_id: number; result: BriefingResultV1 }
-  | { status: 'insufficient_evidence'; attempt_id: number; result: BriefingResultV1 }
-  | { status: 'unavailable' | 'error'; attempt_id: number; failure_code: BriefingFailureCode };
+  | { status: 'waiting_for_evidence'; attempt_id: string }
+  | { status: 'in_progress'; attempt_id: string }
+  | { status: 'available'; attempt_id: string; result: BriefingResultV1 }
+  | { status: 'insufficient_evidence'; attempt_id: string; result: BriefingResultV1 }
+  | { status: 'unavailable' | 'error'; attempt_id: string; failure_code: BriefingFailureCode };
 
 export type BriefingEvidenceRequestV1 = {
   request_schema_version: 'journey-briefing-request-v1'; bundle_schema_version: 'journey-evidence-v1';
-  attempt_id: number; assembled_at: string; analyzed_at: string; analysis_status: 'success';
+  attempt_id: string; assembled_at: string; analyzed_at: string; analysis_status: 'success';
   journey: { mode: 'drive'; origin: PlaceV1; destination: PlaceV1; route: { candidate_id: string; label: string | null; distance_meters: number } };
   sources: {
     road_ahead: { availability: EvidenceAvailability; statuses: SourceStatusV1[]; findings: RoadFindingV1[]; omitted_count: number };
@@ -47,6 +47,9 @@ type StationMeasurementV1 = { name: 'temperature' | 'relative_humidity' | 'preci
 type SwobObservationV1 = { station_id: string; station_name: string | null; distance_meters: number; observed_at: string; retrieved_at: string; observation_age_seconds: number; observation_stale: boolean; cache_stale: boolean; measurements: StationMeasurementV1[] };
 type CameraStatusV1 = 'available' | 'partial' | 'insufficient_evidence' | 'unavailable' | 'error' | 'pending' | 'unknown';
 type CameraObservationV1 = { status: CameraStatusV1; intersection_name: string | null; street_names: string[]; distance_from_destination_meters: number | null; source_name: string | null; direction_view: { view_id: string; direction_label: string | null; retrieved_at: string; source_capture_at: string | null; road_surface: string; visibility: string; vehicle_activity: string; conditions: string[]; uncertainty: string; note: string | null } | null; summary: string | null; summary_evidence_view_ids: string[] };
+
+const uuidV4Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const isJourneyAttemptId = (value: unknown): value is string => typeof value === 'string' && uuidV4Pattern.test(value);
 
 const text = (value: string | null | undefined, max: number): string | null => {
   if (value == null) return null;
@@ -110,7 +113,7 @@ export function serializeBriefingEvidence(bundle: JourneyEvidenceBundle): Briefi
     throw new Error('Journey evidence is not eligible for briefing');
   }
   const trip = bundle.identity.trip;
-  if (trip.mode !== 'drive' || trip.selected_route.distance_meters <= 0 || !Number.isInteger(bundle.identity.attempt_id) || bundle.identity.attempt_id < 0 || bundle.identity.attempt_id > 2_147_483_647) throw new Error('Journey evidence identity is invalid');
+  if (trip.mode !== 'drive' || trip.selected_route.distance_meters <= 0 || !isJourneyAttemptId(bundle.identity.attempt_id)) throw new Error('Journey evidence identity is invalid');
   const assembledAt = timestamp(bundle.assembled_at, 'assembly')!;
   const analyzedAt = timestamp(bundle.identity.analyzed_at, 'analysis')!;
   if (Date.parse(assembledAt) < Date.parse(analyzedAt)) throw new Error('Briefing evidence assembly predates analysis');
@@ -213,7 +216,7 @@ export function normalizeBriefingResult(value: unknown): BriefingResultV1 | null
   const failures = ['configuration_missing', 'budget_exhausted', 'timeout', 'provider_unavailable', 'invalid_model_output', 'duplicate_attempt', 'error'];
   if (v.contract_version !== 'journey-briefing-v1' || v.prompt_version !== 'journey-briefing-prompt-v1' || !statuses.includes(String(v.status)) ||
       !(v.failure_code === null || failures.includes(String(v.failure_code))) || typeof v.generated_at !== 'string' || !Number.isFinite(Date.parse(v.generated_at)) ||
-      !Number.isInteger(v.attempt_id) || typeof v.origin_name !== 'string' || v.origin_name.length > 120 || typeof v.destination_name !== 'string' || v.destination_name.length > 120 ||
+      !isJourneyAttemptId(v.attempt_id) || typeof v.origin_name !== 'string' || v.origin_name.length > 120 || typeof v.destination_name !== 'string' || v.destination_name.length > 120 ||
       v.requested_model !== 'google/gemma-4-31b-it' || !(v.returned_model === null || typeof v.returned_model === 'string' && v.returned_model.length <= 120) || !(v.provider === null || typeof v.provider === 'string' && v.provider.length <= 80) ||
       typeof v.overview !== 'string' || !Array.isArray(v.overview_evidence_refs) || !Array.isArray(v.highlights) || !Array.isArray(v.limitations) || !v.usage || typeof v.usage !== 'object') return null;
   const usage = v.usage as Record<string, unknown>;

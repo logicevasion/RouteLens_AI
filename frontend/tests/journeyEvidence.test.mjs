@@ -84,15 +84,48 @@ const cameraResult = (status = 'available') => ({ observation: {
   requested_model_id: 'google/gemma-4-31b-it', actual_provider_id: 'provider-a', actual_endpoint_id: 'endpoint-a', inferred_at: '2026-10-11T12:02:30Z',
   usage: { input_tokens: 10, output_tokens: 10, total_tokens: 20, cost_usd: 0.01, latency_ms: 5000 },
 }, cache_reused: false, provider_error: null, semantic_error_code: null, semantic_mismatch: null });
-const inputs = (overrides = {}) => ({ trip: trip(), attempt_id: 7, assembled_at: '2026-10-11T12:04:00Z',
+const attemptId = '11111111-1111-4111-8111-111111111111';
+const nextAttemptId = '22222222-2222-4222-8222-222222222222';
+const inputs = (overrides = {}) => ({ trip: trip(), attempt_id: attemptId, lifecycle_id: 7, assembled_at: '2026-10-11T12:04:00Z',
   analysis: { status: 'success', result: analysis(), error: null },
-  camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } }, ...overrides });
+  camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } }, ...overrides });
+
+test('default UUID generation stays unique across logical attempts and reset lifecycle counters', () => {
+  let firstSessionCounter = 0;
+  const firstSessionIds = [
+    { lifecycle_id: ++firstSessionCounter, attempt_id: evidence.createJourneyAttemptId() },
+    { lifecycle_id: ++firstSessionCounter, attempt_id: evidence.createJourneyAttemptId() },
+  ];
+  let reloadedSessionCounter = 0;
+  const reloadedSessionIds = [
+    { lifecycle_id: ++reloadedSessionCounter, attempt_id: evidence.createJourneyAttemptId() },
+  ];
+  const allGeneratedIds = [...firstSessionIds, ...reloadedSessionIds].map(({ attempt_id }) => attempt_id);
+
+  assert.deepEqual(firstSessionIds.map(({ lifecycle_id }) => lifecycle_id), [1, 2]);
+  assert.equal(reloadedSessionIds[0].lifecycle_id, 1);
+  assert.ok(allGeneratedIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)));
+  assert.equal(new Set(allGeneratedIds).size, allGeneratedIds.length);
+});
+
+test('injected UUID generator preserves deterministic identity association across reset lifecycle counters', () => {
+  const sessionAttempt = (id) => ({ lifecycle_id: 1, attempt_id: evidence.createJourneyAttemptId(() => id) });
+  const firstSession = sessionAttempt(attemptId);
+  const reloadedSession = sessionAttempt(nextAttemptId);
+  assert.equal(firstSession.lifecycle_id, reloadedSession.lifecycle_id);
+  assert.notEqual(firstSession.attempt_id, reloadedSession.attempt_id);
+  const firstBundle = evidence.assembleJourneyEvidence(inputs({ ...firstSession, camera_vision: { lifecycle_id: 1, trip: trip(), camera_vision: { status: 'pending' } } }));
+  const reloadedBundle = evidence.assembleJourneyEvidence(inputs({ ...reloadedSession, camera_vision: { lifecycle_id: 1, trip: trip(), camera_vision: { status: 'pending' } } }));
+  assert.notEqual(firstBundle.identity.attempt_id, reloadedBundle.identity.attempt_id);
+  assert.match(firstSession.attempt_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.throws(() => evidence.createJourneyAttemptId(() => '1'), /UUID v4/);
+});
 
 test('current lifecycle handoff binds successful analysis and pending camera to canonical route and attempt', () => {
-  const state = { attempt_id: 7, trip: trip(), analysis: inputs().analysis,
-    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'pending' } } };
+  const state = { attempt_id: attemptId, lifecycle_id: 7, trip: trip(), analysis: inputs().analysis,
+    camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'pending' } } };
   const bundle = evidence.deriveCurrentJourneyEvidence(state, trip(), '2026-10-11T12:04:00Z');
-  assert.equal(bundle.identity.attempt_id, 7);
+  assert.equal(bundle.identity.attempt_id, attemptId);
   assert.deepEqual(bundle.identity.trip, trip());
   assert.equal(bundle.identity.trip.selected_route.candidate_id, 'route-1');
   assert.deepEqual(bundle.identity.trip.selected_route.geometry, trip().selected_route.geometry);
@@ -111,19 +144,19 @@ test('current lifecycle handoff binds successful analysis and pending camera to 
 
 test('current lifecycle handoff drops invalidated, mismatched, failed, and superseded evidence', () => {
   const pending = { status: 'loading', result: null, error: null };
-  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: null, trip: null, analysis: pending, camera_vision: null }, trip(), '2026-10-11T12:04:00Z'), null);
-  const staleCamera = { attempt_id: 6, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } };
-  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: 7, trip: trip(), analysis: inputs().analysis, camera_vision: staleCamera }, trip(), '2026-10-11T12:04:00Z'), null);
-  const nextAttempt = evidence.deriveCurrentJourneyEvidence({ attempt_id: 8, trip: trip(), analysis: pending,
-    camera_vision: { attempt_id: 8, trip: trip(), camera_vision: { status: 'pending' } } }, trip(), '2026-10-11T12:04:00Z');
-  assert.equal(nextAttempt.identity.attempt_id, 8);
+  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: null, lifecycle_id: null, trip: null, analysis: pending, camera_vision: null }, trip(), '2026-10-11T12:04:00Z'), null);
+  const staleCamera = { lifecycle_id: 6, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } };
+  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: attemptId, lifecycle_id: 7, trip: trip(), analysis: inputs().analysis, camera_vision: staleCamera }, trip(), '2026-10-11T12:04:00Z'), null);
+  const nextAttempt = evidence.deriveCurrentJourneyEvidence({ attempt_id: nextAttemptId, lifecycle_id: 8, trip: trip(), analysis: pending,
+    camera_vision: { lifecycle_id: 8, trip: trip(), camera_vision: { status: 'pending' } } }, trip(), '2026-10-11T12:04:00Z');
+  assert.equal(nextAttempt.identity.attempt_id, nextAttemptId);
   assert.equal(nextAttempt.sources.camera_vision.availability, 'pending');
   assert.equal(nextAttempt.readiness.status, 'pending');
   assert.equal(nextAttempt.readiness.ready_for_briefing, false);
   const changed = trip();
   changed.destination.latitude += 0.01;
-  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: 7, trip: trip(), analysis: pending, camera_vision: null }, changed, '2026-10-11T12:04:00Z'), null);
-  const failed = evidence.deriveCurrentJourneyEvidence({ attempt_id: 7, trip: trip(),
+  assert.equal(evidence.deriveCurrentJourneyEvidence({ attempt_id: attemptId, lifecycle_id: 7, trip: trip(), analysis: pending, camera_vision: null }, changed, '2026-10-11T12:04:00Z'), null);
+  const failed = evidence.deriveCurrentJourneyEvidence({ attempt_id: attemptId, lifecycle_id: 7, trip: trip(),
     analysis: { status: 'error', result: null, error: 'analysis failed' }, camera_vision: inputs().camera_vision }, trip(), '2026-10-11T12:04:00Z');
   assert.equal(failed.readiness.status, 'failed');
   assert.equal(failed.readiness.ready_for_briefing, false);
@@ -132,13 +165,15 @@ test('current lifecycle handoff drops invalidated, mismatched, failed, and super
 
 test('App derives the handoff from lifecycle state without adding provider calls or UI', () => {
   assert.match(appSource, /deriveCurrentJourneyEvidence\(journeyEvidenceState, currentTrip/);
-  assert.match(appSource, /attempt_id: requestId, trip: request, analysis: \{ status: 'loading'/);
+  assert.match(appSource, /attempt_id: attemptId, lifecycle_id: requestId, trip: request, analysis: \{ status: 'loading'/);
   assert.match(appSource, /retainCurrentCameraVision\(current, requestId/);
   assert.match(appSource, /isCurrentAnalysisRequest\(requestId, analysisSequence\.current, requestKey, activeAnalysisKey\.current\)/);
   assert.match(appSource, /isCurrentVisionAttempt\(visionAttemptId, visionSequence\.current, visionAttemptKey, activeVisionKey\.current\)/);
   assert.match(appSource, /if \(routeState\.status === 'ready' && routeState\.selectedRoute\?\.id !== route\.id\) invalidateAnalysis\(\)/);
   assert.match(appSource, /async function findRoutes\(\) \{[\s\S]*?invalidateAnalysis\(\)/);
-  assert.match(appSource, /setJourneyEvidenceState\(\{ attempt_id: null/);
+  assert.match(appSource, /setJourneyEvidenceState\(\{ attempt_id: null, lifecycle_id: null/);
+  assert.match(appSource, /const attemptId = createJourneyAttemptId\(\)/);
+  assert.equal((appSource.match(/createJourneyAttemptId\(\)/g) ?? []).length, 1);
   assert.equal((appSource.match(/fetchCameraVision\(/g) ?? []).length, 1);
   assert.doesNotMatch(evidence.deriveCurrentJourneyEvidence.toString(), /fetch\(|OpenRouter/i);
 });
@@ -215,13 +250,13 @@ test('preserves camera authoritative provenance separately from model observatio
 });
 
 test('camera pending and insufficient evidence do not create positive camera claims', () => {
-  const pending = evidence.assembleJourneyEvidence(inputs({ camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'pending' } } }));
+  const pending = evidence.assembleJourneyEvidence(inputs({ camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'pending' } } }));
   assert.equal(pending.sources.camera_vision.availability, 'pending');
   assert.equal(pending.sources.camera_vision.result, null);
   const insufficientResult = cameraResult('insufficient_evidence');
   insufficientResult.observation.views = [{ view_id: 'view-north', road_surface: 'unclear', visibility: 'not_observable',
     vehicle_activity: 'unclear', conditions: [], uncertainty: 'high', note: null }];
-  const insufficient = evidence.assembleJourneyEvidence(inputs({ camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: insufficientResult } } }));
+  const insufficient = evidence.assembleJourneyEvidence(inputs({ camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'complete', result: insufficientResult } } }));
   assert.equal(insufficient.sources.camera_vision.availability, 'empty');
   assert.equal(insufficient.sources.camera_vision.result.observation.status, 'insufficient_evidence');
   assert.equal(insufficient.sources.camera_vision.result.observation.views[0].road_surface, 'unclear');
@@ -229,7 +264,7 @@ test('camera pending and insufficient evidence do not create positive camera cla
   assert.equal(insufficient.readiness.status, 'ready');
   const unavailableResult = cameraResult('unavailable');
   unavailableResult.observation.views = [];
-  const unavailable = evidence.assembleJourneyEvidence(inputs({ camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: unavailableResult } } }));
+  const unavailable = evidence.assembleJourneyEvidence(inputs({ camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'complete', result: unavailableResult } } }));
   assert.equal(unavailable.sources.camera_vision.availability, 'unavailable');
   assert.deepEqual(unavailable.sources.camera_vision.result.observation.views, []);
 });
@@ -258,7 +293,7 @@ test('unknown missing sources and failed analysis are not represented as success
 
 test('camera pending or failed remains a usable partial bundle with road and weather evidence', () => {
   const pending = evidence.assembleJourneyEvidence(inputs({
-    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'pending' } },
+    camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'pending' } },
   }));
   assert.equal(pending.readiness.status, 'partial');
   assert.equal(pending.readiness.ready_for_briefing, true);
@@ -268,7 +303,7 @@ test('camera pending or failed remains a usable partial bundle with road and wea
   const timeoutResult = cameraResult('unavailable');
   timeoutResult.observation.failure_code = 'timeout';
   const timedOut = evidence.assembleJourneyEvidence(inputs({
-    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: timeoutResult } },
+    camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'complete', result: timeoutResult } },
   }));
   assert.equal(timedOut.readiness.status, 'partial');
   assert.equal(timedOut.readiness.ready_for_briefing, true);
@@ -281,7 +316,7 @@ test('camera pending or failed remains a usable partial bundle with road and wea
   providerFailureResult.observation.failure_code = 'provider_error';
   providerFailureResult.provider_error = { http_status: 503, error_code: 'unavailable', category: 'other_provider_error', explanation: 'provider unavailable' };
   const providerFailure = evidence.assembleJourneyEvidence(inputs({
-    camera_vision: { attempt_id: 7, trip: trip(), camera_vision: { status: 'complete', result: providerFailureResult } },
+    camera_vision: { lifecycle_id: 7, trip: trip(), camera_vision: { status: 'complete', result: providerFailureResult } },
   }));
   assert.equal(providerFailure.readiness.status, 'partial');
   assert.equal(providerFailure.sources.camera_vision.availability, 'failed');

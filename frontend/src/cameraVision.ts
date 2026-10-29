@@ -60,11 +60,17 @@ export type CameraVisionResult = {
   semantic_mismatch: { expected_view_count: number; actual_view_count: number; first_mismatched_position: number | null } | null;
 };
 export type JourneyCameraEvidence = {
-  attempt_id: number;
+  lifecycle_id: number;
   trip: AnalysisRequest;
   camera_vision: { status: 'pending' } | { status: 'complete'; result: CameraVisionResult };
 };
-export type JourneyEvidenceState = { attempt_id: number | null; trip: AnalysisRequest | null; analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null };
+export type JourneyEvidenceState = {
+  attempt_id: string | null;
+  lifecycle_id: number | null;
+  trip: AnalysisRequest | null;
+  analysis: AnalysisState;
+  camera_vision: JourneyCameraEvidence | null;
+};
 
 const failureCodes: VisionFailureCode[] = [
   'no_selected_intersection', 'journey_context_mismatch', 'no_eligible_frames', 'stale_frames_only',
@@ -203,8 +209,8 @@ export function cameraVisionFailureResult(error: unknown, timedOut: boolean): Ca
 
 export function retainCurrentCameraVision(
   current: JourneyCameraEvidence | null,
-  attemptId: number,
+  lifecycleId: number,
   result: CameraVisionResult,
 ): JourneyCameraEvidence | null {
-  return current?.attempt_id === attemptId ? { ...current, camera_vision: { status: 'complete', result } } : current;
+  return current?.lifecycle_id === lifecycleId ? { ...current, camera_vision: { status: 'complete', result } } : current;
 }

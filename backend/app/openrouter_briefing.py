@@ -450,7 +450,7 @@ class OpenRouterBriefingAdapter:
         self.budget = budget or BriefingAttemptBudget()
         self.now = now or (lambda: datetime.now(timezone.utc))
         self._attempt_lock = asyncio.Lock()
-        self._seen_attempts: set[int] = set()
+        self._seen_attempts: set[str] = set()
 
     def _result(self, request: BriefingEvidenceRequestV1, status: str, code: str | None,
                 *, model: str | None = None, provider: str | None = None,
@@ -492,9 +492,10 @@ class OpenRouterBriefingAdapter:
         if not request.has_usable_evidence():
             return self._result(request, "insufficient_evidence", None)
         async with self._attempt_lock:
-            if request.attempt_id in self._seen_attempts:
+            attempt_id = str(request.attempt_id)
+            if attempt_id in self._seen_attempts:
                 return self._result(request, "error", "duplicate_attempt")
-            self._seen_attempts.add(request.attempt_id)
+            self._seen_attempts.add(attempt_id)
         if not self.api_key:
             return self._result(request, "unavailable", "configuration_missing")
         if not self.budget.reserve():

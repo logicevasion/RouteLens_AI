@@ -103,14 +103,14 @@ test('keeps source-declared unavailable outcomes bounded and never invents obser
 });
 
 test('attempt identity prevents superseded or changed-trip responses replacing current evidence', () => {
-  const current = { attempt_id: 9, trip, camera_vision: { status: 'pending' } };
+  const current = { lifecycle_id: 9, trip, camera_vision: { status: 'pending' } };
   const accepted = vision.normalizeCameraVisionResult(result());
   assert.equal(vision.isCurrentVisionAttempt(8, 9, 'trip-a', 'trip-a'), false);
   assert.equal(vision.isCurrentVisionAttempt(9, 9, 'trip-a', 'trip-b'), false);
   assert.equal(vision.isCurrentVisionAttempt(9, 9, 'trip-a', 'trip-a'), true);
   assert.equal(vision.retainCurrentCameraVision(current, 8, accepted), current);
   assert.equal(vision.retainCurrentCameraVision(current, 9, accepted).camera_vision.result.observation.intersection_id, 'cam-42');
-  const newer = { ...current, attempt_id: 10, trip: { ...trip, destination: { ...trip.destination, latitude: 49.29 } } };
+  const newer = { ...current, lifecycle_id: 10, trip: { ...trip, destination: { ...trip.destination, latitude: 49.29 } } };
   assert.equal(vision.retainCurrentCameraVision(newer, 9, accepted), newer);
 });
 
@@ -123,7 +123,7 @@ test('a 65-second successful response is retained and a superseded slow response
     const oldRequest = vision.fetchCameraVision(trip, new AbortController().signal);
     const oldAttempt = 20;
     const activeTripKey = 'journey-new';
-    let current = { attempt_id: 21, trip, camera_vision: { status: 'pending' } };
+    let current = { lifecycle_id: 21, trip, camera_vision: { status: 'pending' } };
     const activeController = new AbortController();
     const newRequest = vision.fetchCameraVision(trip, activeController.signal);
     assert.equal(pending.length, 2);
@@ -144,7 +144,7 @@ test('a 65-second successful response is retained and a superseded slow response
     assert.equal(timeoutRecorded, false);
     resolveWith(pending[1], result());
     const fresh = await newRequest;
-    if (vision.isCurrentVisionAttempt(21, current.attempt_id, activeTripKey, activeTripKey)) {
+    if (vision.isCurrentVisionAttempt(21, current.lifecycle_id, activeTripKey, activeTripKey)) {
       current = vision.retainCurrentCameraVision(current, 21, fresh);
     }
     assert.equal(current.camera_vision.result.observation.intersection_id, 'cam-42');
@@ -154,10 +154,10 @@ test('a 65-second successful response is retained and a superseded slow response
 
     resolveWith(pending[0], result({ observation: { ...result().observation, intersection_id: 'stale-camera' } }));
     const stale = await oldRequest;
-    if (vision.isCurrentVisionAttempt(oldAttempt, current.attempt_id, 'journey-old', activeTripKey)) {
+    if (vision.isCurrentVisionAttempt(oldAttempt, current.lifecycle_id, 'journey-old', activeTripKey)) {
       current = vision.retainCurrentCameraVision(current, oldAttempt, stale);
     }
-    assert.equal(current.attempt_id, 21);
+    assert.equal(current.lifecycle_id, 21);
     assert.equal(current.camera_vision.result.observation.intersection_id, 'cam-42');
   } finally { globalThis.fetch = originalFetch; }
 });

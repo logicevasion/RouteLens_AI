@@ -10,7 +10,11 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from app.briefing_contracts import BriefingEvidenceRequestV1, ModelBriefingOutputV1
+from app.briefing_contracts import (
+    BriefingEvidenceRequestV1,
+    BriefingResultV1,
+    ModelBriefingOutputV1,
+)
 from app.main import app
 from app.openrouter_briefing import (
     CHAT_COMPLETIONS_URL,
@@ -31,7 +35,7 @@ def request_payload() -> dict:
     return {
         "request_schema_version": "journey-briefing-request-v1",
         "bundle_schema_version": "journey-evidence-v1",
-        "attempt_id": 17,
+        "attempt_id": "11111111-1111-4111-8111-111111111111",
         "assembled_at": timestamp,
         "analyzed_at": timestamp,
         "analysis_status": "success",
@@ -659,8 +663,12 @@ def test_api_returns_typed_result_for_valid_raw_request(monkeypatch, tmp_path):
     assert response.status_code == 200
     result = response.json()
     assert result["contract_version"] == "journey-briefing-v1"
-    assert result["attempt_id"] == 17 and result["status"] == "available"
+    assert result["attempt_id"] == "11111111-1111-4111-8111-111111111111" and result["status"] == "available"
     assert result["requested_model"] == MODEL_ID
+    typed_result = BriefingResultV1.model_validate_json(json.dumps(result))
+    assert str(typed_result.attempt_id) == result["attempt_id"]
+    with pytest.raises(ValidationError):
+        BriefingResultV1.model_validate_json(json.dumps({**result, "attempt_id": 17}))
 
 
 def test_rolling_hour_daily_caps_corrupt_ledger_and_project_guard(tmp_path):
@@ -711,13 +719,43 @@ def test_failed_budget_replacement_prevents_provider_dispatch(tmp_path, monkeypa
 
 def test_duplicate_attempt_dispatches_only_once(tmp_path):
     calls = []
+    budget_path = tmp_path / "budget"
     adapter = OpenRouterBriefingAdapter(api_key="key", transport=httpx.MockTransport(lambda _: (calls.append(1), completion())[1]),
-                                        budget=BriefingAttemptBudget(tmp_path / "budget", vision_path=tmp_path / "v", now=lambda: NOW), now=lambda: NOW)
+                                        budget=BriefingAttemptBudget(budget_path, vision_path=tmp_path / "v", now=lambda: NOW), now=lambda: NOW)
     async def execute():
         return await asyncio.gather(adapter.generate(valid_request()), adapter.generate(valid_request()))
     results = asyncio.run(execute())
     assert len(calls) == 1
     assert sorted(item.failure_code or "ok" for item in results) == ["duplicate_attempt", "ok"]
+    assert len(json.loads(budget_path.read_text())["attempts"]) == 1
+
+
+def test_different_uuid_attempts_dispatch_independently_even_if_local_counters_repeat(tmp_path):
+    calls = []
+    budget_path = tmp_path / "budget"
+    adapter = OpenRouterBriefingAdapter(api_key="key", transport=httpx.MockTransport(lambda _: (calls.append(1), completion())[1]),
+                                        budget=BriefingAttemptBudget(budget_path, vision_path=tmp_path / "v", now=lambda: NOW), now=lambda: NOW)
+    first = valid_request()
+    second_payload = request_payload()
+    second_payload["attempt_id"] = "22222222-2222-4222-8222-222222222222"
+    second = valid_request(second_payload)
+    async def execute():
+        return await asyncio.gather(adapter.generate(first), adapter.generate(second))
+
+    results = asyncio.run(execute())
+    assert [result.status for result in results] == ["available", "available"]
+    assert len(calls) == 2
+    assert len(json.loads(budget_path.read_text())["attempts"]) == 2
+
+
+def test_request_contract_rejects_numeric_and_non_v4_attempt_ids():
+    payload = request_payload()
+    payload["attempt_id"] = 17
+    with pytest.raises(ValidationError):
+        valid_request(payload)
+    payload["attempt_id"] = "11111111-1111-1111-8111-111111111111"
+    with pytest.raises(ValidationError):
+        valid_request(payload)
 
 
 def test_api_rejects_raw_oversize_and_arbitrary_fields_before_adapter(monkeypatch):
@@ -727,6 +765,10 @@ def test_api_rejects_raw_oversize_and_arbitrary_fields_before_adapter(monkeypatc
     assert response.status_code == 413 and called == []
     payload = request_payload()
     payload["provider"] = "client-controlled"
+    response = api_post(json.dumps(payload).encode())
+    assert response.status_code == 422 and called == []
+    payload = request_payload()
+    payload["attempt_id"] = 17
     response = api_post(json.dumps(payload).encode())
     assert response.status_code == 422 and called == []
 

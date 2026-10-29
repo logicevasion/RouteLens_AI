@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import (
+    UUID4,
     BaseModel,
     ConfigDict,
     Field,
@@ -361,7 +362,7 @@ class BriefingSources(StrictModel):
 class BriefingEvidenceRequestV1(StrictModel):
     request_schema_version: Literal["journey-briefing-request-v1"]
     bundle_schema_version: Literal["journey-evidence-v1"]
-    attempt_id: StrictInt = Field(ge=0, le=2_147_483_647)
+    attempt_id: UUID4
     assembled_at: datetime
     analyzed_at: datetime
     analysis_status: Literal["success"]
@@ -473,7 +474,7 @@ class BriefingResultV1(StrictModel):
     status: Literal["available", "insufficient_evidence", "unavailable", "error"]
     failure_code: Literal["configuration_missing", "budget_exhausted", "timeout", "provider_unavailable", "invalid_model_output", "duplicate_attempt", "error"] | None
     generated_at: datetime
-    attempt_id: StrictInt = Field(ge=0)
+    attempt_id: UUID4
     origin_name: StrictStr = Field(max_length=120)
     destination_name: StrictStr = Field(max_length=120)
     requested_model: Literal["google/gemma-4-31b-it"] = "google/gemma-4-31b-it"

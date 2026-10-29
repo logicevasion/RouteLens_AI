@@ -12,6 +12,8 @@ async function loadTypeScript(path) {
 const briefing = await loadTypeScript('../src/journeyBriefing.ts');
 const evidence = await loadTypeScript('../src/journeyEvidence.ts');
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+const attemptId = '11111111-1111-4111-8111-111111111111';
+const secondAttemptId = '22222222-2222-4222-8222-222222222222';
 const trip = () => ({ mode: 'drive', origin: { name: 'Richmond', latitude: 49.17, longitude: -123.14 }, destination: { name: 'Vancouver', latitude: 49.28, longitude: -123.12 }, selected_route: { candidate_id: 'route-1', geometry: { type: 'LineString', coordinates: [[-123.14, 49.17], [-123.12, 49.28]] }, distance_meters: 12000, duration_seconds: 900, label: 'Route 1' } });
 const sourceStatus = (source, dataset_id, values = {}) => ({ source, dataset_id, success: true, available: true, fetched_at: '2026-10-11T12:03:00Z', cache_hit: false, refreshed: true, stale: false, cache_age_seconds: 0, error: null, records_received: 2, records_normalized: 2, records_skipped: 0, ...values });
 const weatherStatus = (dataset_id) => ({ source: 'OpenWeather', dataset_id, success: true, available: true, fetched_at: '2026-10-11T12:03:00Z', stale: false, cache_stale: false });
@@ -34,14 +36,14 @@ const analysis = (overrides = {}) => ({
     eccc_status: { ...weatherStatus('swob-realtime'), source: 'ECCC GeoMet/SWOB' }, eccc_attribution: 'ECCC GeoMet/SWOB', eccc_observations: Array.from({ length: 4 }, (_, n) => ({ observation: { source: 'ECCC GeoMet/SWOB', station_id: `station-${n}`, station_name: 'Harbour', latitude: 49.29, longitude: -123.12, observed_at: '2026-10-11T11:45:00Z', retrieved_at: '2026-10-11T12:03:00Z', temperature: { value: 8, unit: '°C', source_field: 'air_temp', interval_seconds: null, quality_code: null }, relative_humidity: null, precipitation: [], wind_speed: null, wind_direction: null, snow_depth: null, attribution: 'ECCC GeoMet/SWOB' }, distance_meters: 1200 + n, observation_age_seconds: 1080, observation_stale: false, cache_stale: false, useful_measurements: ['temperature'], selection_reason: 'nearest' })),
   }, analyzed_at: '2026-10-11T12:03:00Z', summary: 'summary', ...overrides,
 });
-const makeBundle = (options = {}) => evidence.assembleJourneyEvidence({ trip: options.trip ?? trip(), attempt_id: 44, assembled_at: '2026-10-11T12:04:00Z', analysis: { status: 'success', result: options.analysis ?? analysis(), error: null }, camera_vision: options.camera === undefined ? { attempt_id: 44, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } } : options.camera });
+const makeBundle = (options = {}) => evidence.assembleJourneyEvidence({ trip: options.trip ?? trip(), attempt_id: attemptId, lifecycle_id: 44, assembled_at: '2026-10-11T12:04:00Z', analysis: { status: 'success', result: options.analysis ?? analysis(), error: null }, camera_vision: options.camera === undefined ? { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } } : options.camera });
 
 test('serializes a realistic Phase 9 bundle into the full backend request DTO', () => {
   const payload = briefing.serializeBriefingEvidence(makeBundle());
   assert.deepEqual(Object.keys(payload.sources), ['road_ahead', 'drivebc_open511', 'openweather_current', 'openweather_forecast', 'eccc_swob', 'camera_vision']);
   assert.equal(payload.request_schema_version, 'journey-briefing-request-v1');
   assert.equal(payload.analysis_status, 'success');
-  assert.equal(payload.attempt_id, 44);
+  assert.equal(payload.attempt_id, attemptId);
   assert.deepEqual(payload.journey.route, { candidate_id: 'route-1', label: 'Route 1', distance_meters: 12000 });
   assert.equal(payload.sources.road_ahead.findings[0].source_id, 'ra-1');
   assert.equal(payload.sources.road_ahead.findings[0].event_type, 'construction');
@@ -77,7 +79,7 @@ test('camera emits only the matching selected direction and keeps unusable statu
   const payload = briefing.serializeBriefingEvidence(makeBundle());
   assert.equal(payload.sources.camera_vision.observation.direction_view.view_id, 'view-north');
   for (const [visionStatus, expected] of [['insufficient_evidence', 'insufficient_evidence'], ['unavailable', 'unavailable'], ['error', 'error']]) {
-    const failed = briefing.serializeBriefingEvidence(makeBundle({ camera: { attempt_id: 44, trip: trip(), camera_vision: { status: 'complete', result: cameraResult(visionStatus) } } }));
+    const failed = briefing.serializeBriefingEvidence(makeBundle({ camera: { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result: cameraResult(visionStatus) } } }));
     assert.equal(failed.sources.camera_vision.observation_status, expected);
     assert.equal(failed.sources.camera_vision.observation.direction_view, null);
     assert.equal(failed.sources.camera_vision.observation.summary, null);
@@ -88,7 +90,7 @@ test('camera emits only the matching selected direction and keeps unusable statu
 test('rejects ineligible and identity-mismatched evidence', () => {
   const bundle = makeBundle();
   assert.throws(() => briefing.serializeBriefingEvidence({ ...bundle, readiness: { status: 'unknown', ready_for_briefing: false } }), /not eligible/);
-  assert.throws(() => makeBundle({ camera: { attempt_id: 43, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } } }), /does not match/);
+  assert.throws(() => makeBundle({ camera: { lifecycle_id: 43, trip: trip(), camera_vision: { status: 'complete', result: cameraResult() } } }), /does not match/);
 });
 
 test('enforces backend text bounds, deterministic relevance ordering and the 32 KiB ceiling', () => {
@@ -133,9 +135,9 @@ test('camera opportunity honors start-time deadline, completion-first, late comp
 
 test('frozen briefing evidence includes a matching camera when it finishes before or after analysis', async () => {
   const freezeWithCameraResult = (result) => evidence.assembleJourneyEvidence({
-    trip: trip(), attempt_id: 44, assembled_at: '2026-10-11T12:04:00Z',
+    trip: trip(), attempt_id: attemptId, lifecycle_id: 44, assembled_at: '2026-10-11T12:04:00Z',
     analysis: { status: 'success', result: analysis(), error: null },
-    camera_vision: { attempt_id: 44, trip: trip(), camera_vision: { status: 'complete', result } },
+    camera_vision: { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result } },
   });
 
   // The camera promise is already fulfilled when analysis completes and asks for its opportunity.
@@ -160,16 +162,16 @@ test('frozen briefing evidence includes a matching camera when it finishes befor
 
 test('briefing transport posts once, validates response identity, and deadline cancellation is isolated', async () => {
   const request = briefing.serializeBriefingEvidence(makeBundle());
-  const reply = { contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1', status: 'unavailable', failure_code: 'budget_exhausted', generated_at: '2026-10-11T12:05:00Z', attempt_id: 44, origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it', returned_model: null, provider: null, overview: '', overview_evidence_refs: [], highlights: [], limitations: [], usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null, latency_ms: 0 } };
+  const reply = { contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1', status: 'unavailable', failure_code: 'budget_exhausted', generated_at: '2026-10-11T12:05:00Z', attempt_id: attemptId, origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it', returned_model: null, provider: null, overview: '', overview_evidence_refs: [], highlights: [], limitations: [], usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null, latency_ms: 0 } };
   const original = globalThis.fetch;
   let calls = 0;
-  globalThis.fetch = async (url, init) => { calls += 1; assert.equal(url, '/api/briefings/generate'); assert.equal(init.method, 'POST'); assert.equal(JSON.parse(init.body).attempt_id, 44); return { ok: true, json: async () => reply }; };
+  globalThis.fetch = async (url, init) => { calls += 1; assert.equal(url, '/api/briefings/generate'); assert.equal(init.method, 'POST'); assert.equal(JSON.parse(init.body).attempt_id, attemptId); return { ok: true, json: async () => reply }; };
   try {
     const controller = new AbortController();
     const result = await briefing.fetchBriefingEvidence(request, controller.signal);
     assert.equal(result.failure_code, 'budget_exhausted');
     assert.equal(calls, 1);
-    globalThis.fetch = async () => ({ ok: true, json: async () => ({ ...reply, attempt_id: 99 }) });
+    globalThis.fetch = async () => ({ ok: true, json: async () => ({ ...reply, attempt_id: secondAttemptId }) });
     await assert.rejects(briefing.fetchBriefingEvidence(request, new AbortController().signal), /invalid_response/);
   } finally { globalThis.fetch = original; }
   const controller = new AbortController();
@@ -186,7 +188,7 @@ test('briefing transport posts once, validates response identity, and deadline c
 test('accepts briefing usage within the raised 1024-token output bound', () => {
   const result = briefing.normalizeBriefingResult({
     contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1',
-    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: 44,
+    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: attemptId,
     origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it',
     returned_model: 'google/gemma-4-31b-it', provider: 'TestProvider', overview: 'Supported overview',
     overview_evidence_refs: ['ra-event-7'], highlights: [
@@ -198,12 +200,14 @@ test('accepts briefing usage within the raised 1024-token output bound', () => {
   });
 
   assert.equal(result?.usage.output_tokens, 900);
+  assert.equal(briefing.normalizeBriefingResult({ ...result, attempt_id: 44 }), null);
+  assert.equal(briefing.normalizeBriefingResult({ ...result, attempt_id: '11111111-1111-1111-8111-111111111111' }), null);
 });
 
 test('accepts 300-character briefing highlights and rejects longer text', () => {
   const response = {
     contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1',
-    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: 44,
+    status: 'available', failure_code: null, generated_at: '2026-10-11T12:05:00Z', attempt_id: attemptId,
     origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it',
     returned_model: 'google/gemma-4-31b-it', provider: 'TestProvider', overview: 'Supported overview',
     overview_evidence_refs: ['ra-event-7'],
@@ -223,7 +227,15 @@ test('accepts 300-character briefing highlights and rejects longer text', () => 
 
 test('App owns one latched briefing request and invalidates/aborts its attempt with journey changes', () => {
   assert.equal((appSource.match(/startBriefingRequest\(/g) ?? []).length, 1);
-  assert.match(appSource, /briefingAttempt\.current = requestId;[\s\S]*?startBriefingRequest\(briefingRequest/);
+  assert.match(appSource, /briefingAttempt\.current = attemptId;[\s\S]*?startBriefingRequest\(briefingRequest/);
+  const analyzeJourney = appSource.slice(appSource.indexOf('async function analyzeJourney()'));
+  const analysisResponse = analyzeJourney.indexOf("fetch('/api/trips/analyze'");
+  const normalizedAnalysis = analyzeJourney.indexOf('normalizeJourneyAnalysis(await response.json())');
+  const briefingDispatch = analyzeJourney.indexOf('startBriefingRequest(briefingRequest');
+  const analysisFailureHandler = analyzeJourney.lastIndexOf('} catch (error) {');
+  assert.ok(analysisResponse >= 0 && normalizedAnalysis > analysisResponse && briefingDispatch > normalizedAnalysis);
+  assert.ok(analysisFailureHandler > briefingDispatch);
+  assert.doesNotMatch(analyzeJourney.slice(analysisFailureHandler), /startBriefingRequest\(/);
   assert.match(appSource, /cameraInferenceStartedAt = performance\.now\(\)/);
   assert.match(appSource, /createCameraOpportunity\(cameraResultPromise, cameraInferenceStartedAt\)/);
   assert.match(appSource, /briefingController\.current\?\.abort\(\)/);

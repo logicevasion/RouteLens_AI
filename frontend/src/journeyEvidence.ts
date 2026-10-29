@@ -30,7 +30,7 @@ export type JourneyEvidenceBundle = {
   schema_version: 'journey-evidence-v1';
   assembled_at: string;
   identity: {
-    attempt_id: number;
+    attempt_id: string;
     trip: AnalysisRequest;
     analysis_status: 'success' | 'pending' | 'failed' | 'unknown';
     analysis_error: string | null;
@@ -49,7 +49,8 @@ export type JourneyEvidenceBundle = {
 
 export type JourneyEvidenceInputs = {
   trip: AnalysisRequest;
-  attempt_id: number;
+  attempt_id: string;
+  lifecycle_id: number;
   assembled_at: string;
   analysis: AnalysisState;
   camera_vision: JourneyCameraEvidence | null;
@@ -57,19 +58,31 @@ export type JourneyEvidenceInputs = {
 
 /** The single internal handoff: current active evidence, or null after journey invalidation. */
 export function deriveCurrentJourneyEvidence(
-  state: { attempt_id: number | null; trip: AnalysisRequest | null; analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null },
+  state: { attempt_id: string | null; lifecycle_id: number | null; trip: AnalysisRequest | null; analysis: AnalysisState; camera_vision: JourneyCameraEvidence | null },
   trip: AnalysisRequest | null,
   assembled_at: string,
 ): JourneyEvidenceBundle | null {
-  if (state.attempt_id === null || !state.trip || !trip || tripIdentity(state.trip) !== tripIdentity(trip)) return null;
+  if (state.attempt_id === null || state.lifecycle_id === null || !state.trip || !trip || tripIdentity(state.trip) !== tripIdentity(trip)) return null;
   try {
-    return assembleJourneyEvidence({ trip, attempt_id: state.attempt_id, assembled_at, analysis: state.analysis, camera_vision: state.camera_vision });
+    return assembleJourneyEvidence({ trip, attempt_id: state.attempt_id, lifecycle_id: state.lifecycle_id, assembled_at, analysis: state.analysis, camera_vision: state.camera_vision });
   } catch {
     return null;
   }
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
+
+const uuidV4Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export function isJourneyAttemptId(value: unknown): value is string {
+  return typeof value === 'string' && uuidV4Pattern.test(value);
+}
+
+export function createJourneyAttemptId(generate: () => string = () => globalThis.crypto.randomUUID()): string {
+  const attemptId = generate();
+  if (!isJourneyAttemptId(attemptId)) throw new Error('Journey attempt ID must be a canonical UUID v4');
+  return attemptId;
+}
 
 function tripIdentity(trip: AnalysisRequest): string {
   const location = (value: AnalysisRequest['origin']) => [value.name, value.latitude, value.longitude, value.address ?? null, value.provider_id ?? null];
@@ -81,13 +94,13 @@ function tripIdentity(trip: AnalysisRequest): string {
 }
 
 function validateInputs(inputs: JourneyEvidenceInputs): void {
-  if (!Number.isInteger(inputs.attempt_id) || inputs.attempt_id < 0) throw new Error('Journey evidence attempt_id must be a non-negative integer');
+  if (!isJourneyAttemptId(inputs.attempt_id) || !Number.isInteger(inputs.lifecycle_id) || inputs.lifecycle_id < 0) throw new Error('Journey evidence identity is invalid');
   if (!Number.isFinite(Date.parse(inputs.assembled_at))) throw new Error('Journey evidence assembled_at must be a timestamp');
   if (inputs.analysis.status === 'success' && tripIdentity(inputs.analysis.result.trip) !== tripIdentity(inputs.trip)) {
     throw new Error('Journey analysis trip does not match the canonical trip');
   }
   const camera = inputs.camera_vision;
-  if (camera && (camera.attempt_id !== inputs.attempt_id || tripIdentity(camera.trip) !== tripIdentity(inputs.trip))) {
+  if (camera && (camera.lifecycle_id !== inputs.lifecycle_id || tripIdentity(camera.trip) !== tripIdentity(inputs.trip))) {
     throw new Error('Camera vision evidence does not match the journey attempt');
   }
 }
