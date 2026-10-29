@@ -255,20 +255,84 @@ export async function fetchBriefingEvidence(request: BriefingEvidenceRequestV1, 
   return result;
 }
 
+export type CameraOpportunitySettlement<T> =
+  | { status: 'waiting' }
+  | { status: 'settled_within_opportunity'; settled_at: number; value: T | null }
+  | { status: 'pending_at_cutoff' }
+  | { status: 'settled_after_cutoff'; settled_at: number; value: T | null }
+  | { status: 'cancelled' }
+  | { status: 'not_started' };
+
 export function createCameraOpportunity<T>(cameraResult: Promise<T> | null, startedAt: number, deadlineMs = 15_000,
-  now: () => number = () => performance.now(), schedule: typeof setTimeout = setTimeout): { promise: Promise<T | null>; cancel: () => void } {
-  if (!cameraResult) return { promise: Promise.resolve(null), cancel: () => undefined };
-  const remaining = Math.max(0, deadlineMs - (now() - startedAt));
-  if (remaining === 0) return { promise: Promise.resolve(null), cancel: () => undefined };
+  now: () => number = () => performance.now(), schedule: typeof setTimeout = setTimeout,
+  clearScheduled: typeof clearTimeout = clearTimeout): {
+    promise: Promise<T | null>; cancel: () => void; settlement: () => CameraOpportunitySettlement<T>;
+  } {
+  if (!cameraResult) return { promise: Promise.resolve(null), cancel: () => undefined, settlement: () => ({ status: 'not_started' }) };
+
+  const cutoffAt = startedAt + deadlineMs;
+  let current: CameraOpportunitySettlement<T> = { status: 'waiting' };
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  let resolveDeadline: ((value: null) => void) | null = null;
-  const deadline = new Promise<null>((resolve) => {
-    resolveDeadline = resolve;
-    timeout = schedule(() => resolve(null), remaining);
+  let resolveOpportunity: ((value: T | null) => void) | null = null;
+  const clearDeadline = () => {
+    if (timeout !== null) clearScheduled(timeout);
+    timeout = null;
+  };
+  const promise = new Promise<T | null>((resolve) => { resolveOpportunity = resolve; });
+
+  const finishAtCutoff = () => {
+    if (current.status !== 'waiting') return;
+    const remaining = cutoffAt - now();
+    if (remaining > 0) {
+      timeout = schedule(finishAtCutoff, remaining);
+      return;
+    }
+    // Defer the cutoff decision one task so a result observed at the exact
+    // monotonic boundary can win. Later settlements are still excluded below.
+    timeout = schedule(() => {
+      if (current.status !== 'waiting') return;
+      current = { status: 'pending_at_cutoff' };
+      resolveOpportunity?.(null);
+      clearDeadline();
+    }, 0);
+  };
+
+  timeout = schedule(finishAtCutoff, Math.max(0, cutoffAt - now()));
+  void cameraResult.then((value) => {
+    const settledAt = now();
+    if (current.status === 'waiting' && settledAt <= cutoffAt) {
+      current = { status: 'settled_within_opportunity', settled_at: settledAt, value };
+      resolveOpportunity?.(value);
+      clearDeadline();
+      return;
+    }
+    if (current.status === 'waiting' || current.status === 'pending_at_cutoff') {
+      current = { status: 'settled_after_cutoff', settled_at: settledAt, value };
+      resolveOpportunity?.(null);
+      clearDeadline();
+    }
+  }, () => {
+    const settledAt = now();
+    if (current.status === 'waiting' && settledAt <= cutoffAt) {
+      current = { status: 'settled_within_opportunity', settled_at: settledAt, value: null };
+      resolveOpportunity?.(null);
+      clearDeadline();
+      return;
+    }
+    if (current.status === 'waiting' || current.status === 'pending_at_cutoff') {
+      current = { status: 'settled_after_cutoff', settled_at: settledAt, value: null };
+      resolveOpportunity?.(null);
+      clearDeadline();
+    }
   });
-  const promise = Promise.race([cameraResult, deadline]).finally(() => { if (timeout !== null) clearTimeout(timeout); timeout = null; });
-  const cancel = () => { if (timeout !== null) clearTimeout(timeout); timeout = null; resolveDeadline?.(null); };
-  return { promise, cancel };
+
+  const cancel = () => {
+    if (current.status !== 'waiting') return;
+    current = { status: 'cancelled' };
+    clearDeadline();
+    resolveOpportunity?.(null);
+  };
+  return { promise, cancel, settlement: () => current };
 }
 
 export function waitForCameraOpportunity<T>(cameraResult: Promise<T> | null, startedAt: number, deadlineMs = 15_000,

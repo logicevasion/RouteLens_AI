@@ -2,10 +2,10 @@
 
 ## Current repository and SDD status
 
-- **Repository checkpoint:** USER-001 implementation began on 2026-10-29 at `45015aa` on `main`, with a clean working tree. This is a dated checkpoint, not a permanent current-revision claim.
+- **Repository checkpoint:** USER-002 implementation began from the clean `b5dd20b` checkpoint on `main` (2026-10-29). USER-001 was human accepted and committed at `b5dd20b`; this is a dated checkpoint, not a permanent current-revision claim.
 - **Completed documentation compaction:** The SDD compaction is complete. The pre-compaction `BUILD_PLAN.md` and `PROJECT_STATE.md` are preserved as [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). Detailed accepted Phase 8–10 decisions and evidence remain in the integration notes listed below.
-- **Git control:** Human developers retain control of Git history. No staging, commit, push, reset, or other history operation was performed for USER-001.
-- **Current assignment:** QAR-1 was human accepted and committed/pushed at `d1bbcd4`. QAR-2 was human accepted and committed at `45015aa`. USER-001 is implemented and ready for human review; it has not been accepted. USER-002 and other architecture findings remain pending/deferred.
+- **Git control:** Human developers retain control of Git history. No staging, commit, push, reset, or other history operation was performed for USER-002.
+- **Current assignment:** QAR-1 was human accepted and committed/pushed at `d1bbcd4`. QAR-2 was human accepted and committed at `45015aa`. USER-001 was human accepted and committed at `b5dd20b`. USER-002's bounded timing correction is implemented and ready for human review; it has not been accepted.
 
 ## Accepted implementation baseline
 
@@ -21,8 +21,8 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Outstanding investigations and deferred findings
 
-- **USER-001 — Duplicate briefing attempts:** Confirmed cross-session numeric-ID collision is corrected. Each explicit Analyze Journey operation now gets one UUID v4 logical attempt ID carried through JourneyEvidenceBundle v1 and briefing request/result contracts. Numeric lifecycle IDs remain for camera matching and stale-response guards. The adapter still deduplicates in process memory; restart resets that state, multiple workers do not share it, and the set grows for the process lifetime. USER-001 is ready for human review, not accepted.
-- **USER-002 — Camera interpretation timing:** The briefing freezes evidence after a 15-second camera opportunity while vision may continue toward its 70-second frontend deadline. Investigate late-arriving results and actual latency before deciding whether to preserve the window, extend it, or introduce a controlled update. Any change to the single-request policy requires explicit approval.
+- **USER-001 — Duplicate briefing attempts:** Confirmed cross-session numeric-ID collision is corrected. Each explicit Analyze Journey operation now gets one UUID v4 logical attempt ID carried through JourneyEvidenceBundle v1 and briefing request/result contracts. Numeric lifecycle IDs remain for camera matching and stale-response guards. The adapter still deduplicates in process memory; restart resets that state, multiple workers do not share it, and the set grows for the process lifetime. USER-001 was human accepted and committed at `b5dd20b`.
+- **USER-002 — Camera interpretation timing:** Corrected the confirmed case where camera evidence completed by the accepted 15-second cutoff but was omitted because journey analysis finished after the cutoff. The camera opportunity coordinator now starts with camera inference and records monotonic settlement timing; timely evidence is retained for the single frozen briefing snapshot, while pending-at-cutoff evidence remains excluded if it arrives later. The independent 70-second camera deadline, briefing deadlines, and one-request rule are unchanged. Typical real-world camera latency remains unmeasured; USER-002 is ready for human review, not accepted.
 - **Deferred implementation findings:** Road Ahead selected-event emphasis may remain bold after journey-input edits or route regeneration until a new Analyze Journey operation. Camera failure-isolation improvements, exhaustive narrow-screen/source-combination review, and optional performance work remain deferred. They do not change the accepted MVP status.
 - **Architecture scope:** The Phase 9 normalized timeline and richer cross-source reasoning/UI described in older roadmap material remain deferred; the accepted implementation uses the internal evidence bundle and Phase 10 briefing. Multi-view inference remains deferred; the MVP briefing uses one selected camera direction.
 
@@ -54,9 +54,11 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 **USER-001 correction verification (2026-10-29):** The full backend suite passed (475) under a socket/DNS guard with zero outbound attempts; focused briefing API tests passed (51); Ruff and `git diff --check` passed; all 11 frontend test files passed; and the TypeScript/Vite production build passed with the existing large-bundle advisory. Regression coverage exercises default UUID v4 generation and uniqueness across a reset lifecycle counter, UUID v4 request/result validation, same-UUID concurrent deduplication with one provider dispatch and budget reservation, and failed-analysis no-dispatch wiring. The full frontend suite and app/Vite TypeScript no-emit checks were rerun for the default-generator coverage correction. No external service or paid provider was contacted.
 
+**USER-002 timing correction (2026-10-29):** Camera opportunity settlement is coordinated from camera request initiation, using `performance.now()` and the unchanged 15-second absolute cutoff. Deterministic frontend regressions cover camera success at t=5 with analysis at t=20, late completion, pending-at-cutoff, just-before and exact-cutoff inclusion, bounded failure status, remaining-window behavior, superseded lifecycle suppression, and no second briefing request after late completion. Focused camera/briefing/evidence tests passed; the full 11-file frontend suite passed; TypeScript no-emit and the production build passed with the existing large-chunk advisory; `git diff --check` passed. No backend code, external API, or paid provider was used. The correction does not establish typical real-world camera latency. USER-002 is ready for human review, not accepted.
+
 ## Next action
 
-Human review of USER-001. Human acceptance and Git checkpoint remain pending.
+Human review of USER-002. Human acceptance and Git checkpoint remain pending.
 
 ## Archive and integration-note references
 

@@ -11,6 +11,7 @@ async function loadTypeScript(path) {
 }
 const briefing = await loadTypeScript('../src/journeyBriefing.ts');
 const evidence = await loadTypeScript('../src/journeyEvidence.ts');
+const vision = await loadTypeScript('../src/cameraVision.ts');
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const attemptId = '11111111-1111-4111-8111-111111111111';
 const secondAttemptId = '22222222-2222-4222-8222-222222222222';
@@ -109,55 +110,210 @@ test('enforces backend text bounds, deterministic relevance ordering and the 32 
   assert.throws(() => briefing.serializeBriefingEvidence(makeBundle({ analysis: oversizedAnalysis })), /32 KiB/);
 });
 
-test('camera opportunity honors start-time deadline, completion-first, late completion, cancel and no-camera paths', async () => {
-  let finish;
-  const pending = new Promise((resolve) => { finish = resolve; });
-  let now = 100;
-  let scheduled;
-  const opportunity = briefing.createCameraOpportunity(pending, 100, 15_000, () => now, (fn) => { scheduled = fn; return 1; });
-  finish('camera');
-  assert.equal(await opportunity.promise, 'camera');
-  now = 15_101;
-  assert.equal(await briefing.waitForCameraOpportunity(pending, 100, 15_000, () => now), null);
-  let lateFinish;
-  const late = new Promise((resolve) => { lateFinish = resolve; });
-  const lateWait = briefing.createCameraOpportunity(late, 0, 15_000, () => 1, (fn) => { scheduled = fn; return 2; });
-  scheduled();
-  assert.equal(await lateWait.promise, null);
-  lateFinish('too-late');
-  assert.equal(await briefing.waitForCameraOpportunity(null, 0), null);
-  let cancelled;
-  const cancelWait = briefing.createCameraOpportunity(new Promise(() => undefined), 0, 15_000, () => 1, (fn) => { cancelled = fn; return 3; });
-  cancelWait.cancel();
-  assert.equal(await cancelWait.promise, null);
-  assert.equal(typeof cancelled, 'function');
+test('initializing at camera start includes a t=5 result at t=20; initializing at t=20 excludes it', async () => {
+  let now = 0;
+  let finishCamera;
+  let cutoffCallback;
+  const clearedTimers = [];
+  const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (callback, delay) => { assert.equal(delay, 15_000); cutoffCallback = callback; return 1; },
+    (timer) => clearedTimers.push(timer));
+
+  now = 5_000;
+  finishCamera(cameraResult());
+  await Promise.resolve();
+  assert.deepEqual(opportunity.settlement(), { status: 'settled_within_opportunity', settled_at: 5_000, value: cameraResult() });
+
+  now = 20_000; // Analysis finishes after the absolute camera cutoff.
+  const eligibleCamera = await opportunity.promise;
+  const frozen = makeBundle({ camera: { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result: eligibleCamera } } });
+  assert.equal(frozen.sources.camera_vision.availability, 'available');
+  assert.equal(cutoffCallback instanceof Function, true);
+  assert.deepEqual(clearedTimers, [1], 'normal camera settlement clears the pending opportunity timer');
+
+  const delayedInitialization = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (_callback, delay) => { assert.equal(delay, 0); return 2; }, (timer) => clearedTimers.push(timer));
+  assert.equal(await delayedInitialization.promise, null);
+  assert.equal(delayedInitialization.settlement().status, 'settled_after_cutoff');
+  const delayedSnapshot = makeBundle({ camera: { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'pending' } } });
+  assert.equal(delayedSnapshot.sources.camera_vision.availability, 'pending');
+  assert.deepEqual(clearedTimers, [1, 2]);
 });
 
-test('frozen briefing evidence includes a matching camera when it finishes before or after analysis', async () => {
-  const freezeWithCameraResult = (result) => evidence.assembleJourneyEvidence({
-    trip: trip(), attempt_id: attemptId, lifecycle_id: 44, assembled_at: '2026-10-11T12:04:00Z',
-    analysis: { status: 'success', result: analysis(), error: null },
-    camera_vision: { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result } },
-  });
-
-  // The camera promise is already fulfilled when analysis completes and asks for its opportunity.
-  const cameraFinishedFirst = Promise.resolve(cameraResult());
-  const early = await briefing.createCameraOpportunity(cameraFinishedFirst, 100, 15_000, () => 200, () => 1).promise;
-  assert.equal(freezeWithCameraResult(early).sources.camera_vision.availability, 'available');
-
-  // Main analysis has completed, but the initiated camera request is still inside its original window.
+test('camera still pending at cutoff freezes pending and later completion cannot change the snapshot', async () => {
+  let now = 0;
   let finishCamera;
+  let cutoffCallback;
   const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
-  const opportunity = briefing.createCameraOpportunity(cameraPending, 100, 15_000, () => 200, () => 2);
-  finishCamera(cameraResult('available', 'Southbound'));
-  const later = await opportunity.promise;
-  const frozen = freezeWithCameraResult(later);
-  assert.equal(frozen.sources.camera_vision.availability, 'available');
-  assert.equal(frozen.sources.camera_vision.result.observation.included_views[0].direction_label, 'Southbound');
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (callback) => { cutoffCallback = callback; return 1; }, () => undefined);
 
-  assert.match(appSource, /const cameraInferenceStartedAt = performance\.now\(\);[\s\S]*?const cameraResultPromise = fetchCameraVision\(/);
-  assert.match(appSource, /const cameraResult = await cameraOpportunity\.promise;[\s\S]*?const matchingCamera:[\s\S]*?= cameraResult \?/);
-  assert.match(appSource, /const frozenBundle = deriveCurrentJourneyEvidence\(\{[\s\S]*?camera_vision: matchingCamera/);
+  now = 15_000;
+  cutoffCallback();
+  cutoffCallback(); // Flush the deferred exact-boundary decision with no camera result.
+  await Promise.resolve();
+  assert.equal(await opportunity.promise, null);
+  assert.deepEqual(opportunity.settlement(), { status: 'pending_at_cutoff' });
+
+  const frozenRequest = briefing.serializeBriefingEvidence(makeBundle({ camera: {
+    lifecycle_id: 44, trip: trip(), camera_vision: { status: 'pending' },
+  } }));
+  assert.equal(frozenRequest.sources.camera_vision.availability, 'pending');
+  now = 15_001;
+  finishCamera(cameraResult());
+  await Promise.resolve();
+  assert.equal(opportunity.settlement().status, 'settled_after_cutoff');
+  assert.equal(frozenRequest.sources.camera_vision.availability, 'pending');
+});
+
+test('camera completion immediately before and exactly at the cutoff is included', async () => {
+  for (const settledAt of [14_999, 15_000]) {
+    let now = 0;
+    let finishCamera;
+    let cutoffCallback;
+    const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+    const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+      (callback) => { cutoffCallback = callback; return 1; }, () => undefined);
+    now = settledAt;
+    finishCamera(cameraResult());
+    await Promise.resolve(); // Apply the inclusive <= cutoff rule before the timer callback.
+    assert.equal((await opportunity.promise)?.observation.status, 'available');
+    assert.equal(opportunity.settlement().status, 'settled_within_opportunity');
+    cutoffCallback(); // A queued/late timer cannot override an observed timely settlement.
+    assert.equal(opportunity.settlement().settled_at, settledAt);
+  }
+
+  let now = 15_000;
+  let finishAtBoundary;
+  let nextDeadlineTask;
+  const boundaryPromise = new Promise((resolve) => { finishAtBoundary = resolve; });
+  const boundaryOpportunity = briefing.createCameraOpportunity(boundaryPromise, 0, 15_000, () => now,
+    (callback) => { nextDeadlineTask = callback; return 1; }, () => undefined);
+  nextDeadlineTask(); // Deadline timer runs first at exactly t=15; it defers its decision one task.
+  finishAtBoundary(cameraResult());
+  await Promise.resolve();
+  nextDeadlineTask();
+  assert.equal((await boundaryOpportunity.promise)?.observation.status, 'available');
+  assert.equal(boundaryOpportunity.settlement().status, 'settled_within_opportunity');
+});
+
+test('camera completion after cutoff is excluded even when analysis completes later', async () => {
+  let now = 0;
+  let finishCamera;
+  let cutoffCallback;
+  const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (callback) => { cutoffCallback = callback; return 1; }, () => undefined);
+  now = 15_000;
+  cutoffCallback();
+  cutoffCallback(); // Flush the deferred cutoff decision.
+  await Promise.resolve();
+  now = 15_001;
+  finishCamera(cameraResult());
+  await Promise.resolve();
+  now = 20_000;
+  assert.equal(await opportunity.promise, null);
+  assert.equal(opportunity.settlement().status, 'settled_after_cutoff');
+});
+
+test('camera failure within the opportunity is frozen as bounded failure evidence', async () => {
+  const failure = vision.unavailableCameraVision('provider_unavailable');
+  const opportunity = briefing.createCameraOpportunity(Promise.resolve(failure), 100, 15_000, () => 200,
+    () => 1, () => undefined);
+  const received = await opportunity.promise;
+  const payload = briefing.serializeBriefingEvidence(makeBundle({ camera: {
+    lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result: received },
+  } }));
+  assert.equal(payload.sources.camera_vision.observation_status, 'unavailable');
+  assert.equal(payload.sources.camera_vision.observation.direction_view, null);
+});
+
+test('analysis completing early waits only to the request-start cutoff, not a fresh 15 seconds', async () => {
+  let now = 0;
+  let finishCamera;
+  let cutoffCallback;
+  let scheduledDelay;
+  const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (callback, delay) => { cutoffCallback = callback; scheduledDelay = delay; return 1; }, () => undefined);
+  now = 4_000; // Main analysis has completed; the opportunity timer was already running.
+  const waitingForEvidence = opportunity.promise;
+  assert.equal(scheduledDelay, 15_000);
+  now = 14_999;
+  finishCamera(cameraResult());
+  assert.equal((await waitingForEvidence)?.observation.status, 'available');
+  assert.equal(opportunity.settlement().settled_at, 14_999);
+  cutoffCallback();
+  assert.equal(opportunity.settlement().status, 'settled_within_opportunity');
+});
+
+test('a superseded attempt cannot retain its late camera result', async () => {
+  let now = 0;
+  let finishOldCamera;
+  let cutoffCallback;
+  const oldCamera = new Promise((resolve) => { finishOldCamera = resolve; });
+  const oldOpportunity = briefing.createCameraOpportunity(oldCamera, 0, 15_000, () => now,
+    (callback) => { cutoffCallback = callback; return 1; }, () => undefined);
+  const current = { lifecycle_id: 45, trip: trip(), camera_vision: { status: 'pending' } };
+  now = 15_000;
+  cutoffCallback();
+  cutoffCallback();
+  await Promise.resolve();
+  assert.equal(await oldOpportunity.promise, null);
+  now = 16_000;
+  finishOldCamera(cameraResult());
+  await Promise.resolve();
+  const oldResult = oldOpportunity.settlement().value;
+  assert.equal(vision.retainCurrentCameraVision(current, 44, oldResult), current);
+});
+
+test('late camera completion does not trigger a second briefing request', async () => {
+  let now = 0;
+  let finishCamera;
+  let cutoffCallback;
+  const cameraPending = new Promise((resolve) => { finishCamera = resolve; });
+  const opportunity = briefing.createCameraOpportunity(cameraPending, 0, 15_000, () => now,
+    (callback) => { cutoffCallback = callback; return 1; }, () => undefined);
+  now = 15_000;
+  cutoffCallback();
+  cutoffCallback();
+  await Promise.resolve();
+  const cameraAtFreeze = await opportunity.promise;
+  const frozenRequest = briefing.serializeBriefingEvidence(makeBundle({ camera: cameraAtFreeze ? {
+    lifecycle_id: 44, trip: trip(), camera_vision: { status: 'complete', result: cameraAtFreeze },
+  } : { lifecycle_id: 44, trip: trip(), camera_vision: { status: 'pending' } } }));
+
+  const reply = { contract_version: 'journey-briefing-v1', prompt_version: 'journey-briefing-prompt-v1', status: 'unavailable', failure_code: 'budget_exhausted', generated_at: '2026-10-11T12:05:00Z', attempt_id: attemptId, origin_name: 'Richmond', destination_name: 'Vancouver', requested_model: 'google/gemma-4-31b-it', returned_model: null, provider: null, overview: '', overview_evidence_refs: [], highlights: [], limitations: [], usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null, latency_ms: 0 } };
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls += 1; return { ok: true, json: async () => reply }; };
+  try {
+    await briefing.startBriefingRequest(frozenRequest).promise;
+    now = 15_001;
+    finishCamera(vision.unavailableCameraVision('timeout'));
+    await Promise.resolve();
+    assert.equal(calls, 1);
+    assert.equal(frozenRequest.sources.camera_vision.availability, 'pending');
+    assert.equal(opportunity.settlement().status, 'settled_after_cutoff');
+    assert.equal(opportunity.settlement().value.observation.failure_code, 'timeout');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('camera opportunity supports cancellation and no-camera paths', async () => {
+  const absent = briefing.createCameraOpportunity(null, 0);
+  assert.equal(await absent.promise, null);
+  assert.equal(absent.settlement().status, 'not_started');
+  let cancelDeadline;
+  const clearedTimers = [];
+  const cancelled = briefing.createCameraOpportunity(new Promise(() => undefined), 0, 15_000, () => 1,
+    (callback) => { cancelDeadline = callback; return 17; }, (timer) => clearedTimers.push(timer));
+  cancelled.cancel();
+  assert.equal(await cancelled.promise, null);
+  assert.equal(cancelled.settlement().status, 'cancelled');
+  assert.deepEqual(clearedTimers, [17], 'cancellation clears the pending opportunity timer');
+  assert.equal(typeof cancelDeadline, 'function');
+
 });
 
 test('briefing transport posts once, validates response identity, and deadline cancellation is isolated', async () => {
@@ -236,8 +392,17 @@ test('App owns one latched briefing request and invalidates/aborts its attempt w
   assert.ok(analysisResponse >= 0 && normalizedAnalysis > analysisResponse && briefingDispatch > normalizedAnalysis);
   assert.ok(analysisFailureHandler > briefingDispatch);
   assert.doesNotMatch(analyzeJourney.slice(analysisFailureHandler), /startBriefingRequest\(/);
-  assert.match(appSource, /cameraInferenceStartedAt = performance\.now\(\)/);
-  assert.match(appSource, /createCameraOpportunity\(cameraResultPromise, cameraInferenceStartedAt\)/);
+  assert.match(appSource, /const frozenBundle = deriveCurrentJourneyEvidence\(\{[\s\S]*?camera_vision: matchingCamera/);
+  const cameraRequestStart = analyzeJourney.indexOf('const cameraResultPromise = fetchCameraVision(');
+  const opportunityStart = analyzeJourney.indexOf('const cameraOpportunity = createCameraOpportunity(cameraResultPromise, cameraInferenceStartedAt)');
+  const analysisRequestStart = analyzeJourney.indexOf("fetch('/api/trips/analyze'");
+  const analysisSuccess = analyzeJourney.indexOf("setAnalysisState({ status: 'success', result: analysis");
+  const cameraResultConsumed = analyzeJourney.indexOf('const cameraResult = await cameraOpportunity.promise');
+  assert.ok(cameraRequestStart >= 0, 'camera inference request starts');
+  assert.ok(cameraRequestStart < opportunityStart, 'coordinator is created from the camera request');
+  assert.ok(opportunityStart < analysisRequestStart, 'coordinator is initialized before journey analysis starts');
+  assert.ok(analysisRequestStart < analysisSuccess && analysisSuccess < cameraResultConsumed,
+    'the completed camera result is consumed after analysis succeeds');
   assert.match(appSource, /briefingController\.current\?\.abort\(\)/);
   assert.match(appSource, /setJourneyBriefingState\(\{ status: 'idle' \}\)/);
   assert.match(appSource, /briefingControllerValue\.signal\.aborted \|\| requestId !== analysisSequence\.current/);

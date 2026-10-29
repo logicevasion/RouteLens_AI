@@ -643,6 +643,8 @@ export default function App() {
       clearTimeout(visionTimeout);
       if (visionSequence.current === visionAttemptId) visionController.current = null;
     });
+    const cameraOpportunity = createCameraOpportunity(cameraResultPromise, cameraInferenceStartedAt);
+    cameraOpportunityCancel.current = cameraOpportunity.cancel;
 
     selectedGalleryIntersectionId.current = null;
     nearbyCameraResult.current = null;
@@ -696,8 +698,6 @@ export default function App() {
       if (!isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
       setAnalysisState({ status: 'success', result: analysis, error: null });
       if (analysisController.current === controller) analysisController.current = null;
-      const cameraOpportunity = createCameraOpportunity(cameraResultPromise, cameraInferenceStartedAt);
-      cameraOpportunityCancel.current = cameraOpportunity.cancel;
       const cameraResult = await cameraOpportunity.promise;
       if (cameraOpportunityCancel.current === cameraOpportunity.cancel) cameraOpportunityCancel.current = null;
       if (!isCurrentAnalysisRequest(requestId, analysisSequence.current, capturedTripKey, activeAnalysisKey.current) || briefingAttempt.current === attemptId) return;
@@ -747,6 +747,8 @@ export default function App() {
       }
     } catch (error) {
       if (controller.signal.aborted || !isCurrentAnalysisRequest(requestId, analysisSequence.current, requestKey, activeAnalysisKey.current)) return;
+      cameraOpportunity.cancel();
+      if (cameraOpportunityCancel.current === cameraOpportunity.cancel) cameraOpportunityCancel.current = null;
       setAnalysisState({ status: 'error', result: null, error: error instanceof Error ? error.message : 'Road Ahead analysis is temporarily unavailable. Please try again.' });
       if (briefingAttempt.current !== attemptId) setJourneyBriefingState({ status: 'idle' });
     } finally {
