@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CameraState, CameraView } from './cameras';
-import { formatCameraAge, formatRetrievedAt, handleCameraImageError } from './cameras';
+import { boundedCameraViewIndex, formatCameraAge, formatRetrievedAt, handleCameraImageError } from './cameras';
 
 function cameraDistance(metres: number): string {
   return metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`;
@@ -36,14 +36,20 @@ function CameraImage({ view, intersection, requestKey, stale }: { view: CameraVi
   </figure>;
 }
 
-export default function DestinationCameraPanel({ camera }: { camera: CameraState }) {
+export default function DestinationCameraPanel({ camera, headingId = 'destination-camera-title' }: { camera: CameraState; headingId?: string }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const result = camera.status === 'success' ? camera.result : null;
   const intersection = result?.intersection;
   const views = result?.status === 'stale' ? result.stale_views : [...(result?.views ?? []), ...(result?.stale_views ?? [])];
+  const requestKey = camera.status === 'success' ? camera.requestKey : '';
+  const activeIndex = boundedCameraViewIndex(selectedIndex, views.length);
+  const selectedView = views.length ? views[activeIndex] : null;
   const partial = Boolean(result && (result.diagnostics.views_failed > 0 || result.stale_views.length > 0));
-  return <section className="destination-camera-panel" aria-labelledby="destination-camera-title">
+
+  useEffect(() => setSelectedIndex(0), [requestKey, intersection?.intersection_id, views.length]);
+  return <section className="destination-camera-panel" aria-labelledby={headingId}>
     <div className="camera-heading">
-      <div><p className="eyebrow">NEARBY INTERSECTION</p><h3 id="destination-camera-title">Destination Cameras</h3></div>
+      <div><p className="eyebrow">NEARBY INTERSECTION</p><h3 id={headingId}>Destination Cameras</h3></div>
       {result && <span className={`camera-badge${result.status === 'unavailable' ? ' camera-badge-muted' : ''}`}>{result.status === 'available' ? 'Camera images' : result.status === 'stale' ? 'Stale images' : 'Unavailable'}</span>}
     </div>
     {camera.status === 'idle' && <p className="camera-state">Camera images load when you choose Analyze journey.</p>}
@@ -60,15 +66,23 @@ export default function DestinationCameraPanel({ camera }: { camera: CameraState
       {result?.status === 'stale' && <p className="camera-stale-note" role="status">Only cached camera images are available. They may be outdated and do not establish current conditions.</p>}
       {result?.diagnostics.catalogue_stale && <p className="camera-stale-note">Camera catalogue information is stale.</p>}
       {partial && result?.status !== 'stale' && <p className="camera-stale-note" role="status">Some directions were unavailable or stale during the nearby camera search. Available views below are from this selected intersection.</p>}
-      <div className="camera-gallery" aria-label={`Camera views at ${intersection.name}`}>
-        {views.map((view) => <CameraImage
-          key={`${camera.status === 'success' ? camera.requestKey : ''}:${view.view_id}`}
-          view={view}
-          intersection={intersection.name}
-          requestKey={camera.status === 'success' ? camera.requestKey : ''}
-          stale={result?.status === 'stale'}
-        />)}
-      </div>
+      {selectedView && <>
+        {views.length === 1 && <p className="camera-position" aria-live="polite">View 1 of 1 · {selectedView.direction_label?.trim() || 'Direction not provided'}</p>}
+        {views.length > 1 && <nav className="camera-navigation" aria-label={`Camera direction at ${intersection.name}`}>
+          <button type="button" aria-label="Previous camera direction" disabled={activeIndex === 0} onClick={() => setSelectedIndex((index) => boundedCameraViewIndex(index - 1, views.length))}>‹ Previous</button>
+          <span aria-live="polite">View {activeIndex + 1} of {views.length} · {selectedView.direction_label?.trim() || 'Direction not provided'}</span>
+          <button type="button" aria-label="Next camera direction" disabled={activeIndex >= views.length - 1} onClick={() => setSelectedIndex((index) => boundedCameraViewIndex(index + 1, views.length))}>Next ›</button>
+        </nav>}
+        <div className="camera-gallery" aria-label={`Camera views at ${intersection.name}`}>
+          <CameraImage
+            key={`${requestKey}:${selectedView.view_id}`}
+            view={selectedView}
+            intersection={intersection.name}
+            requestKey={requestKey}
+            stale={result?.status === 'stale'}
+          />
+        </div>
+      </>}
       <p className="camera-attribution">Source: {intersection.source} · {intersection.attribution}</p>
     </>}
   </section>;

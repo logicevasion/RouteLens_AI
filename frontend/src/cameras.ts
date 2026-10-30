@@ -46,6 +46,11 @@ export type CameraState =
   | { status: 'success'; requestKey: string; result: DestinationCamera }
   | { status: 'error'; requestKey: string };
 
+export function boundedCameraViewIndex(index: number, viewCount: number): number {
+  if (!Number.isFinite(index) || !Number.isFinite(viewCount) || viewCount <= 0) return 0;
+  return Math.min(viewCount - 1, Math.max(0, Math.trunc(index)));
+}
+
 export type NearbyCameraMarker = {
   intersection_id: string;
   name: string;

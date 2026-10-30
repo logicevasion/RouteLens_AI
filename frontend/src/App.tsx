@@ -4,7 +4,9 @@ import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
 import RoadAheadPanel from './RoadAheadPanel';
 import DestinationWeatherPanel from './DestinationWeatherPanel';
-import DestinationCameraPanel from './DestinationCameraPanel';
+import JourneyStageLayout from './JourneyStageLayout';
+import { beginJourneyPresentation, initialJourneyPresentation, invalidateJourneyPresentation } from './presentation';
+import type { JourneyPresentation } from './presentation';
 import { fetchDestinationCamera, fetchNearbyCameras, isCurrentCameraRequest, isCurrentNearbyCameraRequest, shouldRequestSelectedCameraMarker } from './cameras';
 import type { CameraState, NearbyCameraState } from './cameras';
 import { activeSelectedEventId, buildAnalysisRequest, isAnalysisReady, isCurrentAnalysisRequest, normalizeJourneyAnalysis } from './roadAhead';
@@ -288,16 +290,16 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
 }
 
 type IntelligencePanelProps = {
+  stage: 'plan' | 'understand';
   routeState: RouteRequestState;
   onSelectRoute: (route: RouteCandidate) => void;
   analysisState: AnalysisState;
-  cameraState: CameraState;
   briefingState: JourneyBriefingState;
   selectedEventId: string | null;
   onSelectFinding: (eventId: string) => void;
 };
 
-function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraState, briefingState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
+function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, briefingState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -308,7 +310,7 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
         <span className="panel-status"><span /> {routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'Waiting for a journey'}</span>
       </div>
 
-      <section className={`briefing-card briefing-card-${briefingState.status}`} aria-labelledby="briefing-title" aria-live="polite">
+      {briefingState.status !== 'idle' && <section className={`briefing-card briefing-card-${briefingState.status}`} aria-labelledby="briefing-title" aria-live="polite">
         <div className="briefing-heading">
           <div>
             <p className="eyebrow">AI ASSISTED · SOURCE GROUNDED</p>
@@ -335,18 +337,16 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
               <p className="briefing-limitations">{briefingState.result.limitations.slice(0, 2).join(' ')}</p>
             )}
           </>
-        ) : briefingState.status === 'idle' ? (
-          <p className="briefing-message">Analyze a selected journey to prepare a source-grounded briefing.</p>
         ) : briefingState.status === 'waiting_for_evidence' ? (
           <p className="briefing-message">Preparing the available journey evidence for your briefing…</p>
         ) : briefingState.status === 'in_progress' ? (
           <p className="briefing-message">Generating a briefing from the available journey evidence…</p>
         ) : briefingState.status === 'insufficient_evidence' ? (
-          <p className="briefing-message">Available source evidence is not sufficient to prepare a briefing. Your journey information remains below.</p>
+          <p className="briefing-message">Available source evidence is not sufficient to prepare a briefing. Deterministic journey evidence remains available.</p>
         ) : (
-          <p className="briefing-message">The briefing is unavailable right now. Your journey information remains below.</p>
+          <p className="briefing-message">The briefing is unavailable right now. Deterministic journey evidence remains available.</p>
         )}
-      </section>
+      </section>}
 
       <div className="journey-overview">
         <div className="overview-route" aria-hidden="true">
@@ -363,6 +363,8 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
               : 'Choose an origin and destination, then find driving routes.'}</p>
         </div>
       </div>
+
+      {stage === 'plan' && routeState.status !== 'ready' && <p className="stage-guidance">Choose an origin and a Vancouver destination, then find routes. Select the route closest to your planned journey before analyzing it.</p>}
 
       {(routeState.status === 'loading' || routeState.status === 'ready' || routeState.status === 'empty' || routeState.status === 'error') && (
         <section className="route-selection" aria-labelledby="route-selection-title">
@@ -404,11 +406,11 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
         </section>
       )}
 
-      <div className="intelligence-sections">
+      {stage === 'understand' && <div className="intelligence-sections">
         {intelligenceSections.map((section) => section.title === 'Destination conditions' ? (
           <DestinationWeatherPanel key={section.title} analysis={analysisState} />
         ) : section.title === 'Destination cameras' ? (
-          <DestinationCameraPanel key={section.title} camera={cameraState} />
+          null
         ) : section.title === 'Road and route context' ? (
           <RoadAheadPanel key={section.title} analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
         ) : (
@@ -421,13 +423,17 @@ function IntelligencePanel({ routeState, onSelectRoute, analysisState, cameraSta
             <p className="empty-state">{section.message}</p>
           </section>
         ))}
-      </div>
-      {analysisState.status !== 'success' && <p className="panel-note">Weather, road findings, and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
+      </div>}
+      {stage === 'understand' && analysisState.status !== 'success' && <p className="panel-note">Weather, road findings, and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
     </aside>
   );
 }
 
 export default function App() {
+  const [presentation, setPresentation] = useState<JourneyPresentation>(initialJourneyPresentation);
+  const { stage } = presentation;
+  const analysisAt = presentation.analysisAt ?? '';
+  const appShellRef = useRef<HTMLElement | null>(null);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
   const [routeState, setRouteState] = useState<RouteRequestState>(initialRouteState);
   const [origin, setOrigin] = useState<Location | null>(null);
@@ -486,6 +492,7 @@ export default function App() {
     : null;
 
   function invalidateAnalysis() {
+    setPresentation(invalidateJourneyPresentation());
     briefingAttempt.current = null;
     briefingController.current?.abort();
     briefingController.current = null;
@@ -587,6 +594,8 @@ export default function App() {
 
   async function analyzeJourney() {
     if (!origin || !destination || !selectedRoute || !canAnalyze || analysisController.current) return;
+    const attemptStartedAt = new Date().toISOString();
+    setPresentation(beginJourneyPresentation(presentation, true, attemptStartedAt));
     const analyzedDestination = destination;
     const request = buildAnalysisRequest(origin, analyzedDestination, selectedRoute);
     const requestKey = JSON.stringify(request);
@@ -795,8 +804,15 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (stage === 'understand') {
+      appShellRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, [stage]);
+
   return (
-    <main className="app-shell">
+    <main ref={appShellRef} className={`app-shell app-shell-stage-${stage}`}>
       <header className="topbar">
         <a className="brand" href="/" aria-label="RouteLens AI home">
           <span className="brand-mark" aria-hidden="true"><span /><span /><span /></span>
@@ -825,24 +841,26 @@ export default function App() {
         onAnalyze={() => void analyzeJourney()}
       />
 
-      <div className="workspace">
-        <div className="map-workspace">
-          <div className="map-caption"><span className="map-caption-dot" /> VANCOUVER OVERVIEW</div>
-          <VancouverMap
-            routes={routeState.status === 'ready' ? routeState.candidates : []}
-            selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
-            fitKey={routeState.fitKey}
-            findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
-            drivebcFindings={analysisState.status === 'success' ? analysisState.result.drivebc_findings : noDriveBCFindings}
-            regionalEvents={analysisState.status === 'success' ? analysisState.result.regional_events : noRegionalEvents}
-            selectedEventId={activeSelectedEvent}
-            onSelectEvent={setSelectedEventId}
-            cameraMarkers={nearbyCameraState.status === 'success' ? nearbyCameraState.result.cameras : []}
-            selectedCameraId={cameraState.status === 'success' ? cameraState.result.intersection?.intersection_id ?? null : null}
-          />
+      <JourneyStageLayout stage={stage} analysis={analysisState} camera={cameraState} analysisAt={analysisAt}>
+        <div className={`workspace workspace-stage-${stage}`}>
+          <div className="map-workspace">
+            <div className="map-caption"><span className="map-caption-dot" /> VANCOUVER OVERVIEW</div>
+            <VancouverMap
+              routes={routeState.status === 'ready' ? routeState.candidates : []}
+              selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
+              fitKey={routeState.fitKey}
+              findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
+              drivebcFindings={analysisState.status === 'success' ? analysisState.result.drivebc_findings : noDriveBCFindings}
+              regionalEvents={analysisState.status === 'success' ? analysisState.result.regional_events : noRegionalEvents}
+              selectedEventId={activeSelectedEvent}
+              onSelectEvent={setSelectedEventId}
+              cameraMarkers={nearbyCameraState.status === 'success' ? nearbyCameraState.result.cameras : []}
+              selectedCameraId={cameraState.status === 'success' ? cameraState.result.intersection?.intersection_id ?? null : null}
+            />
+          </div>
+          <IntelligencePanel stage={stage} routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} briefingState={journeyBriefingState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
         </div>
-        <IntelligencePanel routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} cameraState={cameraState} briefingState={journeyBriefingState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
-      </div>
+      </JourneyStageLayout>
     </main>
   );
 }

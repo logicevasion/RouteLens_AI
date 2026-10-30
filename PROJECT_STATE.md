@@ -2,11 +2,25 @@
 
 ## Current repository and SDD status
 
-- **Baseline:** Clean `main` working tree at `40df498` before this documentation task; checkpoint verified from local Git history on 2026-10-30.
+- **Implementation checkout:** Clean `main` at `566182e` when Alpha-UX-1 work began; changes below remain uncommitted. The earlier pre-Alpha documentation checkpoint was `40df498`.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, and USER-002 `40df498`. Acceptance of all four is confirmed by the current human assignment; commit identities are independently verified locally.
-- **Immediate objective:** Minimal private-alpha UX improvements for testing with friends, before broader authentication, usage tracking, and deployment work. This task prepares documentation only; no Alpha UX implementation or protection/deployment capability is claimed.
-- **Planning status:** [Alpha UX v1](docs/alpha-ux-spec.md) and the two bounded slices in `BUILD_PLAN.md` are prepared for human review. Alpha-UX-1 is next, pending a separate implementation prompt; Alpha-UX-2 requires separate authorization.
+- **Immediate objective:** Correct the second failed Alpha-UX-1 visual acceptance and prepare the slice for human re-review. This presentation work does not establish authentication, usage tracking, or deployment readiness.
+- **Planning status:** Initial Alpha-UX-1 visual acceptance failed because a deferred React state updater read a mutable analysis-controller ref and stayed in Stage 1. The second visual test confirmed the summary transition but found page scrolling and forecast-card overflow defects. Those corrections and regressions are implemented; human re-review is pending. Alpha-UX-2 remains unauthorized.
 - **Git control:** Human developers retain all staging and Git history control. No staging, commit, push, reset, or history change was performed for this task.
+
+## Alpha-UX-1 implementation status
+
+Initial human visual testing failed to show the Stage 2 summary. The confirmed cause was a deferred `setPresentation` updater reading `analysisController.current` after the handler assigned the active controller; it therefore kept the prior Stage 1 value. The transition now commits from the validated Analyze handler without reading the ref in a deferred updater. `JourneyStageLayout` keeps the summary and existing workspace together as one tested application composition.
+
+The second human visual test confirmed that the summary mounted, then found the header scrolled out of view and no usable vertical scroll. Stage 2 had an auto-height shell under fixed-height roots and a hidden-overflow body; `scrollIntoView` moved the viewport to the summary while the shell had no scroll range. Stage 2 now uses a viewport-height scroll shell on desktop, normal document flow on narrow screens, a content-height workspace with a sized map, and a naturally growing support panel. Its one-time transition adjustment resets the viewport to the top. Primary next-hour cards now show only timestamp, temperature, condition, and precipitation probability; detailed measurements remain in the full supporting forecast. Their previous `white-space: nowrap` rule overrode the weaker wrapping rule for the long measurement string.
+
+Stage 1 presents journey guidance and explicit route selection beside the large map, with the idle AI briefing placeholder removed. A valid Analyze Journey enters Stage 2 immediately, scrolls the primary summary into view once without moving focus, and shows a navigable one-image camera gallery, OpenWeather current conditions and actual next-hour intervals, the closest eligible ECCC observation, and a source-qualified Road Ahead direct-overlap count. The map, editable journey controls, detailed forecast/station data, Road Ahead findings, DriveBC context, and active briefing states remain accessible below the summary. Alpha-UX-2's map/construction layout, Experimental briefing placement, and collapsed supporting sections are not implemented.
+
+Changed components and helpers: `App.tsx`, `JourneyStageLayout.tsx`, `JourneyPrimarySummary.tsx`, `presentation.ts`, `journeySummary.ts`, `DestinationCameraPanel.tsx`, `DestinationWeatherPanel.tsx`, `cameras.ts`, `weather.ts`, and `styles.css`. Deterministic presentation coverage was added or updated in `primarySummary.test.mjs`, `cameraPanel.test.mjs`, `weatherPanel.test.mjs`, and `journeyBriefingCard.test.mjs`.
+
+**Verification:** Focused frontend checks passed (59 test cases across 5 files), including stage/page composition and compact forecast regressions. `cd frontend && npm test` passed (105 test cases across 12 files, 0 failures); `cd frontend && npm run build` passed with the existing nonblocking large-bundle advisory; `git diff --check` passed. Headless Chrome measured the production-CSS Stage 2 fixture at desktop and narrow widths: desktop app-shell scroll range was 119 px with the map reachable after scrolling; at an effective 500 px width the document scroll range was 534 px and the map entered the viewport after scrolling. This fixture did not load the full React app or MapLibre. No external requests or paid inference calls were made. Human visual re-review remains required for the live page, camera/map interactions, and proportions.
+
+The USER-001 UUID v4 attempt identity, USER-002 inclusive camera cutoff, timeouts, abort/stale-result guards, frozen briefing evidence, and single briefing dispatch remain in the existing orchestration and lifecycle tests. No backend, API, normalized data contract, provider, or inference code changed. Alpha-UX-1 is not human accepted; Alpha-UX-2 remains unauthorized.
 
 ## Accepted implementation baseline
 

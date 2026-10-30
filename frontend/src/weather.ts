@@ -1,4 +1,25 @@
-import type { DestinationWeather, WeatherSourceStatus } from './analysisTypes';
+import type { DestinationWeather, ForecastInterval, SelectedStationObservation, WeatherSourceStatus } from './analysisTypes';
+
+export function nextHourForecast(intervals: ForecastInterval[], analysisAt: string): ForecastInterval[] {
+  const start = Date.parse(analysisAt);
+  if (!Number.isFinite(start)) return [];
+  const end = start + 60 * 60 * 1000;
+  return intervals
+    .filter((interval) => {
+      const timestamp = Date.parse(interval.forecast_at);
+      return Number.isFinite(timestamp) && timestamp > start && timestamp <= end;
+    })
+    .slice()
+    .sort((left, right) => Date.parse(left.forecast_at) - Date.parse(right.forecast_at));
+}
+
+export function closestEligibleStation(observations: SelectedStationObservation[]): SelectedStationObservation | null {
+  return observations
+    .filter((item) => !item.observation_stale && item.useful_measurements.length > 0 && Number.isFinite(item.distance_meters))
+    .slice()
+    .sort((left, right) => left.distance_meters - right.distance_meters ||
+      (left.observation.station_id < right.observation.station_id ? -1 : left.observation.station_id > right.observation.station_id ? 1 : 0))[0] ?? null;
+}
 
 type RecordValue = Record<string, unknown>;
 const isRecord = (value: unknown): value is RecordValue => typeof value === 'object' && value !== null && !Array.isArray(value);

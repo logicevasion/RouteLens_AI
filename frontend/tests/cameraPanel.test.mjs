@@ -73,13 +73,16 @@ test('renders a one-view nearby intersection with attribution, safe link, and re
   assert.doesNotMatch(html, /Live now|Real-time feed/);
 });
 
-test('supports five views and retains complete composite source labels', () => {
+test('supports five views with one navigable image and complete direction labels', () => {
   const directions = ['North', 'East', 'South - Main St', 'South - Kingsway', 'West Exit'];
   const html = render({ status: 'success', requestKey: 'journey-a', result: cameraResult({
     views: directions.map((label, index) => view(index + 1, label)), diagnostics: { ...cameraResult().diagnostics, views_failed: 0 },
   }) });
-  for (const label of directions) assert.match(html, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.equal((html.match(/<img/g) ?? []).length, 5);
+  assert.match(html, /North/);
+  assert.equal((html.match(/<img/g) ?? []).length, 1);
+  assert.match(html, /View 1 of 5/);
+  assert.match(html, /aria-label="Next camera direction"/);
+  assert.match(html, /aria-label="Previous camera direction"/);
 });
 
 test('renders partial availability without replacing failed views', () => {
