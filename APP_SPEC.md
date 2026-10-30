@@ -480,32 +480,21 @@ A single unavailable source should not normally invalidate the entire journey an
 
 ## 10. Frontend and Presentation Contract
 
-### Desktop Layout
+### Desktop Layout and Alpha UX v1
 
-The MVP is desktop-only.
+The accepted datathon MVP used a desktop map (~65%) beside a journey intelligence panel (~35%). For the private alpha, the approved presentation contract is a two-stage workflow detailed in [Alpha UX v1](docs/alpha-ux-spec.md).
 
-Primary layout:
+- **Stage 1 — Plan Your Journey:** retain the top header and journey controls, with the map (~65%) beside guidance or the existing explicit route-selection UI (~35%). Remove the pre-analysis AI briefing placeholder.
+- **Stage 2 — Understand Your Journey:** enter immediately on valid Analyze Journey. Lead with a full-width responsive camera/weather summary, initially approximately equal columns on desktop. Present deterministic evidence as available independently of AI completion.
+- Below the summary, place the interactive map beside route-intersecting Road Ahead events, followed by the **Experimental** AI Journey Briefing. Put extended forecast/station data, nearby events, detailed source statuses, and secondary context in collapsed supporting sections. Empty DriveBC or deferred Transit content must not dominate primary space.
 
-- **Top:** origin, destination, driving-route selection, and manual analysis action.
-- **Left (~65%):** interactive MapLibre map.
-- **Right (~35%):** journey intelligence panel.
+Preserve the dark city-intelligence visual style, readable responsive stacking, existing map interactions, and visible uncertainty/provenance. The detailed specification governs summary selection, missing-data wording, lifecycle behavior, and accessibility. A richer journey timeline remains deferred.
 
-Use a dark, polished city-intelligence visual style with a low-clutter MapTiler basemap.
+### Information Hierarchy and Lifecycle
 
-Telemetry overlays and journey information should remain visually prominent.
+Prioritize destination camera imagery, OpenWeather current conditions and actual next-hour 15-minute intervals, one closest sufficiently recent useful ECCC station, and a cautious Road Ahead intersection count. Distinguish all sources and preserve freshness and missing-data semantics. AI remains available as experimental supporting synthesis rather than the primary summary.
 
-### Information Hierarchy
-
-Prioritize:
-
-1. AI Journey Briefing as the primary journey summary.
-2. Journey overview and route context.
-3. Supporting road events, destination weather, and camera imagery.
-4. Source provenance, freshness, availability, and uncertainty.
-
-The panel presents the AI Journey Briefing, journey overview, destination conditions, and along-route findings, with supporting source details. A richer journey timeline remains deferred beyond the MVP.
-
-Do not overwhelm users with every available source record.
+Find Routes returns to Stage 1. Valid Analyze Journey enters Stage 2 without waiting for AI. Preserve input validation, explicit route selection, cancellation, stale-response guards, USER-001 UUID identity, USER-002 timing, and one briefing dispatch per logical attempt. This presentation change does not change backend contracts, models, prompts, inference controls, data sources, or infrastructure. Implementation remains separately authorized through `BUILD_PLAN.md`.
 
 ### Interaction Principles
 

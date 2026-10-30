@@ -9,50 +9,65 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Codex may implement an assignment only after separate human authorization. Human developers control staging, commits, pushes, and all Git history.
 - Future accepted assignments should be summarized in `PROJECT_STATE.md`, not appended as full implementation transcripts.
 
-## Current assignment: QAR-1 — OpenRouter aggregate estimated-spending guard correction
+## Next prepared assignment: Alpha-UX-1 — Stage transitions and primary summary
 
-**Status:** Scope approved for planning. The plan is for human review; implementation has not started and requires a separate human-approved implementation prompt.
+**Status:** Prepared for human review only. This documentation task authorizes no implementation. A separate human implementation prompt is required for Alpha-UX-1; Alpha-UX-2 is not included in that authorization.
 
-**Objective:** Correct the reproduced defect that allows combined local estimated spending in the OpenRouter vision and briefing role ledgers to reach or exceed the accepted project-wide limit of strictly less than US$5.
+**Objective:** Implement Stage 1/Stage 2 and the deterministic primary summary specified in [Alpha UX v1](docs/alpha-ux-spec.md).
 
-### Approved scope and design
+### Scope and expected components
 
-Use one shared project-level inter-process reservation coordination mechanism for every vision and briefing reservation path. Keep the provider adapters independent and the two persisted JSON role ledgers separate. Under the shared coordination, each reservation must read and validate both ledgers, apply all existing role-specific checks and the strict aggregate `< US$5` invariant, then update only the reserving role's ledger using its existing atomic-file replacement pattern. No reservation path may bypass the shared mechanism.
+- `frontend/src/App.tsx`: retain header/controls and existing route selection; add presentation stages, Stage 1 guidance and approximately 65/35 map/route layout; remove the pre-analysis AI placeholder.
+- `frontend/src/DestinationCameraPanel.tsx`: one-view navigation across the actual returned usable views with complete provenance and failure states.
+- `frontend/src/DestinationWeatherPanel.tsx`, existing weather helpers/types, and a small summary component/helper if needed: current weather, timestamp-based next-hour subset, nearest eligible ECCC station, and qualified Road Ahead overlap count from existing normalized data.
+- `frontend/src/styles.css` and relevant tests under `frontend/tests/`: full-width responsive summary, approximately equal desktop camera/weather columns and deterministic regression coverage. Expected paths are guidance, not a refactor mandate.
+- Retain existing supporting information below the new summary during this intermediate slice. Do not implement Alpha-UX-2's final map/events arrangement, Experimental placement, or collapse organization yet.
 
-Preserve the existing role-specific thresholds and semantics:
+### Acceptance criteria
 
-- Vision: `round(role_estimate + reservation, 8) > 4.90` rejects. Exactly US$4.90 remains allowed by this role check.
-- Briefing: `round(vision_estimate + briefing_estimate + reservation, 8) >= 4.99` rejects, including equality at US$4.99. Do not loosen this stricter existing check when adding the separate aggregate invariant.
-- Both role ledgers retain their existing caps of 50 attempts per rolling hour and 100 per UTC day. Vision reserves US$0.02 per attempt and retains its approximately US$1/day estimate guard; briefing reserves US$0.002 per attempt. These role-specific estimate safeguards and provider/account-authoritative billing remain in force. Every accepted reservation is counted before transport, including failed and timed-out calls; QAR-1 adds no refunds, retries, or dispatch changes.
+1. Stage 1 retains header/controls, guidance before routes, and explicit Choose Your Route UI after routes. Route candidates, selection and highlighting, validation, and errors remain functional.
+2. Find Routes returns immediately from Stage 2 to Stage 1; valid Analyze enters Stage 2 immediately and brings the section beginning into view once, without moving keyboard focus. Later result updates do not repeat the viewport adjustment or disrupt user scrolling. Input/route invalidation suppresses prior results and cancels matching work. Invalid Analyze creates no attempt.
+3. Summary spans available width; camera and weather are approximately equal columns on desktop and stack readably. Camera and deterministic evidence render independently of AI loading/failure; no extra data fetch or inference is introduced. Inputs remain editable and Find Routes remains available during analysis. Repeated Analyze clicks during the active analysis do not create duplicate logical attempts; existing loading, disabled, cancellation and validation behavior is preserved. Camera navigation and map interaction remain usable while AI is pending.
+4. Camera navigation handles zero, one, and more than four views, partial/stale results, changed results, and image failure. Only one image is displayed; provenance, official link and timestamps remain accessible. Navigation does not change inference image selection or dispatch.
+5. Current weather preserves all requested available fields and unknowns. The next-hour selection starts from current analysis time, excludes elapsed forecast timestamps, uses only actual upcoming timestamps, retains gaps, and preserves provider evaluation/freshness metadata; the complete series remains accessible. No data sent to the briefing is changed. Select one closest non-stale useful ECCC observation using normalized flags/measurements; preserve measured/source distinctions and cache warnings. No eligible station yields an explicit empty state.
+6. Road count includes only Road Ahead direct overlaps and qualifies partial/stale/unavailable/zero data. No all-clear wording or DriveBC Point/nearby inflation.
+7. USER-001 UUID behavior, USER-002 inclusive cutoff/settlement behavior, existing deadlines, cancellation, stale guards, and at most one briefing dispatch per attempt remain unchanged. Display subsets never alter briefing evidence.
 
-The local aggregate covers estimates represented in these two ledgers. It does not include unledgered historical spend or replace reconciling cumulative provider/account usage, including historical usage, against the under-US$5 project limit before any further paid inference. The vision US$4.90 estimate is a role safeguard, not an additional pool that can be added to US$5.
+### Verification and human approval boundary
 
-### Persisted state and failure semantics
+Run focused fixture-based stage/summary/camera/weather regressions, plus existing camera, briefing, and evidence lifecycle tests. Exercise deterministic completion orders (camera before/after analysis, AI pending/failing), Find Routes during pending work, invalidation, missing intervals/fields, station eligibility and ties, road status/count variants, and no dispatch from navigation. Run the full frontend suite (`cd frontend && npm test`), production build (`npm run build`), and `git diff --check`. Use mocked transports with no external requests or paid inference. Backend checks are not required when backend files remain unchanged.
 
-- A missing role ledger keeps its existing empty-ledger initialization behavior.
-- Malformed, unreadable, oversized, or otherwise invalid persisted state in either ledger fails closed. Do not reset, repair, or silently replace invalid state.
-- The shared operating-system lock serializes reservation decisions across processes and is released if a process exits or crashes. The two ledger files are not one atomic transaction.
-- A crash before atomic replacement leaves the prior target ledger intact (an unused temporary file may remain). A crash after replacement leaves the reservation counted, even if provider dispatch did not occur.
-- A failed write or replacement denies dispatch and leaves the existing target ledger intact wherever the filesystem's atomic-replace guarantee applies.
+Use mocked browser/manual review where available for immediate stage transitions, desktop proportions, keyboard camera navigation, responsive stacking, and retained map rendering/highlighting; report unavailable browser checks as Not run. Human review and explicit acceptance are required before the slice is accepted; passing checks do not authorize Alpha-UX-2 or Git history operations. Update `PROJECT_STATE.md` factually after implementation.
 
-### Verification and acceptance
+## Separately authorized future assignment: Alpha-UX-2 — Supporting layout and disclosures
 
-Use temporary persisted-ledger files and mocked or non-dispatching transports only; no paid provider request is permitted. Add a valid-shaped controlled regression that reproduces the original aggregate violation, and cover:
+**Status:** Future slice; requires its own human-approved implementation prompt after Alpha-UX-1 review. Not authorized by this preparation or by Alpha-UX-1 implementation approval.
 
-- both sequential reservation orders and strict aggregate-threshold behavior;
-- concurrent cross-role reservations from separate processes synchronized against the same ledgers;
-- existing per-role hourly/daily attempt caps and estimate safeguards;
-- missing-ledger initialization;
-- malformed, unreadable, oversized, and otherwise invalid state in either ledger;
-- denied reservations never dispatching a provider request.
+**Objective:** Complete Stage 2's map/construction arrangement, Experimental briefing placement, and collapsible supporting data per [Alpha UX v1](docs/alpha-ux-spec.md).
 
-Simulate unreadability deterministically if filesystem permissions do not reproduce it in the test environment. Run focused vision and briefing budget/API tests, Ruff on affected backend code and tests, and `git diff --check`. The controlled regression must fail against the original behavior and pass after correction.
+### Scope and expected components
 
-Acceptance requires every reservation path to use the same inter-process coordination, no accepted sequential or concurrent reservations to produce a combined persisted estimate at or above US$5, all existing role-specific thresholds and semantics to remain unchanged, persisted-state errors to fail closed, and the stated focused tests/static checks to pass.
+`App.tsx`, `VancouverMap.tsx` integration, `RoadAheadPanel.tsx`, `DestinationWeatherPanel.tsx`, briefing presentation extracted only as necessary, `styles.css`, and focused frontend tests. Reorganize existing data and callbacks without changing map relevance or inference orchestration.
 
-### Out of scope
+### Acceptance criteria
 
-USER-001, USER-002, QAR-2/test-suite investigation, other architecture findings, Phase 10 acceptance or implementation changes, provider/account integration, billing reconciliation, databases, new infrastructure or dependencies, and all Git operations. No API, model, prompt, provider, or frontend lifecycle changes are authorized.
+1. Below the primary summary, the map sits beside route-intersecting Road Ahead events on desktop and stacks readably at narrower widths. Route/construction emphasis, source-scoped selection, event-to-map focus, existing overlays, and camera markers remain functional.
+2. AI Journey Briefing appears below map/construction, labelled Experimental, with existing content and independent loading/error/insufficient-evidence states. Its position or mount lifecycle causes no new dispatch.
+3. Complete three-hour forecast, additional returned ECCC observations, nearby construction, detailed statuses and secondary context are accessible in keyboard-operable sections collapsed by default. Primary source warnings remain visible. Preserve timestamps, units, attribution, unknowns, and event interactions when expanded.
+4. Existing DriveBC findings remain accessible and distinct from Road Ahead; regional/Point context retains its semantics. Empty DriveBC and deferred Transit placeholders consume no large primary area; transit stays deferred.
+5. Alpha-UX-1 transitions, primary summary and all accepted UUID/timing/cancellation/one-dispatch behavior remain intact; no content is lost through reorganization.
+
+### Verification and human approval boundary
+
+Run focused map/event and disclosure interaction regressions with deterministic fixtures, retained camera/weather/briefing/evidence tests, the full frontend suite, production build and `git diff --check`. Verify selected event focus and highlighting after layout resize, collapse/expand, repeated analysis and return to Stage 1. Use mocked browser/manual checks for section order, readable scrolling/stacking, keyboard disclosure controls and map rendering. No external requests or paid inference. Report checks precisely; human visual review and explicit acceptance remain required. No automatic next phase or Git operation is authorized.
+
+## Shared exclusions
+
+Both slices are frontend presentation work only: no backend/API/shared contract changes, new sources, additional LLM inference, model/prompt/provider/budget changes, dependencies, infrastructure, authentication, usage tracking, deployment, unrelated fixes or refactoring. Preserve QAR-1 budget controls and QAR-2 offline isolation. Material conflicts require escalation under `AGENTS.md`.
+
+## Completed correction assignment
+
+QAR-1 is accepted at `d1bbcd4`. Its prior active plan (only relative links adjusted for the archive location), including thresholds, persisted-state semantics and verification criteria, is preserved in [the pre-Alpha UX archive](docs/archive/BUILD_PLAN_pre-AlphaUX.md). QAR-2 (`45015aa`), USER-001 (`b5dd20b`) and USER-002 (`40df498`) are also human accepted. These checkpoints were confirmed in local Git history; acceptance is supplied by the human task prompt.
 
 ## Accepted baseline: Phases 0–10
 

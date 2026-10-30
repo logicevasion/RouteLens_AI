@@ -2,10 +2,11 @@
 
 ## Current repository and SDD status
 
-- **Repository checkpoint:** USER-002 implementation began from the clean `b5dd20b` checkpoint on `main` (2026-10-29). USER-001 was human accepted and committed at `b5dd20b`; this is a dated checkpoint, not a permanent current-revision claim.
-- **Completed documentation compaction:** The SDD compaction is complete. The pre-compaction `BUILD_PLAN.md` and `PROJECT_STATE.md` are preserved as [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). Detailed accepted Phase 8–10 decisions and evidence remain in the integration notes listed below.
-- **Git control:** Human developers retain control of Git history. No staging, commit, push, reset, or other history operation was performed for USER-002.
-- **Current assignment:** QAR-1 was human accepted and committed/pushed at `d1bbcd4`. QAR-2 was human accepted and committed at `45015aa`. USER-001 was human accepted and committed at `b5dd20b`. USER-002's bounded timing correction is implemented and ready for human review; it has not been accepted.
+- **Baseline:** Clean `main` working tree at `40df498` before this documentation task; checkpoint verified from local Git history on 2026-10-30.
+- **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, and USER-002 `40df498`. Acceptance of all four is confirmed by the current human assignment; commit identities are independently verified locally.
+- **Immediate objective:** Minimal private-alpha UX improvements for testing with friends, before broader authentication, usage tracking, and deployment work. This task prepares documentation only; no Alpha UX implementation or protection/deployment capability is claimed.
+- **Planning status:** [Alpha UX v1](docs/alpha-ux-spec.md) and the two bounded slices in `BUILD_PLAN.md` are prepared for human review. Alpha-UX-1 is next, pending a separate implementation prompt; Alpha-UX-2 requires separate authorization.
+- **Git control:** Human developers retain all staging and Git history control. No staging, commit, push, reset, or history change was performed for this task.
 
 ## Accepted implementation baseline
 
@@ -15,14 +16,14 @@ Phases 0–10 are human accepted and complete; RouteLens AI MVP v1 is implementa
 
 ## QAR-1 implementation status
 
-Vision and briefing reservations now use one deterministic operating-system lock derived from their canonical ledger-path pair. Under that lock, each role validates both persisted ledgers, applies its existing role safeguards and the strict combined estimate limit, then atomically replaces only its own JSON ledger. A valid-state ARCH-004 regression and repeated separate-process concurrency coverage are in place. Full thresholds, error behavior, crash/write semantics, acceptance criteria, and exclusions remain in `BUILD_PLAN.md`.
+Vision and briefing reservations now use one deterministic operating-system lock derived from their canonical ledger-path pair. Under that lock, each role validates both persisted ledgers, applies its existing role safeguards and the strict combined estimate limit, then atomically replaces only its own JSON ledger. A valid-state ARCH-004 regression and repeated separate-process concurrency coverage are in place. Full thresholds, error behavior, crash/write semantics, acceptance criteria, and exclusions remain in [the archived QAR-1 plan](docs/archive/BUILD_PLAN_pre-AlphaUX.md).
 
 No external API or paid provider was used. QAR-1 was human accepted and committed/pushed at `d1bbcd4`. Local ledger estimates do not represent historical or authoritative provider/account spending.
 
-## Outstanding investigations and deferred findings
+## Accepted lifecycle corrections and deferred findings
 
 - **USER-001 — Duplicate briefing attempts:** Confirmed cross-session numeric-ID collision is corrected. Each explicit Analyze Journey operation now gets one UUID v4 logical attempt ID carried through JourneyEvidenceBundle v1 and briefing request/result contracts. Numeric lifecycle IDs remain for camera matching and stale-response guards. The adapter still deduplicates in process memory; restart resets that state, multiple workers do not share it, and the set grows for the process lifetime. USER-001 was human accepted and committed at `b5dd20b`.
-- **USER-002 — Camera interpretation timing:** Corrected the confirmed case where camera evidence completed by the accepted 15-second cutoff but was omitted because journey analysis finished after the cutoff. The camera opportunity coordinator now starts with camera inference and records monotonic settlement timing; timely evidence is retained for the single frozen briefing snapshot, while pending-at-cutoff evidence remains excluded if it arrives later. The independent 70-second camera deadline, briefing deadlines, and one-request rule are unchanged. Typical real-world camera latency remains unmeasured; USER-002 is ready for human review, not accepted.
+- **USER-002 — Camera interpretation timing:** Corrected the confirmed case where camera evidence completed by the accepted 15-second cutoff but was omitted because journey analysis finished after the cutoff. The camera opportunity coordinator now starts with camera inference and records monotonic settlement timing; timely evidence is retained for the single frozen briefing snapshot, while pending-at-cutoff evidence remains excluded if it arrives later. The independent 70-second camera deadline, briefing deadlines, and one-request rule are unchanged. Typical real-world camera latency remains unmeasured; USER-002 was human accepted and committed at `40df498`.
 - **Deferred implementation findings:** Road Ahead selected-event emphasis may remain bold after journey-input edits or route regeneration until a new Analyze Journey operation. Camera failure-isolation improvements, exhaustive narrow-screen/source-combination review, and optional performance work remain deferred. They do not change the accepted MVP status.
 - **Architecture scope:** The Phase 9 normalized timeline and richer cross-source reasoning/UI described in older roadmap material remain deferred; the accepted implementation uses the internal evidence bundle and Phase 10 briefing. Multi-view inference remains deferred; the MVP briefing uses one selected camera direction.
 
@@ -54,13 +55,17 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 **USER-001 correction verification (2026-10-29):** The full backend suite passed (475) under a socket/DNS guard with zero outbound attempts; focused briefing API tests passed (51); Ruff and `git diff --check` passed; all 11 frontend test files passed; and the TypeScript/Vite production build passed with the existing large-bundle advisory. Regression coverage exercises default UUID v4 generation and uniqueness across a reset lifecycle counter, UUID v4 request/result validation, same-UUID concurrent deduplication with one provider dispatch and budget reservation, and failed-analysis no-dispatch wiring. The full frontend suite and app/Vite TypeScript no-emit checks were rerun for the default-generator coverage correction. No external service or paid provider was contacted.
 
-**USER-002 timing correction (2026-10-29):** Camera opportunity settlement is coordinated from camera request initiation, using `performance.now()` and the unchanged 15-second absolute cutoff. Deterministic frontend regressions cover camera success at t=5 with analysis at t=20, late completion, pending-at-cutoff, just-before and exact-cutoff inclusion, bounded failure status, remaining-window behavior, superseded lifecycle suppression, and no second briefing request after late completion. Focused camera/briefing/evidence tests passed; the full 11-file frontend suite passed; TypeScript no-emit and the production build passed with the existing large-chunk advisory; `git diff --check` passed. No backend code, external API, or paid provider was used. The correction does not establish typical real-world camera latency. USER-002 is ready for human review, not accepted.
+**USER-002 timing correction (2026-10-29):** Camera opportunity settlement is coordinated from camera request initiation, using `performance.now()` and the unchanged 15-second absolute cutoff. Deterministic frontend regressions cover camera success at t=5 with analysis at t=20, late completion, pending-at-cutoff, just-before and exact-cutoff inclusion, bounded failure status, remaining-window behavior, superseded lifecycle suppression, and no second briefing request after late completion. Focused camera/briefing/evidence tests passed; the full 11-file frontend suite passed; TypeScript no-emit and the production build passed with the existing large-chunk advisory; `git diff --check` passed. No backend code, external API, or paid provider was used. The correction does not establish typical real-world camera latency. USER-002 was human accepted and committed at `40df498`.
 
 ## Next action
 
-Human review of USER-002. Human acceptance and Git checkpoint remain pending.
+Human review of this documentation preparation, followed by a separate Alpha-UX-1 implementation prompt. Alpha-UX-2 remains separately authorized. No implementation has begun.
+
+**Alpha UX documentation preparation (2026-10-30):** Governing documents, frontend composition and existing tests were source-inspected; accepted checkpoints were verified against local Git history. Documentation links, consistency and whitespace are checked for this task. No source/test changes, application test runs, live external requests, or paid inference. Documentation preparation does not establish runtime or visual acceptance.
 
 ## Archive and integration-note references
+
+- Completed QAR-1 active plan before Alpha UX preparation (relative links adjusted): [pre-Alpha UX build plan](docs/archive/BUILD_PLAN_pre-AlphaUX.md).
 
 - Exact pre-compaction records: [`docs/archive/BUILD_PLAN_pre-QAR1.md`](docs/archive/BUILD_PLAN_pre-QAR1.md) and [`docs/archive/PROJECT_STATE_pre-QAR1.md`](docs/archive/PROJECT_STATE_pre-QAR1.md). They preserve original content and inconsistencies as found.
 - Accepted Phase 8B implementation, provider, and budget record: [`docs/integration-notes/camera-vision-phase-8b.md`](docs/integration-notes/camera-vision-phase-8b.md).
