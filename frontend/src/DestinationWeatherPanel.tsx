@@ -17,11 +17,12 @@ function WeatherMeasurement({ label, value }: { label: string; value: MeasuredVa
   return <span className="weather-measurement"><b>{label}</b> {value.value} {value.unit}{interval}</span>;
 }
 
-export default function DestinationWeatherPanel({ analysis, presentation = 'supporting', analysisAt, headingId = 'destination-weather-title' }: {
+export default function DestinationWeatherPanel({ analysis, presentation = 'supporting', analysisAt, headingId = 'destination-weather-title', supportingOnly = false }: {
   analysis: AnalysisState;
   presentation?: 'primary' | 'supporting';
   analysisAt?: string;
   headingId?: string;
+  supportingOnly?: boolean;
 }) {
   const weather = analysis.status === 'success' ? analysis.result.destination_weather : null;
   const current = weather?.openweather_current;
@@ -46,7 +47,7 @@ export default function DestinationWeatherPanel({ analysis, presentation = 'supp
     {analysis.status === 'error' && <p className="weather-state weather-unavailable">Weather is unavailable because journey analysis failed.</p>}
     {analysis.status === 'success' && <>
       {!anyAvailable && <p className="weather-state weather-unavailable" role="status">Weather sources are unavailable. No weather condition can be inferred.</p>}
-      <section className="weather-source-block" aria-label="OpenWeather current conditions">
+      {!supportingOnly && <section className="weather-source-block" aria-label="OpenWeather current conditions">
         <div className="weather-subheading"><h4>Current Conditions</h4><span>{current?.weather?.source ?? 'OpenWeather'}</span></div>
         {current?.weather ? <>
           <div className="current-weather-main">
@@ -63,7 +64,7 @@ export default function DestinationWeatherPanel({ analysis, presentation = 'supp
           <p className="weather-provenance">Observed {formatLocalTime(current.weather.observed_at)} · {statusLine(current.status, 'OpenWeather')}</p>
           {current.status.stale && <p className="weather-stale-note">Showing the last valid current conditions.</p>}
         </> : <p className="weather-state">{!current?.status.available ? 'Current conditions are unavailable.' : 'No current conditions returned.'}</p>}
-      </section>
+      </section>}
 
       <section className="weather-source-block" aria-label={primary ? 'OpenWeather next hour forecast' : 'OpenWeather next three hours forecast'}>
         <div className="weather-subheading"><h4>{primary ? 'Next Hour' : 'Next 3 Hours'}</h4><span>OpenWeather · 15 min</span></div>

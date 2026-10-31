@@ -6,6 +6,7 @@ type RoadAheadPanelProps = {
   analysis: AnalysisState;
   selectedEventId: string | null;
   onSelectFinding: (eventId: string) => void;
+  presentation?: 'route' | 'supporting';
 };
 
 function sourceName(status: SourceStatus): string {
@@ -93,7 +94,7 @@ function DriveBCFinding({ finding, selected, onSelect }: { finding: DriveBCAnaly
   </article>;
 }
 
-export default function RoadAheadPanel({ analysis, selectedEventId, onSelectFinding }: RoadAheadPanelProps) {
+export default function RoadAheadPanel({ analysis, selectedEventId, onSelectFinding, presentation = 'supporting' }: RoadAheadPanelProps) {
   const result = analysis.status === 'success' ? analysis.result : null;
   const direct = result?.findings.filter((finding) => finding.classification === 'direct_overlap') ?? [];
   const nearby = result?.findings.filter((finding) => finding.classification === 'nearby') ?? [];
@@ -101,19 +102,57 @@ export default function RoadAheadPanel({ analysis, selectedEventId, onSelectFind
   const driveDirect = drivebc.filter((finding) => finding.geometry_basis === 'linestring_intersection');
   const driveNearby = drivebc.filter((finding) => finding.geometry_basis !== 'linestring_intersection');
   const selectedRegional = result?.regional_events.find((event) => sourceScopedEventId(event) === selectedEventId) ?? null;
-  const roadAheadUsable = result?.source_statuses.some((status) => status.dataset_id.startsWith('road-ahead-') && status.available) ?? false;
+  const roadAheadStatuses = result?.source_statuses.filter((status) => status.dataset_id.startsWith('road-ahead-')) ?? [];
+  const roadAheadUsable = roadAheadStatuses.some((status) => status.available);
+  const roadAheadIncomplete = roadAheadStatuses.length === 0 || roadAheadStatuses.some((status) => !status.available || status.stale);
+  const roadAheadStatus = !roadAheadUsable ? 'unavailable' : roadAheadIncomplete ? 'partial' : 'available';
   const driveBCUsable = result?.source_statuses.some((status) => status.dataset_id.startsWith('drivebc-open511') && status.available) ?? false;
 
+  if (presentation === 'route') return <section className="road-ahead-panel route-events-panel" aria-labelledby="route-events-title">
+    <div className="road-ahead-heading"><div><p className="eyebrow">ROAD EVENTS &amp; DISRUPTIONS</p><h3 id="route-events-title">On your route — City of Vancouver Road Ahead</h3></div>
+      {result && <span className={`analysis-badge analysis-${roadAheadStatus}`}>{roadAheadStatus === 'available' ? 'Available' : roadAheadStatus === 'partial' ? 'Partial coverage' : 'Unavailable'}</span>}
+    </div>
+    {analysis.status === 'idle' && <p className="road-ahead-state">Route-intersecting Road Ahead events appear after journey analysis.</p>}
+    {analysis.status === 'loading' && <p className="road-ahead-state road-ahead-loading" role="status" aria-live="polite"><span className="map-spinner" aria-hidden="true" /> Checking route-intersecting Road Ahead events…</p>}
+    {analysis.status === 'error' && <p className="road-ahead-state road-ahead-error" role="alert">Road Ahead findings are unavailable because journey analysis failed.</p>}
+    {result && <>
+      {roadAheadIncomplete && <p className="coverage-note">{!roadAheadUsable ? 'Road Ahead source coverage is unavailable; this does not indicate a clear route.' : 'Road Ahead source coverage is partial or stale. Findings may be incomplete.'}</p>}
+      {roadAheadStatuses.filter((status) => !status.available || status.stale).map((status) =>
+        <p className="coverage-note" key={status.dataset_id}>{sourceName(status)}: {freshness(status)}. Route findings may be incomplete.</p>)}
+      {direct.length > 0 && <FindingGroup title="Direct route intersections" findings={direct} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
+      {direct.length === 0 && (roadAheadUsable
+        ? <p className="road-ahead-empty">No direct Road Ahead route intersections were identified in available datasets. This does not confirm that the route is disruption-free.</p>
+        : <p className="road-ahead-empty">Road Ahead route findings could not be checked because its datasets are unavailable.</p>)}
+    </>}
+    <details className="route-event-disclosure">
+      <summary>Nearby Road Ahead events ({nearby.length})</summary>
+      {analysis.status === 'success' ? <>
+        {roadAheadIncomplete && <p className="coverage-note">Nearby Road Ahead coverage may be incomplete or stale.</p>}
+        {nearby.length > 0 ? <FindingGroup title="Nearby Road Ahead events" findings={nearby} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
+          : <p className="road-ahead-empty">No nearby Road Ahead events were returned.</p>}
+      </> : <p className="road-ahead-state">{analysis.status === 'idle' ? 'Nearby Road Ahead events appear after journey analysis.' : analysis.status === 'loading' ? 'Checking nearby Road Ahead events…' : 'Nearby Road Ahead events are unavailable because journey analysis failed.'}</p>}
+    </details>
+    <details className="route-event-disclosure">
+      <summary>DriveBC Open511 ({drivebc.length})</summary>
+      {analysis.status !== 'success' && <p className="road-ahead-state">{analysis.status === 'idle' ? 'DriveBC events appear after journey analysis.' : analysis.status === 'loading' ? 'Checking DriveBC Open511 regional events…' : analysis.error}</p>}
+      {result && !driveBCUsable && <p className="coverage-note">DriveBC Open511 is unavailable; regional coverage may be incomplete.</p>}
+      {result && driveDirect.length > 0 && <DriveBCGroup title="LineString intersections" findings={driveDirect} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
+      {result && driveNearby.length > 0 && <DriveBCGroup title="Nearby or regional events" findings={driveNearby} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
+      {result && drivebc.length === 0 && <p className="road-ahead-empty">{driveBCUsable
+        ? 'No route-relevant DriveBC findings were identified. Regional events may still appear on the map; this is not proof the route is clear.'
+        : 'DriveBC route findings could not be checked because the Open511 source is unavailable.'}</p>}
+    </details>
+  </section>;
+
   return <section className="road-ahead-panel multi-source-panel" aria-labelledby="road-context-title">
-    <div className="road-ahead-heading"><div><p className="eyebrow">MULTI-SOURCE ROAD CONTEXT</p><h3 id="road-context-title">Along your journey</h3></div>
+    <div className="road-ahead-heading"><div><p className="eyebrow">MULTI-SOURCE ROAD CONTEXT</p><h3 id="road-context-title">Road source details</h3></div>
       {result && <span className={`analysis-badge analysis-${result.status}`}>{result.status === 'available' ? 'Available' : result.status === 'partial' ? 'Partial' : 'Unavailable'}</span>}
     </div>
-    {analysis.status === 'idle' && <p className="road-ahead-state">Select a driving route, then analyze to check Road Ahead and DriveBC data.</p>}
-    {analysis.status === 'loading' && <p className="road-ahead-state road-ahead-loading" role="status" aria-live="polite"><span className="map-spinner" aria-hidden="true" /> Checking road datasets and matching route events…</p>}
+    {analysis.status === 'idle' && <p className="road-ahead-state">Road source details appear after analysis.</p>}
+    {analysis.status === 'loading' && <p className="road-ahead-state road-ahead-loading" role="status" aria-live="polite"><span className="map-spinner" aria-hidden="true" /> Checking Road Ahead and DriveBC sources…</p>}
     {analysis.status === 'error' && <p className="road-ahead-state road-ahead-error" role="alert">{analysis.error}</p>}
     {result && <>
       <p className="analysis-summary">{result.summary}</p>
-      {result.status === 'unavailable' && <p className="coverage-note">No source coverage was available. This does not indicate a clear route.</p>}
       <div className="source-status-list" aria-label="Road event source status">{result.source_statuses.map((status) =>
         <div className={`source-status source-${status.available ? status.stale ? 'stale' : 'available' : 'unavailable'}`} key={status.dataset_id}>
           <span className="source-status-name">{sourceName(status)}</span><span>{freshness(status)}</span>
@@ -121,20 +160,6 @@ export default function RoadAheadPanel({ analysis, selectedEventId, onSelectFind
           {status.fetched_at && <time dateTime={status.fetched_at}>Checked {new Date(status.fetched_at).toLocaleString()}</time>}
           {!status.available && <span className="source-error">Coverage from this dataset is reduced.</span>}
         </div>)}</div>
-      <section className="source-finding-section" aria-label="Road Ahead findings"><h4>Road Ahead · City of Vancouver</h4>
-        {direct.length > 0 && <FindingGroup title="Route intersections" findings={direct} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
-        {nearby.length > 0 && <FindingGroup title="Nearby context" findings={nearby} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
-        {result.findings.length === 0 && (roadAheadUsable
-          ? <p className="road-ahead-empty">No route-relevant findings were identified in available Road Ahead datasets. This does not confirm that the route is disruption-free.</p>
-          : <p className="road-ahead-empty">Road Ahead route findings could not be checked because its datasets are unavailable.</p>)}
-      </section>
-      <section className="source-finding-section" aria-label="DriveBC findings"><h4>DriveBC Open511 · route-relevant findings</h4>
-        {driveDirect.length > 0 && <DriveBCGroup title="LineString intersections" findings={driveDirect} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
-        {driveNearby.length > 0 && <DriveBCGroup title="Nearby events" findings={driveNearby} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />}
-        {drivebc.length === 0 && (driveBCUsable
-          ? <p className="road-ahead-empty">No route-relevant DriveBC findings were identified. Regional events may still appear on the map; this is not proof the route is clear.</p>
-          : <p className="road-ahead-empty">DriveBC route findings could not be checked because the Open511 source is unavailable.</p>)}
-      </section>
       {selectedRegional && <div className="regional-selection" aria-live="polite"><strong>Selected regional event · {selectedRegional.source}</strong><span>{selectedRegional.title}</span><small>This event is visible in the regional feed; selection alone does not make it route-relevant.</small></div>}
       {result.unmatchable_events.length > 0 && <p className="coverage-note">{result.unmatchable_events.length} source events had geometry that could not be checked.</p>}
       <p className="analysis-timestamp">Analysis requested {new Date(result.analyzed_at).toLocaleString()} · regional DriveBC events shown on map are separate from route findings</p>

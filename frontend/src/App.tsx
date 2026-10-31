@@ -33,54 +33,6 @@ const statusLabels: Record<BackendStatus, string> = {
   unavailable: 'Backend unavailable',
 };
 
-const intelligenceSections = [
-  {
-    title: 'Destination conditions',
-    icon: 'cloud',
-    message: 'Conditions will appear here',
-  },
-  {
-    title: 'Destination cameras',
-    icon: 'camera',
-    message: '',
-  },
-  {
-    title: 'Road and route context',
-    icon: 'route',
-    message: 'Road context available after journey selection',
-  },
-  {
-    title: 'Transit context',
-    icon: 'transit',
-    message: 'Service alerts available after journey selection',
-  },
-] as const;
-
-function SectionIcon({ name }: { name: (typeof intelligenceSections)[number]['icon'] }) {
-  const common = {
-    width: 17,
-    height: 17,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.7,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true as const,
-  };
-
-  switch (name) {
-    case 'cloud':
-      return <svg {...common}><path d="M20 16.2A4.8 4.8 0 0 0 18 7h-1.2A7 7 0 1 0 4 16.3" /><path d="M8 19h.01M12 19h.01M16 19h.01" /></svg>;
-    case 'route':
-      return <svg {...common}><circle cx="6" cy="18" r="2" /><circle cx="18" cy="6" r="2" /><path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3" /></svg>;
-    case 'transit':
-      return <svg {...common}><rect x="5" y="3" width="14" height="16" rx="3" /><path d="M8 19l-2 2m10-2 2 2M8 7h8M8 12h.01M16 12h.01M8 16h8" /></svg>;
-    case 'camera':
-      return <svg {...common}><path d="M14 5h-4l-2 3H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></svg>;
-  }
-}
-
 type DestinationFeedback = {
   kind: 'pending' | 'error' | 'rejected';
   message: string;
@@ -281,7 +233,7 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         {routeState.status === 'loading' && 'Requesting driving alternatives…'}
         {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
         {routeState.status === 'error' && routeState.error}
-        {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one below.`}
+        {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one to continue.`}
         {analysisState.status === 'loading' && 'Checking road sources and destination weather for the selected route. This may take a little while.'}
         {analysisState.status === 'error' && analysisState.error}
       </p>
@@ -294,12 +246,31 @@ type IntelligencePanelProps = {
   routeState: RouteRequestState;
   onSelectRoute: (route: RouteCandidate) => void;
   analysisState: AnalysisState;
-  briefingState: JourneyBriefingState;
   selectedEventId: string | null;
   onSelectFinding: (eventId: string) => void;
 };
 
-function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, briefingState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
+function BriefingCard({ briefingState }: { briefingState: JourneyBriefingState }) {
+  return <section className={`briefing-card briefing-card-${briefingState.status}`} aria-labelledby="briefing-title" aria-live="polite">
+    <div className="briefing-heading"><div><p className="eyebrow">EXPERIMENTAL · AI ASSISTED · SOURCE GROUNDED</p><h3 id="briefing-title">AI Journey Briefing</h3></div>
+      {briefingState.status === 'available' && <span className="briefing-badge">Ready</span>}
+    </div>
+    {briefingState.status === 'available' ? <>
+      <p className="briefing-overview">{briefingState.result.overview}</p>
+      {briefingState.result.highlights.length === 3 && <ul className="briefing-highlights">{briefingState.result.highlights.map((highlight, index) => <li key={`${highlight.category}-${index}`}>
+        <span className={`briefing-category briefing-category-${highlight.category}`}>{highlight.category === 'camera' ? 'Camera conditions' : highlight.category === 'weather' ? 'Destination weather' : 'Construction'}</span><span>{highlight.text}</span>
+      </li>)}</ul>}
+      {briefingState.result.limitations.slice(0, 2).length > 0 && <p className="briefing-limitations">{briefingState.result.limitations.slice(0, 2).join(' ')}</p>}
+    </> : briefingState.status === 'waiting_for_evidence' ? <p className="briefing-message">Preparing the available journey evidence for your briefing…</p>
+      : briefingState.status === 'in_progress' ? <p className="briefing-message">Generating a briefing from the available journey evidence…</p>
+        : briefingState.status === 'insufficient_evidence' ? <p className="briefing-message">Available source evidence is not sufficient to prepare a briefing. Deterministic journey evidence remains available.</p>
+          : briefingState.status === 'idle' ? <p className="briefing-message">The experimental briefing appears here when available. Deterministic journey evidence remains available independently.</p>
+            : <p className="briefing-message">The briefing is unavailable right now. Deterministic journey evidence remains available.</p>}
+  </section>;
+}
+
+function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, selectedEventId, onSelectFinding }: IntelligencePanelProps) {
+  if (stage === 'understand') return <RoadAheadPanel analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} presentation="route" />;
   return (
     <aside className="intelligence-panel" aria-labelledby="intelligence-title">
       <div className="panel-heading">
@@ -309,44 +280,6 @@ function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, br
         </div>
         <span className="panel-status"><span /> {routeState.selectedRoute ? 'Route selected' : routeState.status === 'ready' ? 'Choose a route' : 'Waiting for a journey'}</span>
       </div>
-
-      {briefingState.status !== 'idle' && <section className={`briefing-card briefing-card-${briefingState.status}`} aria-labelledby="briefing-title" aria-live="polite">
-        <div className="briefing-heading">
-          <div>
-            <p className="eyebrow">AI ASSISTED · SOURCE GROUNDED</p>
-            <h3 id="briefing-title">AI Journey Briefing</h3>
-          </div>
-          {briefingState.status === 'available' && <span className="briefing-badge">Ready</span>}
-        </div>
-        {briefingState.status === 'available' ? (
-          <>
-            <p className="briefing-overview">{briefingState.result.overview}</p>
-            {briefingState.result.highlights.length === 3 && (
-              <ul className="briefing-highlights">
-                {briefingState.result.highlights.map((highlight, index) => (
-                  <li key={`${highlight.category}-${index}`}>
-                    <span className={`briefing-category briefing-category-${highlight.category}`}>
-                      {highlight.category === 'camera' ? 'Camera conditions' : highlight.category === 'weather' ? 'Destination weather' : 'Construction'}
-                    </span>
-                    <span>{highlight.text}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {briefingState.result.limitations.slice(0, 2).length > 0 && (
-              <p className="briefing-limitations">{briefingState.result.limitations.slice(0, 2).join(' ')}</p>
-            )}
-          </>
-        ) : briefingState.status === 'waiting_for_evidence' ? (
-          <p className="briefing-message">Preparing the available journey evidence for your briefing…</p>
-        ) : briefingState.status === 'in_progress' ? (
-          <p className="briefing-message">Generating a briefing from the available journey evidence…</p>
-        ) : briefingState.status === 'insufficient_evidence' ? (
-          <p className="briefing-message">Available source evidence is not sufficient to prepare a briefing. Deterministic journey evidence remains available.</p>
-        ) : (
-          <p className="briefing-message">The briefing is unavailable right now. Deterministic journey evidence remains available.</p>
-        )}
-      </section>}
 
       <div className="journey-overview">
         <div className="overview-route" aria-hidden="true">
@@ -406,25 +339,6 @@ function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, br
         </section>
       )}
 
-      {stage === 'understand' && <div className="intelligence-sections">
-        {intelligenceSections.map((section) => section.title === 'Destination conditions' ? (
-          <DestinationWeatherPanel key={section.title} analysis={analysisState} />
-        ) : section.title === 'Destination cameras' ? (
-          null
-        ) : section.title === 'Road and route context' ? (
-          <RoadAheadPanel key={section.title} analysis={analysisState} selectedEventId={selectedEventId} onSelectFinding={onSelectFinding} />
-        ) : (
-          <section className="intelligence-section" key={section.title}>
-            <div className="section-heading">
-              <span className="section-icon"><SectionIcon name={section.icon} /></span>
-              <h3>{section.title}</h3>
-              <span className="section-chevron" aria-hidden="true">⌄</span>
-            </div>
-            <p className="empty-state">{section.message}</p>
-          </section>
-        ))}
-      </div>}
-      {stage === 'understand' && analysisState.status !== 'success' && <p className="panel-note">Weather, road findings, and the regional DriveBC map layer load only when you choose Analyze journey.</p>}
     </aside>
   );
 }
@@ -858,8 +772,27 @@ export default function App() {
               selectedCameraId={cameraState.status === 'success' ? cameraState.result.intersection?.intersection_id ?? null : null}
             />
           </div>
-          <IntelligencePanel stage={stage} routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} briefingState={journeyBriefingState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
+          <IntelligencePanel stage={stage} routeState={routeState} onSelectRoute={selectRoute} analysisState={analysisState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} />
         </div>
+        {stage === 'understand' && <>
+          <BriefingCard briefingState={journeyBriefingState} />
+          <section className="supporting-information" aria-label="Supporting journey information">
+            <h2>Supporting information</h2>
+            <details className="supporting-disclosure">
+              <summary>Full three-hour forecast and ECCC station observations</summary>
+              <DestinationWeatherPanel analysis={analysisState} supportingOnly />
+            </details>
+            <details className="supporting-disclosure">
+              <summary>Detailed road source status and freshness</summary>
+              <RoadAheadPanel analysis={analysisState} selectedEventId={activeSelectedEvent} onSelectFinding={setSelectedEventId} presentation="supporting" />
+            </details>
+            <details className="supporting-disclosure">
+              <summary>Regional map context</summary>
+              {analysisState.status === 'success' ? <p className="supporting-hint">The map above retains regional DriveBC context and metadata-only nearby camera markers. Select a road event in its source-specific list to focus it on the map.</p>
+                : <p className="supporting-hint">Regional DriveBC context appears on the map when journey analysis returns it. Transit mode remains deferred.</p>}
+            </details>
+          </section>
+        </>}
       </JourneyStageLayout>
     </main>
   );

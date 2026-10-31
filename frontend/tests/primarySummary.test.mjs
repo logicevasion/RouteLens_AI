@@ -111,7 +111,7 @@ test('application stage layout mounts the primary summary and retains workspace 
   const render = (state) => {
     const workspace = React.createElement('div', { className: `workspace workspace-stage-${state.stage}` },
       React.createElement('div', { className: 'map-workspace', role: 'application', 'aria-label': 'Interactive journey map' }, 'Map'),
-      React.createElement('aside', { className: 'intelligence-panel' }, 'Choose your route · Road Ahead · DriveBC'));
+      React.createElement('aside', { className: state.stage === 'plan' ? 'intelligence-panel' : 'route-events-panel' }, state.stage === 'plan' ? 'Choose your route' : 'Checking route-intersecting Road Ahead events · Road Ahead · DriveBC'));
     return renderToStaticMarkup(React.createElement(JourneyStageLayout, {
       stage: state.stage, analysis, camera, analysisAt: state.analysisAt ?? '',
     }, workspace));
@@ -142,7 +142,8 @@ test('application stage layout mounts the primary summary and retains workspace 
   assert.match(css, /\.app-shell-stage-understand \{ height: 100vh; height: 100dvh; min-height: 0; overflow-x: hidden; overflow-y: auto; \}/);
   assert.match(css, /\.workspace-stage-understand \{ height: auto; min-height: 0; flex: 0 0 auto; align-items: start; \}/);
   assert.match(css, /\.workspace-stage-understand \.map-workspace \{ height: min\(70vh, 820px\); min-height: 520px; \}/);
-  assert.match(css, /\.workspace-stage-understand \.intelligence-panel \{ min-height: 0; overflow: visible; \}/);
+  assert.match(css, /\.workspace-stage-understand \.route-events-panel \{ max-height: min\(70vh, 820px\); min-height: 520px; overflow-y: auto;/);
+  assert.match(css, /\.workspace-stage-understand \{ grid-template-columns: minmax\(0, 3fr\) minmax\(300px, 2fr\); \}/);
   assert.match(css, /\.app-shell \{\s*display: flex;\s*width: 100%;\s*height: 100vh;\s*height: 100dvh;\s*min-height: 620px;\s*flex-direction: column;\s*overflow: hidden;/);
   assert.match(css, /\.workspace-stage-plan \{ grid-template-columns: minmax\(0, 65fr\) minmax\(330px, 35fr\); \}/);
   assert.match(css, /html, body, #root \{ height: auto; \}/);
