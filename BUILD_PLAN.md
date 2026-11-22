@@ -9,61 +9,27 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Codex may implement an assignment only after separate human authorization. Human developers control staging, commits, pushes, and all Git history.
 - Future accepted assignments should be summarized in `PROJECT_STATE.md`, not appended as full implementation transcripts.
 
-## Next prepared assignment: Alpha-UX-1 — Stage transitions and primary summary
+## Phase 1 — UX Stabilization
 
-**Status:** Prepared for human review only. This documentation task authorizes no implementation. A separate human implementation prompt is required for Alpha-UX-1; Alpha-UX-2 is not included in that authorization.
+**Status:** Phase 1A implementation is authorized by the current human task. Phases 1B–1D are documented for sequencing only and each requires its own bounded implementation prompt.
 
-**Objective:** Implement Stage 1/Stage 2 and the deterministic primary summary specified in [Alpha UX v1](docs/alpha-ux-spec.md).
+### Phase 1A — Vancouver-only destination suggestions (current assignment)
 
-### Scope and expected components
+- Preserve broad origin autocomplete behavior.
+- Destination autocomplete sends a MapTiler bbox derived from the authoritative City of Vancouver polygon, requests enough candidates to account for filtering, and returns at most the existing five suggestions in provider order.
+- The existing municipal polygon validator is the eligibility filter. Keep submit-time destination validation unchanged.
+- Keep the API backward compatible for callers that omit the optional search role. Handle empty/malformed results and upstream errors using current sanitized behavior.
+- Limit code changes to the geocoding adapter/API, autocomplete request, focused tests, and factual project state.
 
-- `frontend/src/App.tsx`: retain header/controls and existing route selection; add presentation stages, Stage 1 guidance and approximately 65/35 map/route layout; remove the pre-analysis AI placeholder.
-- `frontend/src/DestinationCameraPanel.tsx`: one-view navigation across the actual returned usable views with complete provenance and failure states.
-- `frontend/src/DestinationWeatherPanel.tsx`, existing weather helpers/types, and a small summary component/helper if needed: current weather, timestamp-based next-hour subset, nearest eligible ECCC station, and qualified Road Ahead overlap count from existing normalized data.
-- `frontend/src/styles.css` and relevant tests under `frontend/tests/`: full-width responsive summary, approximately equal desktop camera/weather columns and deterministic regression coverage. Expected paths are guidance, not a refactor mandate.
-- Retain existing supporting information below the new summary during this intermediate slice. Do not implement Alpha-UX-2's final map/events arrangement, Experimental placement, or collapse organization yet.
+### Subsequent Phase 1 slices (not authorized by this assignment)
 
-### Acceptance criteria
+- **1B — Automatic route selection:** select and highlight the first returned route after successful generation while retaining manual route changes.
+- **1C — Typography:** increase undersized interface text by approximately 2–4 points and review/refine visual formatting.
+- **1D — Camera outage fallback:** deterministically recognize the known City of Vancouver outage placeholder using only each candidate intersection's primary image; skip unavailable intersections, try the next closest eligible candidate, cap attempts, keep displayed and analyzed cameras consistent, and do not use an LLM for outage detection.
 
-1. Stage 1 retains header/controls, guidance before routes, and explicit Choose Your Route UI after routes. Route candidates, selection and highlighting, validation, and errors remain functional.
-2. Find Routes returns immediately from Stage 2 to Stage 1; valid Analyze enters Stage 2 immediately and brings the section beginning into view once, without moving keyboard focus. Later result updates do not repeat the viewport adjustment or disrupt user scrolling. Input/route invalidation suppresses prior results and cancels matching work. Invalid Analyze creates no attempt.
-3. Summary spans available width; camera and weather are approximately equal columns on desktop and stack readably. Camera and deterministic evidence render independently of AI loading/failure; no extra data fetch or inference is introduced. Inputs remain editable and Find Routes remains available during analysis. Repeated Analyze clicks during the active analysis do not create duplicate logical attempts; existing loading, disabled, cancellation and validation behavior is preserved. Camera navigation and map interaction remain usable while AI is pending.
-4. Camera navigation handles zero, one, and more than four views, partial/stale results, changed results, and image failure. Only one image is displayed; provenance, official link and timestamps remain accessible. Navigation does not change inference image selection or dispatch.
-5. Current weather preserves all requested available fields and unknowns. The next-hour selection starts from current analysis time, excludes elapsed forecast timestamps, uses only actual upcoming timestamps, retains gaps, and preserves provider evaluation/freshness metadata; the complete series remains accessible. No data sent to the briefing is changed. Select one closest non-stale useful ECCC observation using normalized flags/measurements; preserve measured/source distinctions and cache warnings. No eligible station yields an explicit empty state.
-6. Road count includes only Road Ahead direct overlaps and qualifies partial/stale/unavailable/zero data. No all-clear wording or DriveBC Point/nearby inflation.
-7. USER-001 UUID behavior, USER-002 inclusive cutoff/settlement behavior, existing deadlines, cancellation, stale guards, and at most one briefing dispatch per attempt remain unchanged. Display subsets never alter briefing evidence.
+### Verification and approval boundary
 
-### Verification and human approval boundary
-
-Run focused fixture-based stage/summary/camera/weather regressions, plus existing camera, briefing, and evidence lifecycle tests. Exercise deterministic completion orders (camera before/after analysis, AI pending/failing), Find Routes during pending work, invalidation, missing intervals/fields, station eligibility and ties, road status/count variants, and no dispatch from navigation. Run the full frontend suite (`cd frontend && npm test`), production build (`npm run build`), and `git diff --check`. Use mocked transports with no external requests or paid inference. Backend checks are not required when backend files remain unchanged.
-
-Use mocked browser/manual review where available for immediate stage transitions, desktop proportions, keyboard camera navigation, responsive stacking, and retained map rendering/highlighting; report unavailable browser checks as Not run. Human review and explicit acceptance are required before the slice is accepted; passing checks do not authorize Alpha-UX-2 or Git history operations. Update `PROJECT_STATE.md` factually after implementation.
-
-## Separately authorized future assignment: Alpha-UX-2 — Supporting layout and disclosures
-
-**Status:** Future slice; requires its own human-approved implementation prompt after Alpha-UX-1 review. Not authorized by this preparation or by Alpha-UX-1 implementation approval.
-
-**Objective:** Complete Stage 2's map/construction arrangement, Experimental briefing placement, and collapsible supporting data per [Alpha UX v1](docs/alpha-ux-spec.md).
-
-### Scope and expected components
-
-`App.tsx`, `VancouverMap.tsx` integration, `RoadAheadPanel.tsx`, `DestinationWeatherPanel.tsx`, briefing presentation extracted only as necessary, `styles.css`, and focused frontend tests. Reorganize existing data and callbacks without changing map relevance or inference orchestration.
-
-### Acceptance criteria
-
-1. Below the primary summary, the map sits beside route-intersecting Road Ahead events on desktop and stacks readably at narrower widths. Route/construction emphasis, source-scoped selection, event-to-map focus, existing overlays, and camera markers remain functional.
-2. AI Journey Briefing appears below map/construction, labelled Experimental, with existing content and independent loading/error/insufficient-evidence states. Its position or mount lifecycle causes no new dispatch.
-3. Complete three-hour forecast, additional returned ECCC observations, nearby construction, detailed statuses and secondary context are accessible in keyboard-operable sections collapsed by default. Primary source warnings remain visible. Preserve timestamps, units, attribution, unknowns, and event interactions when expanded.
-4. Existing DriveBC findings remain accessible and distinct from Road Ahead; regional/Point context retains its semantics. Empty DriveBC and deferred Transit placeholders consume no large primary area; transit stays deferred.
-5. Alpha-UX-1 transitions, primary summary and all accepted UUID/timing/cancellation/one-dispatch behavior remain intact; no content is lost through reorganization.
-
-### Verification and human approval boundary
-
-Run focused map/event and disclosure interaction regressions with deterministic fixtures, retained camera/weather/briefing/evidence tests, the full frontend suite, production build and `git diff --check`. Verify selected event focus and highlighting after layout resize, collapse/expand, repeated analysis and return to Stage 1. Use mocked browser/manual checks for section order, readable scrolling/stacking, keyboard disclosure controls and map rendering. No external requests or paid inference. Report checks precisely; human visual review and explicit acceptance remain required. No automatic next phase or Git operation is authorized.
-
-## Shared exclusions
-
-Both slices are frontend presentation work only: no backend/API/shared contract changes, new sources, additional LLM inference, model/prompt/provider/budget changes, dependencies, infrastructure, authentication, usage tracking, deployment, unrelated fixes or refactoring. Preserve QAR-1 budget controls and QAR-2 offline isolation. Material conflicts require escalation under `AGENTS.md`.
+Run focused geocoding and destination-validation tests, the backend test suite and Ruff, the frontend test suite and production build, and `git diff --check`. Use deterministic fixtures/mocked transports without live services. Provide a manual origin/destination dropdown checklist. Record implementation and verification in `PROJECT_STATE.md`; human review and manual verification precede acceptance. Do not stage, commit, push, or begin 1B–1D.
 
 ## Completed correction assignment
 

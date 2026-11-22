@@ -70,7 +70,8 @@ export default function LocationAutocomplete({
       setIsOpen(true);
       void (async () => {
         try {
-          const params = new URLSearchParams({ q: queryToSearch });
+          const role = marker === 'destination-marker' ? 'destination' : 'origin';
+          const params = new URLSearchParams({ q: queryToSearch, role });
           const response = await fetch(`/api/geocoding/search?${params.toString()}`, {
             signal: controller.signal,
           });

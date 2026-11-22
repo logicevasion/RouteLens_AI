@@ -1,5 +1,7 @@
 """Focused geocoding and destination validation endpoints."""
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import ValidationError
@@ -107,13 +109,14 @@ def _vision_failure(code: str, *, status: str = "unavailable") -> AdapterResult:
 @router.get("/geocoding/search", response_model=list[Location])
 async def search_locations(
     q: str = Query(min_length=2, max_length=200),
+    role: Literal["origin", "destination"] = Query(default="origin"),
 ) -> list[Location]:
-    """Return normalized suggestions using Metro Vancouver as search proximity."""
+    """Return normalized origin or Vancouver-eligible destination suggestions."""
     query = q.strip()
     if len(query) < 2:
         raise HTTPException(status_code=422, detail="Query must contain at least 2 characters.")
     try:
-        return await MapTilerGeocoder().search(query)
+        return await MapTilerGeocoder().search(query, destination=role == "destination")
     except GeocodingConfigurationError as error:
         raise HTTPException(status_code=503, detail=str(error)) from None
     except GeocodingUpstreamError as error:

@@ -9,12 +9,20 @@ from urllib.parse import quote
 
 import httpx
 
+from app.geography import CITY_OF_VANCOUVER, validate_destination
 from app.models import Location
 
 MAPTILER_ENDPOINT = "https://api.maptiler.com/geocoding"
 MAPTILER_PROXIMITY = "-123.1207,49.2827"
 MAX_CANDIDATES = 5
+DESTINATION_PROVIDER_LIMIT = 10
 REQUEST_TIMEOUT_SECONDS = 8.0
+
+
+def _city_bbox() -> str:
+    """Return MapTiler's west,south,east,north bbox for the municipal polygon."""
+    west, south, east, north = CITY_OF_VANCOUVER.bounds
+    return f"{west},{south},{east},{north}"
 
 
 class GeocodingError(Exception):
@@ -91,7 +99,7 @@ def _first_text(*values: Any) -> str | None:
     return None
 
 
-def normalize_response(payload: Any) -> list[Location]:
+def normalize_response(payload: Any, *, limit: int = MAX_CANDIDATES) -> list[Location]:
     """Normalize valid point candidates from a MapTiler FeatureCollection."""
     if not isinstance(payload, dict) or payload.get("type") != "FeatureCollection":
         raise GeocodingUpstreamError("MapTiler returned an invalid geocoding response.")
@@ -104,7 +112,7 @@ def normalize_response(payload: Any) -> list[Location]:
         location = normalize_feature(feature)
         if location is not None:
             candidates.append(location)
-        if len(candidates) == MAX_CANDIDATES:
+        if len(candidates) == limit:
             break
     return candidates
 
@@ -121,19 +129,22 @@ class MapTilerGeocoder:
         self._api_key = (api_key if api_key is not None else os.getenv("MAPTILER_API_KEY", "")).strip()
         self._transport = transport
 
-    async def search(self, query: str) -> list[Location]:
+    async def search(self, query: str, *, destination: bool = False) -> list[Location]:
         if not self._api_key:
             raise GeocodingConfigurationError("Location search is not configured on this server.")
 
         encoded_query = quote(query, safe="")
+        candidate_limit = DESTINATION_PROVIDER_LIMIT if destination else MAX_CANDIDATES
         params = {
             "key": self._api_key,
             "autocomplete": "true",
             "country": "ca",
             "language": "en",
-            "limit": str(MAX_CANDIDATES),
+            "limit": str(candidate_limit),
             "proximity": MAPTILER_PROXIMITY,
         }
+        if destination:
+            params["bbox"] = _city_bbox()
         try:
             async with httpx.AsyncClient(
                 timeout=REQUEST_TIMEOUT_SECONDS,
@@ -150,6 +161,9 @@ class MapTilerGeocoder:
         if response.status_code >= 400:
             raise GeocodingUpstreamError("Location search is temporarily unavailable.")
         try:
-            return normalize_response(response.json())
+            candidates = normalize_response(response.json(), limit=candidate_limit)
         except (ValueError, TypeError):
             raise GeocodingUpstreamError("MapTiler returned an invalid geocoding response.") from None
+        if not destination:
+            return candidates
+        return [candidate for candidate in candidates if validate_destination(candidate).valid][:MAX_CANDIDATES]

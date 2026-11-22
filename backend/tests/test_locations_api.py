@@ -107,8 +107,11 @@ def test_invalid_coordinates_are_rejected_by_api_model() -> None:
 
 
 def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    roles: list[bool] = []
+
     class FakeGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
+            roles.append(destination)
             if query == "missing place":
                 return []
             return [Location(name="Downtown", latitude=49.28249, longitude=-123.11814, provider_id="id.1")]
@@ -116,6 +119,9 @@ def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: FakeGeocoder())
     response = api_request("GET", "/api/geocoding/search", params={"q": "Downtown"})
     empty_response = api_request("GET", "/api/geocoding/search", params={"q": "missing place"})
+    destination_response = api_request(
+        "GET", "/api/geocoding/search", params={"q": "Downtown", "role": "destination"}
+    )
 
     assert response.status_code == 200
     assert response.json() == [
@@ -129,6 +135,13 @@ def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest
     ]
     assert empty_response.status_code == 200
     assert empty_response.json() == []
+    assert destination_response.status_code == 200
+    assert roles == [False, False, True]
+
+
+def test_search_rejects_unknown_role() -> None:
+    response = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "other"})
+    assert response.status_code == 422
 
 
 def test_search_rejects_short_or_blank_queries() -> None:
@@ -139,7 +152,7 @@ def test_search_rejects_short_or_blank_queries() -> None:
 
 def test_search_provider_failure_returns_safe_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class FailedGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
             raise GeocodingUpstreamError("Location search timed out. Please try again.")
 
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: FailedGeocoder())
@@ -151,7 +164,7 @@ def test_search_provider_failure_returns_safe_error(monkeypatch: pytest.MonkeyPa
 
 def test_search_missing_server_credential_returns_safe_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class UnconfiguredGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
             raise GeocodingConfigurationError("Location search is not configured on this server.")
 
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: UnconfiguredGeocoder())

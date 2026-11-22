@@ -2,11 +2,18 @@
 
 ## Current repository and SDD status
 
-- **Implementation checkout:** Alpha-UX-1 is accepted at `ed955d1` on `main`. Alpha-UX-2 is human accepted and ready for commit; its changes remain uncommitted.
+- **Implementation checkout:** `feature/alpha-ux-stabilization`; the worktree was clean at task start. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current objective:** Prepare a small, access-protected friends-only alpha deployment. Authentication, usage tracking, and broader deployment planning remain deferred.
-- **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for Alpha-UX-2.
-- **Git control:** Human developers retain staging and Git history control. Alpha-UX-2 is ready for a human-controlled commit and push.
+- **Current objective:** Phase 1 UX Stabilization, with implementation limited to 1A Vancouver-only destination suggestions. Phases 1B–1D are documented for later separate assignments.
+- **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
+
+## Phase 1 status
+
+Phase 1A adds an optional `role` to geocoding search while preserving the default origin behavior. Destination requests use the official City of Vancouver polygon bounds as MapTiler's bbox, request up to the provider maximum of 10 candidates, apply the existing municipal polygon validator, and return at most five results in provider order. Submit-time destination validation is unchanged. Phases 1B–1D have not been implemented.
+
+**Verification:** Full backend suite passed (478 tests); Ruff passed for `backend/app` and `backend/tests`; frontend suite passed (14 test files, 0 failures); TypeScript/Vite production build passed with the existing large-chunk advisory; and `git diff --check` passed. No live provider requests were made. Human review and manual origin/destination dropdown verification remain pending.
+
+**Status:** Phase 1A implementation is ready for human review; it is not yet human accepted.
 
 ## Alpha UX implementation status
 
