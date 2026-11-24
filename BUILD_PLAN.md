@@ -11,7 +11,7 @@ This file defines the currently selected bounded assignment. Planning approval d
 
 ## Phase 1 — UX Stabilization
 
-**Status:** Phases 1A, 1B, and 1C are accepted. Phase 1D is implemented and pending human review.
+**Status:** Phases 1A–1D are complete. All four passed manual verification and independent Claude Code review and were accepted by the human developer. Phase 1 is ready to merge into `main`.
 
 ### Phase 1A — Vancouver-only destination suggestions (accepted)
 
@@ -32,12 +32,17 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Check wrapping for long location names and narrow viewports. Run the existing frontend tests, production build, and `git diff --check`. Use available browser tooling for a lightweight layout check.
 - Record verification in `PROJECT_STATE.md` and provide a manual browser checklist for human review. Human developers retain staging, commits, pushes, and deployment.
 
-### Phase 1D — Camera outage fallback (ready for human review)
+### Phase 1D — Camera outage fallback (accepted)
 
 - Screen the first validated-URL view at up to four intersections in the existing proximity order. Skip confirmed placeholders and unavailable primaries. Fetch other directions only at the selected intersection.
 - Use the supplied JPEG as the source for an embedded SHA-256 and a small Pillow template tolerant of recompression and resizing. Preserve the original JPEG as a regression fixture.
 - Bind browser-triggered vision to the gallery's selected intersection and current frame identities through a response/request header and cache-only validation. Keep the existing JSON response and briefing lifecycle. Exclude placeholders before inference or cached image delivery.
-- Verify offline with fixture-backed camera responses and a mocked vision provider. Review browser behavior and check current City feed variants as a separate manual verification.
+- Fixture-backed camera responses and a mocked vision provider verified the fallback and gallery-to-vision consistency. Browser behavior was manually verified. Matching against a newly captured live City outage image remains unverified, and the existing first-briefing camera interpretation timing issue remains open.
+- All Phase 1D QA follow-up findings were addressed to Claude Code's and the human developer's satisfaction. The follow-up passed 497 backend tests and Ruff. Earlier Phase 1D verification passed all 15 frontend test files and the TypeScript/Vite production build with the existing large-chunk advisory. [Detailed verification](PROJECT_STATE.md#phase-1-status)
+
+## Phase 2 — Security and API cost controls (planned)
+
+Phase 2 is the next development focus after Phase 1 merges. Implementation has yet to begin and requires a separate bounded assignment.
 
 ## Completed correction assignment
 
@@ -45,7 +50,7 @@ QAR-1 is accepted at `d1bbcd4`. Its prior active plan (only relative links adjus
 
 ## Accepted baseline: Phases 0–10
 
-The human-accepted datathon MVP is driving-only and serves journeys into Vancouver. Phases 0–3 established the SDD foundation, application shell, Vancouver map, canonical geocoding and destination validation, ORS route alternatives, and explicit route selection. Phases 4–6 added Road Ahead, DriveBC Open511, OpenWeather, and ECCC/SWOB evidence with source-specific provenance and failure handling. Phase 7 added the Vancouver camera catalogue, current-frame retrieval, gallery, and metadata-only nearby markers. Phase 8 added validated single-direction camera inference and provenance. Phase 9 added the internal journey evidence bundle and lifecycle handoff. Phase 10 added the source-grounded, three-topic AI Journey Briefing and completed the MVP. Accepted implementation details, caveats, and evidence remain in `PROJECT_STATE.md`'s archive and the integration notes.
+The human-accepted datathon MVP is driving-only and serves journeys into Vancouver. Phases 0–3 established the SDD foundation, application shell, Vancouver map, canonical geocoding and destination validation, and ORS route alternatives. That baseline required manual route selection until UX Stabilization Phase 1B added automatic first-route selection. Phases 4–6 added Road Ahead, DriveBC Open511, OpenWeather, and ECCC/SWOB evidence with source-specific provenance and failure handling. Phase 7 added the Vancouver camera catalogue, current-frame retrieval, gallery, and metadata-only nearby markers. Phase 8 added validated single-direction camera inference and provenance. Phase 9 added the internal journey evidence bundle and lifecycle handoff. Phase 10 added the source-grounded, three-topic AI Journey Briefing and completed the MVP. Accepted implementation details, caveats, and evidence remain in `PROJECT_STATE.md`'s archive and the integration notes.
 
 ## Historical records and accepted integration notes
 

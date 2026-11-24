@@ -128,7 +128,7 @@ Journeys whose destination is outside Vancouver are explicitly unsupported in th
 
 The datathon MVP supports **Drive mode only**.
 
-Users select an approximate driving route into the City of Vancouver. That selected route provides geographic context for road events, weather conditions, and destination camera observations.
+RouteLens selects the first usable approximate driving route returned by a successful search into the City of Vancouver. Users may select an alternative. The currently selected route provides geographic context for journey analysis.
 
 Transit, walking, and cycling modes are outside the MVP scope.
 
@@ -142,7 +142,7 @@ Journey-specific transit relevance requires additional service, route, direction
 
 The MVP instead prioritizes:
 
-- explicitly selected driving routes;
+- approximate driving routes with automatic first-route selection and manual alternatives;
 - municipal Road Ahead construction and closures;
 - regional DriveBC Open511 road events;
 - current and near-term weather;
@@ -192,12 +192,12 @@ The MVP flow is:
 4. User enters a destination.
 5. User selects a valid Vancouver destination from autocomplete results.
 6. RouteLens generates plausible driving-route candidates.
-7. The user explicitly selects the route that most closely resembles their planned journey.
-8. The user manually initiates journey analysis.
+7. RouteLens selects the first usable returned route. The user may select an alternative.
+8. The user manually initiates journey analysis for the currently selected route.
 9. RouteLens gathers relevant current and near-term telemetry.
 10. Deterministic logic identifies geographically and temporally relevant evidence.
 11. RouteLens automatically selects the nearest usable Vancouver camera intersection to the destination.
-12. RouteLens retrieves usable directional camera views and performs one combined multimodal assessment.
+12. RouteLens displays usable directional camera views and uses one eligible image from the validated gallery selection for OpenRouter vision interpretation.
 13. RouteLens presents municipal and regional road context, weather observations and forecasts, camera-derived visual conditions, and a concise AI-assisted journey briefing.
 14. The user may manually inspect additional geographic telemetry on the interactive map.
 
@@ -238,7 +238,7 @@ The UI should ask something like:
 
 > **Which route most closely matches your planned trip?**
 
-The user selects the closest match.
+The first usable returned route is selected automatically. The user may choose an alternative that better matches their journey.
 
 The application should not frame these as:
 
@@ -256,8 +256,8 @@ For a driving journey:
 
 1. origin and destination are selected;
 2. RouteLens obtains plausible driving corridors;
-3. the user selects the corridor closest to their intended journey;
-4. telemetry is prioritized around that corridor.
+3. RouteLens selects the first usable returned corridor and offers alternatives for manual selection;
+4. journey analysis prioritizes telemetry around the currently selected corridor.
 
 Relevant information may include:
 
@@ -331,29 +331,17 @@ Instead, RouteLens should automatically select:
 
 > **one nearest usable Vancouver camera intersection to the destination**
 
-and use all available directional views from that intersection.
+and show usable directional views from that intersection in the gallery.
 
 ---
 
 # 19. Destination Camera Selection
 
-RouteLens should identify the nearest usable camera intersection to the destination.
-
-A camera intersection is considered usable when RouteLens can retrieve one or more valid current directional images.
-
-Expected behavior:
-
-1. find nearby Vancouver camera intersections;
-2. choose the nearest candidate;
-3. verify that usable current images are available;
-4. if not, try the next-nearest candidate;
-5. select one usable intersection.
-
-The MVP does not require automatic analysis of multiple camera intersections.
+RouteLens screens up to four nearest eligible Vancouver camera intersections in distance order. It checks each candidate's primary image from the first directional view with a validated URL in catalogue order. A match to the known offline placeholder or an unavailable primary causes RouteLens to try the next candidate. The first fresh, usable primary determines the gallery intersection. A usable cached stale primary can support a degraded gallery when none of the screened intersections has a fresh, usable primary.
 
 ---
 
-# 20. Multi-View Camera Assessment
+# 20. Directional Camera Gallery and Assessment
 
 A selected Vancouver camera intersection may expose multiple directional views.
 
@@ -364,13 +352,7 @@ Typical examples include:
 - east-facing;
 - west-facing.
 
-RouteLens should retrieve all available usable views from the selected intersection and perform:
-
-> **one combined multimodal assessment**
-
-rather than making separate AI calls for every direction.
-
-This allows the AI to use multiple perspectives of the same local conditions while controlling latency and cost.
+The gallery can show multiple usable directions from the selected intersection. Browser-triggered OpenRouter vision uses one eligible image from the same validated gallery selection. If that selection can no longer be validated against the cache, the application reports camera interpretation as unavailable for that attempt.
 
 ---
 
@@ -740,7 +722,7 @@ The user should quickly be able to understand:
 Destination conditions should prioritize:
 
 1. selected Vancouver camera intersection imagery;
-2. structured multi-view camera analysis;
+2. structured camera interpretation from one eligible directional image;
 3. current OpenWeather conditions;
 4. nearby useful ECCC/SWOB observations;
 5. near-term OpenWeather forecast;
@@ -1213,7 +1195,7 @@ The MVP must allow the user to:
 ## Route Context
 
 - generate an approximate journey corridor;
-- select/accept an approximate corridor;
+- automatically select the first usable returned corridor and allow manual choice of an alternative;
 - view the selected route on the map;
 - understand that the corridor is for context rather than authoritative navigation.
 
@@ -1221,7 +1203,7 @@ The MVP must allow the user to:
 
 - select the nearest usable destination camera intersection automatically;
 - retrieve available directional images from that intersection;
-- receive one combined multimodal analysis across usable views;
+- receive camera interpretation from one eligible directional image in the validated gallery selection;
 - see current visual-condition insight;
 - continue receiving a useful journey analysis if no usable camera is available.
 
@@ -1315,12 +1297,12 @@ The MVP is considered successful when a user can:
 1. Select a valid origin.
 2. Select a valid City of Vancouver destination.
 3. View plausible driving-route candidates.
-4. Explicitly select an approximate driving route.
+4. Use the automatically selected first usable route or select an alternative for journey analysis.
 5. View the selected route on an interactive map.
 6. See relevant Vancouver Road Ahead construction and closure information.
 7. See regional DriveBC Open511 events and route-relevant findings.
 8. Inspect the selected destination camera intersection when usable imagery exists.
-9. Receive a multi-view camera-derived visual-condition assessment.
+9. Receive a visual-condition assessment from one eligible directional camera image.
 10. See current and near-term OpenWeather information.
 11. See relevant measured ECCC/SWOB observations.
 12. Receive a concise, source-grounded AI journey briefing.
@@ -1466,7 +1448,7 @@ The MVP succeeds by combining:
 - an approximate selected journey corridor;
 - municipal construction data;
 - regional road-event data;
-- one nearby multi-view Vancouver camera assessment;
+- one single-image assessment from a nearby Vancouver camera intersection;
 - structured weather;
 - measured weather observations.
 

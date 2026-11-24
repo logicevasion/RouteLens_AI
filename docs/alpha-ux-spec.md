@@ -2,21 +2,23 @@
 
 ## Status and purpose
 
-Approved requirements supplied by the human developer for a small, protected private alpha with friends. This document prepares future implementation; no Alpha UX code is implemented or authorized by this documentation task. The accepted datathon MVP and QAR-1, QAR-2, USER-001, and USER-002 form the baseline. [BUILD_PLAN.md](../BUILD_PLAN.md) separates the two implementation slices; [PROJECT_STATE.md](../PROJECT_STATE.md) records actual status.
+Approved requirements supplied by the human developer for a small, protected private alpha with friends. The accepted datathon MVP and QAR-1, QAR-2, USER-001, and USER-002 formed the baseline. Alpha-UX-1 and Alpha-UX-2 are complete and accepted. Phase 1 UX Stabilization subsequently updated route and camera selection. [Current project state](../PROJECT_STATE.md)
 
 The objective is faster access to deterministic journey evidence while retaining the dark visual style and existing source semantics. Authentication, usage tracking, protection mechanisms, and deployment remain separately scoped work; this specification does not establish that a hosted alpha is protected or ready to deploy.
 
 ## Stage 1 — Plan Your Journey
 
-Retain the top header and existing origin, destination, Find Routes, and Analyze Journey controls. Keep validation, canonical locations, explicit route selection, candidate rendering, selection colours, and highlighting. On desktop the interactive map occupies approximately 65% and the route-selection panel approximately 35%.
+Retain the top header and existing origin, destination, Find Routes, and Analyze Journey controls. Keep validation, canonical locations, candidate rendering, selection colours, and highlighting. On desktop the interactive map occupies approximately 65% and the route-selection panel approximately 35%.
 
-Remove the unused pre-analysis AI Journey Briefing placeholder. Before candidates exist, provide concise guidance to choose locations and find routes. Once candidates are available, reuse the existing Choose Your Route UI, including approximate distance/duration and explicit selection. Preserve loading, no-route, validation, and error feedback. Never select the first candidate automatically.
+Remove the unused pre-analysis AI Journey Briefing placeholder. Before candidates exist, provide concise guidance to choose locations and find routes. Once a successful search returns usable candidates, select the first in response order. The Choose Your Route UI shows approximate distance and duration and lets the user manually select an alternative. Analyze Journey uses the currently selected candidate. Preserve loading, no-route, validation, and error feedback. The original Alpha UX v1 requirement for mandatory manual route selection was superseded by Phase 1B.
 
 ## Stage 2 — Understand Your Journey
 
 A valid Analyze Journey action enters Stage 2 immediately, before analysis or AI completes. Retain the header and journey controls. Lead with a full-width responsive primary summary, initially using approximately equal camera and weather columns on desktop and stacking them when space requires. Do not defer this summary behind an AI spinner. Each evidence area presents its own available, loading, stale, empty, or unavailable state. On each valid transition into Stage 2, bring the beginning of the “Understand Your Journey” section into view once. Do not move keyboard focus. Later evidence or briefing state updates must not repeat the scroll, and ordinary user scrolling after entry must remain undisturbed. Keep the transition compatible with the existing page layout and accessible navigation.
 
 ### Primary summary
+
+Phase 1D screens the primary images at up to four nearest eligible intersections, skipping known offline placeholders. Browser-triggered OpenRouter vision uses the same validated camera selection as the gallery.
 
 1. **Destination cameras:** Display one directional image at a time with accessible direction navigation and current position/total. Use the actual usable returned views at the selected intersection, including clearly marked stale views under existing fallback semantics; never assume four directions. Zero views shows an unavailable state; one view needs no active navigation. Preserve full direction labels, intersection name, approximate destination distance, source attribution, official source link, retrieval timestamp and age, supplied capture timestamp or explicit capture-time unavailability, and partial/stale warnings. Navigation is presentation only: it must not trigger analysis, new retrieval, or inference, or change the backend-selected inference image. Reset or clamp the view selection when the result changes and retain image-load failure isolation.
 2. **OpenWeather current conditions:** Show temperature, condition, feels-like, humidity, wind speed, visibility, observation time, and freshness when supplied. Retain units and source identity. Unavailable values stay unknown, never zero or inferred.
@@ -50,13 +52,13 @@ During Stage 2, keep origin/destination editable and Find Routes available; invo
 
 The analysis API currently delivers roads and weather together; this UX does not require streaming or splitting that response. Camera imagery is independently available. Reuse existing components, normalized data, evidence bundle, and orchestration; summary filtering must not truncate or alter the evidence sent to the existing briefing.
 
-## Implementation boundaries and verification
+## Original Alpha UX v1 implementation boundaries and verification
 
 No backend changes, new sources, API/normalized contract changes, new inference, dependencies, infrastructure, authentication, tracking, or deployment. Do not modify model, prompt, provider routing, budget ledgers, quotas, or paid controls. QAR-1 aggregate accounting and QAR-2 offline test isolation remain intact.
 
 Alpha-UX-1 covers stage transitions and primary summary. Existing supporting content may remain below the summary as an interim arrangement; the final map/events composition, Experimental placement, and disclosure organization belong to separately authorized Alpha-UX-2. Completion of the first slice is not completion of Alpha UX v1.
 
-Future verification uses deterministic fixtures and mocked transports only, with no external requests or paid inference. Cover transitions/invalidation, independent completion/failure orders, variable camera counts, missing forecast intervals, station eligibility, qualified road counts, UUID/timing/one-dispatch regressions, and final map/disclosure interactions. Human visual review owns desktop proportions, responsive readability, and acceptance; automated checks do not establish visual acceptance. Detailed slice criteria are in [BUILD_PLAN.md](../BUILD_PLAN.md).
+The original verification plan called for deterministic fixtures and mocked transports. It covered transitions/invalidation, independent completion/failure orders, variable camera counts, missing forecast intervals, station eligibility, qualified road counts, UUID/timing/one-dispatch regressions, and final map/disclosure interactions. Human visual review owns desktop proportions, responsive readability, and acceptance. [Recorded verification](../PROJECT_STATE.md#alpha-ux-implementation-status)
 
 ## Baseline observations
 

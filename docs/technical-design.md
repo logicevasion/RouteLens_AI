@@ -28,7 +28,7 @@ Public deployment is not required.
 
 The datathon MVP supports **driving journeys exclusively**.
 
-The supported journey contract consists of a canonical origin, a City of Vancouver destination, and an explicitly selected driving-route candidate with GeoJSON LineString geometry.
+The supported journey contract consists of a canonical origin, a City of Vancouver destination, and the currently selected driving-route candidate with GeoJSON LineString geometry. A successful search selects the first usable candidate in response order, and the user may select an alternative.
 
 Transit Mode, GTFS preprocessing, transit service selection, service-alert ingestion, and transit-specific relevance matching are deferred beyond the MVP.
 
@@ -54,7 +54,7 @@ RouteLens consists of:
 - ephemeral camera-image caching;
 - OpenRouter-backed AI inference.
 
-High-level flow:
+Conceptual evidence flow. The frontend coordinates separate road/weather analysis, camera gallery, camera vision, and briefing requests.
 
 ```text
 User
@@ -63,7 +63,7 @@ User
 React / Vite frontend
  │
  │ origin / destination
- │ explicitly selected driving route
+ │ currently selected driving route
  ▼
 FastAPI backend
  │
@@ -1029,9 +1029,9 @@ openrouteservice
       ↓
 1–3 candidate routes
       ↓
-frontend displays candidates
+frontend displays candidates and selects the first usable route
       ↓
-user selects closest match
+user may select an alternative
 ```
 
 Requirements:
@@ -1224,27 +1224,9 @@ The catalogue should retain the last valid version if refresh/enrichment fails.
 
 # 39. Destination Camera Selection
 
-MVP selection logic:
+Screen up to four nearest eligible intersections in distance order. For each intersection, check the primary image from the first directional view with a validated URL in catalogue order. If the primary matches the known offline placeholder or is unavailable, skip that intersection and try the next candidate. Select the first intersection with a fresh, usable primary and fetch its remaining directions for the gallery. If no fresh primary qualifies, a usable cached stale primary may support a degraded gallery. Otherwise, camera evidence is unavailable.
 
-```text
-destination
-   ↓
-nearby camera intersections
-   ↓
-sort by distance
-   ↓
-check nearest candidate
-   ↓
-usable directional images?
-   ├── yes → select
-   └── no  → try next nearest
-```
-
-The result is:
-
-> one nearest usable camera intersection.
-
-The MVP does not automatically analyze multiple intersections.
+The detector uses an exact SHA-256 match and a background-color and text-layout comparison against the supplied outage image. Matching against a newly captured live City outage image remains unverified.
 
 ---
 
@@ -1252,10 +1234,10 @@ The MVP does not automatically analyze multiple intersections.
 
 Once an intersection is selected:
 
-1. retrieve all known directional views;
-2. validate image responses;
-3. keep usable images;
-4. pass all usable images to one multimodal request.
+1. retrieve the remaining directional views within the selection limits;
+2. validate image responses and exclude known offline placeholders;
+3. make usable images available in the gallery;
+4. use one eligible direction from the gallery's validated selection for browser-triggered inference.
 
 Typical intersections may expose 2–4 images.
 
@@ -1284,7 +1266,7 @@ upstream Vancouver JPEG
 Benefits:
 
 - avoids CORS issues;
-- ensures UI and AI use the same frame;
+- lets browser-triggered vision validate the gallery's intersection and frame identities;
 - centralizes validation;
 - isolates upstream URLs;
 - supports ephemeral storage policy.
@@ -1339,16 +1321,20 @@ Raw image binaries do not need to be stored in SQLite.
 
 ---
 
-# 44. Multi-View Camera Analysis Pipeline
+# 44. Single-Image Camera Analysis Pipeline
+
+For browser-triggered vision, the gallery response supplies an `X-Camera-Selection` fingerprint for the selected intersection and current frames. The frontend sends it with the vision request. Cache-only validation must confirm that selection before any OpenRouter attempt. A changed, expired, or stale-only selection results in unavailable camera interpretation for that attempt.
+
+Camera interpretation that completes after the briefing evidence cutoff can still be omitted from the first briefing.
 
 Flow:
 
 ```text
-selected camera intersection
+gallery selection
        ↓
-fetch all usable current views
+validate intersection and current frame identities from cache
        ↓
-temporary cache
+select one eligible direction in catalogue order
        ↓
 one constrained multimodal request
        ↓
@@ -1363,7 +1349,7 @@ persist normalized observation
 
 The model should be explicitly instructed to:
 
-- evaluate all supplied views together;
+- evaluate the supplied directional image;
 - describe observable evidence only;
 - distinguish wet pavement from active rainfall;
 - return unknown/null where unclear;
@@ -1385,7 +1371,7 @@ Target contract:
   "visibility": "good",
   "image_quality": "usable",
   "confidence": 0.84,
-  "notes": "Wet pavement is visible across multiple views; light falling precipitation may be visible in one view."
+  "notes": "Wet pavement is visible in the supplied view."
 }
 ```
 
@@ -1788,7 +1774,9 @@ may indicate localized/changing conditions.
 
 # 80. Main Journey Analysis Endpoint
 
-Primary orchestration endpoint:
+The original orchestration plan below describes a single endpoint. The application now fetches the gallery and camera interpretation through separate requests to `POST /api/cameras/nearest` and `POST /api/cameras/observe`. The browser passes the gallery selection to vision as described in Section 44.
+
+Primary orchestration endpoint in the original plan:
 
 ```text
 POST /api/trips/analyze
@@ -2241,11 +2229,13 @@ route candidates fetched
       ↓
 MapLibre displays up to 3 routes
       ↓
-user selects closest match
+first usable returned route selected
+      ↓
+user may select an alternative
       ↓
 selected route highlighted
       ↓
-Analyze Journey
+Analyze Journey uses the currently selected route
 ```
 
 Unselected routes should be muted.
@@ -2836,7 +2826,7 @@ A slower optional source should not make the application appear frozen.
 Cost-control strategies:
 
 - one camera intersection per journey;
-- one multimodal request across all usable views;
+- one eligible directional image per camera inference attempt;
 - no repeated time-series camera polling;
 - cache current analysis where useful;
 - send compact normalized evidence to text model;
@@ -2928,7 +2918,7 @@ The technical design is realized when:
 2. Origin/destination autocomplete works.
 3. Vancouver destination validation works.
 4. Drive mode returns route candidates.
-5. User can select a candidate route.
+5. The first usable returned route is selected automatically. Users can select another candidate, and analysis uses the current selection.
 6. FastAPI orchestrates all MVP source adapters.
 7. Normalized models preserve source provenance.
 8. Geographic calculations use meter-appropriate projection.
@@ -2944,9 +2934,9 @@ The technical design is realized when:
 18. OpenWeather endpoint/schema has been validated against the actual API key.
 19. OpenWeather current/near-term data is normalized.
 20. Vancouver camera catalogue enrichment extracts real directional image URLs.
-21. Nearest usable camera intersection is selected.
-22. All available usable directional views are fetched ephemerally.
-23. One multimodal inference analyzes those views.
+21. Up to four nearest eligible intersections are screened for a usable primary image, skipping known offline placeholders.
+22. Usable directional views from the selected intersection are made available in the gallery.
+23. Browser-triggered vision validates the gallery selection from cache and uses one eligible directional image.
 24. Camera output validates through Pydantic.
 25. Journey timeline is built from normalized relevant evidence.
 26. Journey briefing validates through Pydantic.
@@ -2983,7 +2973,7 @@ OBSERVATION
 road + weather + camera
         ↓
 AI INTERPRETATION
-multi-view camera assessment
+single-image camera assessment
 +
 journey briefing
         ↓
@@ -3052,9 +3042,9 @@ or:
 ```text
 Vancouver camera catalogue
 → directional image URL enrichment
-→ nearest usable destination intersection
-→ multi-view image retrieval
-→ multimodal AI assessment
+→ screen up to four nearest eligible destination intersections
+→ retrieve usable views for the selected intersection
+→ single-image AI assessment from the validated gallery selection
 → destination conditions panel
 ```
 
