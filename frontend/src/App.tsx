@@ -233,7 +233,7 @@ function JourneyControls({ origin, destination, onOriginChange, onDestinationCha
         {routeState.status === 'loading' && 'Requesting driving alternatives…'}
         {routeState.status === 'empty' && 'No usable routes were returned. Check the locations and try again.'}
         {routeState.status === 'error' && routeState.error}
-        {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available. Select one to continue.`}
+        {routeState.status === 'ready' && `${routeState.candidates.length} ${routeState.candidates.length === 1 ? 'route' : 'routes'} available.`}
         {analysisState.status === 'loading' && 'Checking road sources and destination weather for the selected route. This may take a little while.'}
         {analysisState.status === 'error' && analysisState.error}
       </p>
@@ -297,7 +297,7 @@ function IntelligencePanel({ stage, routeState, onSelectRoute, analysisState, se
         </div>
       </div>
 
-      {stage === 'plan' && routeState.status !== 'ready' && <p className="stage-guidance">Choose an origin and a Vancouver destination, then find routes. Select the route closest to your planned journey before analyzing it.</p>}
+      {stage === 'plan' && routeState.status !== 'ready' && <p className="stage-guidance">Choose an origin and a Vancouver destination, then find routes. You can change the selected route before analysis.</p>}
 
       {(routeState.status === 'loading' || routeState.status === 'ready' || routeState.status === 'empty' || routeState.status === 'error') && (
         <section className="route-selection" aria-labelledby="route-selection-title">
@@ -486,7 +486,7 @@ export default function App() {
       } else if (normalized.routes.length === 0) {
         setRouteState({ status: 'empty', candidates: [], selectedRoute: null, error: null, fitKey: routeState.fitKey });
       } else {
-        setRouteState({ status: 'ready', candidates: normalized.routes, selectedRoute: null, error: null, fitKey: routeState.fitKey + 1 });
+        setRouteState({ status: 'ready', candidates: normalized.routes, selectedRoute: normalized.routes[0], error: null, fitKey: routeState.fitKey + 1 });
       }
     } catch {
       if (controller.signal.aborted || routingSequence.current !== requestId) return;
@@ -761,7 +761,7 @@ export default function App() {
             <div className="map-caption"><span className="map-caption-dot" /> VANCOUVER OVERVIEW</div>
             <VancouverMap
               routes={routeState.status === 'ready' ? routeState.candidates : []}
-              selectedRouteId={routeState.status === 'ready' ? routeState.selectedRoute?.id ?? null : null}
+              selectedRouteId={selectedRoute?.id ?? null}
               fitKey={routeState.fitKey}
               findings={analysisState.status === 'success' ? analysisState.result.findings : noAnalysisFindings}
               drivebcFindings={analysisState.status === 'success' ? analysisState.result.drivebc_findings : noDriveBCFindings}

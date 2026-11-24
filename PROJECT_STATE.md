@@ -4,18 +4,18 @@
 
 - **Implementation checkout:** `feature/alpha-ux-stabilization`; the worktree was clean at task start. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current objective:** Phase 1 UX Stabilization, with implementation limited to 1A Vancouver-only destination suggestions. Phases 1B–1D are documented for later separate assignments.
+- **Current objective:** Phase 1B automatic first-route selection is the active implementation. Phase 1A is accepted and committed. Phases 1C and 1D are deferred.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
 
-Phase 1A adds an optional `role` to geocoding search while preserving the default origin behavior. Destination requests use the official City of Vancouver polygon bounds as MapTiler's bbox, request up to the provider maximum of 10 candidates, apply the existing municipal polygon validator, and return at most five results in provider order. Submit-time destination validation is unchanged. Phases 1B–1D have not been implemented.
+**Phase 1A — Accepted.** Destination autocomplete uses the official Vancouver polygon bounds and filters candidates against the municipal polygon. It returns up to five suggestions in provider order. Origin autocomplete retains broad search, and submit-time destination validation still applies. The implementation is committed at `6aa083a`, and the regression test follow-up is committed at `fb9d1b4`.
 
-**QA follow-up:** Phase 1A implementation is committed at `6aa083a`. The developer reported successful manual browser testing, and independent Claude Code QA found no functional defects. The follow-up replaces the source-text assertion with component-driven fetch assertions for both roles and adds a mocked MapTiler API integration test for municipal polygon filtering. A scratch-copy mutation that hard-codes `role=origin` passed the old test and failed the new destination assertion.
+**Phase 1A verification:** The developer reported successful manual browser testing. The follow-up verified both autocomplete roles and added a mocked MapTiler integration test for polygon filtering. The focused backend suite (41 tests), full backend suite (479 tests), Ruff, frontend suite (14 files), production build, and `git diff --check` passed.
 
-**Verification:** The focused backend suite passed (41 tests), the full backend suite passed (479 tests), and Ruff passed for `backend/app` and `backend/tests`. All 14 frontend test files passed. The TypeScript/Vite production build passed with the existing large-chunk advisory, and `git diff --check` passed.
+**Phase 1B — Ready for human review.** Find Routes selects the first usable candidate in response order. The selected card, map highlight, and manually initiated analysis use the same route. Users can select any alternative. A new search clears the selection and dependent analysis, and empty or failed searches leave the selection clear. Existing cancellation and request-sequence guards suppress superseded results.
 
-**Status:** The test follow-up is ready for human review.
+**Phase 1B verification:** The frontend suite (15 files), TypeScript/Vite production build, routing and analysis API regressions (39 tests), Ruff, and `git diff --check` passed. The build emitted the existing large-chunk advisory. Frontend behavioral tests cover card state, map inputs, analysis payloads, manual override, and response ordering with mocked requests. Visual browser verification is pending. No paid API calls were made.
 
 ## Alpha UX implementation status
 
@@ -52,7 +52,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 - `AGENTS.md` and `APP_SPEC.md` remain governing documents. `BUILD_PLAN.md` defines the current bounded approved assignment; this file records implementation reality. Historical decisions and evidence remain discoverable in the archives and integration notes.
 - Codex may implement only separately authorized assignments. Future accepted assignments should be summarized here rather than appended as full implementation transcripts.
-- RouteLens remains driving-only for the datathon MVP, with Vancouver destinations, explicit candidate-route selection, and manual/on-demand analysis. It is a journey companion, not a navigation replacement.
+- RouteLens remains driving-only for the datathon MVP, with Vancouver destinations, a manually adjustable route selection, and on-demand analysis. It is a journey companion.
 - Source evidence remains distinct and provenance-bearing. Missing/empty evidence is not an all-clear; camera retrieval time is not a verified capture time; Point proximity is not route overlap; camera observations are not authoritative speed, congestion, or meteorological measurements.
 - The Phase 8/10 integrations use `google/gemma-4-31b-it` through OpenRouter with separate vision and briefing ledgers, role-specific quotas/estimates, and provider/account billing as authoritative. QAR-1 preserves these controls while coordinating aggregate local estimates.
 - The later Phase 8D record authorizes current validated City of Vancouver camera frames to be sent to OpenRouter solely for the private, noncommercial prototype under existing limits; it supersedes the earlier 8B restriction. It does not authorize bulk/history collection, public redistribution, commercial deployment, or broader external sharing. Provider-side processing/retention and external image-use rights remain considerations for any expansion.
@@ -80,7 +80,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Commit and push the human-accepted Alpha-UX-2 implementation. Next, plan a minimal protected deployment for a small group of friends using the existing development environment. Full Google OAuth and usage analytics remain deferred.
+Review Phase 1B and verify card and map highlighting in the browser before human acceptance.
 
 **Alpha UX presentation refinement (2026-10-30):** The map-side panel now groups direct Road Ahead, nearby Road Ahead, and DriveBC Open511 in that order; only direct findings are open by default, and relocated event lists are absent from lower supporting information. Frontend tests and build passed; a local CSS fixture demonstrated map adjacency and independent panel scrolling. Full application visual behavior remains for human review. No backend, API, normalized data, inference, provider, infrastructure, or dependency changes; no external requests or paid inference.
 

@@ -33,7 +33,7 @@ This document defines the approved intended MVP system. It does not indicate whi
 
 The datathon MVP supports **Drive mode only**.
 
-Users explicitly select an approximate driving route into the City of Vancouver. The selected route provides geographic context for road events, weather, and destination camera observations.
+The application selects the first approximate driving route into the City of Vancouver after a successful route search. Users can select a different candidate. The selected route provides geographic context for road events, weather, and destination camera observations.
 
 **Scope decision (2026-10-11):** Transit Mode, including TransLink GTFS Static and GTFS-Realtime Service Alerts, is deferred beyond the datathon MVP. Transit requires additional service, direction, stop, transfer, and timing context that is outside the existing driving workflow.
 
@@ -47,7 +47,7 @@ Camera-based visual intelligence remains the MVP's primary differentiating capab
 2. User selects a destination through autocomplete.
 3. Application validates that the destination is inside Vancouver.
 4. Application generates approximate driving-route candidates.
-5. User explicitly selects the candidate closest to their intended journey.
+5. Application selects the first returned candidate. The user can choose another route closer to their intended journey.
 6. User manually initiates journey analysis.
 7. Application gathers current and near-term road and weather evidence.
 8. Deterministic logic identifies geographically and temporally relevant evidence.
@@ -156,9 +156,9 @@ The application operates on RouteLens-owned normalized models. External provider
 ### Journey and Routing
 
 - `Location` — canonical selected place with coordinates and identifying information.
-- `Trip` — canonical origin, Vancouver destination, Drive mode, and explicitly selected driving route.
+- `Trip` — canonical origin, Vancouver destination, Drive mode, and selected driving route.
 - `RouteCandidate` — approximate route geometry and descriptive information.
-- `SelectedRoute` — user-chosen corridor used for geographic relevance.
+- `SelectedRoute` — corridor used for geographic relevance, selected by default or by the user.
 
 ### City Telemetry
 
@@ -484,7 +484,7 @@ A single unavailable source should not normally invalidate the entire journey an
 
 The accepted datathon MVP used a desktop map (~65%) beside a journey intelligence panel (~35%). For the private alpha, the approved presentation contract is a two-stage workflow detailed in [Alpha UX v1](docs/alpha-ux-spec.md).
 
-- **Stage 1 — Plan Your Journey:** retain the top header and journey controls, with the map (~65%) beside guidance or the existing explicit route-selection UI (~35%). Remove the pre-analysis AI briefing placeholder.
+- **Stage 1 — Plan Your Journey:** retain the top header and journey controls, with the map (~65%) beside guidance or the route-selection UI (~35%). Remove the pre-analysis AI briefing placeholder.
 - **Stage 2 — Understand Your Journey:** enter immediately on valid Analyze Journey. Lead with a full-width responsive camera/weather summary, initially approximately equal columns on desktop. Present deterministic evidence as available independently of AI completion.
 - Below the summary, place the interactive map beside route-intersecting Road Ahead events, followed by the **Experimental** AI Journey Briefing. Put extended forecast/station data, nearby events, detailed source statuses, and secondary context in collapsed supporting sections. Empty DriveBC or deferred Transit content must not dominate primary space.
 
@@ -494,7 +494,7 @@ Preserve the dark city-intelligence visual style, readable responsive stacking, 
 
 Prioritize destination camera imagery, OpenWeather current conditions and actual next-hour 15-minute intervals, one closest sufficiently recent useful ECCC station, and a cautious Road Ahead intersection count. Distinguish all sources and preserve freshness and missing-data semantics. AI remains available as experimental supporting synthesis rather than the primary summary.
 
-Find Routes returns to Stage 1. Valid Analyze Journey enters Stage 2 without waiting for AI. Preserve input validation, explicit route selection, cancellation, stale-response guards, USER-001 UUID identity, USER-002 timing, and one briefing dispatch per logical attempt. This presentation change does not change backend contracts, models, prompts, inference controls, data sources, or infrastructure. Implementation remains separately authorized through `BUILD_PLAN.md`.
+Find Routes returns to Stage 1 and clears the prior selection and analysis. A successful search with usable candidates selects the first route and allows manual override. Valid Analyze Journey enters Stage 2 without waiting for AI. Preserve input validation, cancellation, stale-response guards, USER-001 UUID identity, USER-002 timing, and one briefing dispatch per logical attempt. This presentation change does not change backend contracts, models, prompts, inference controls, data sources, or infrastructure. Implementation remains separately authorized through `BUILD_PLAN.md`.
 
 ### Interaction Principles
 

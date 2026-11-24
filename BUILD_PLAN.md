@@ -11,9 +11,9 @@ This file defines the currently selected bounded assignment. Planning approval d
 
 ## Phase 1 — UX Stabilization
 
-**Status:** Phase 1A implementation is authorized by the current human task. Phases 1B–1D are documented for sequencing only and each requires its own bounded implementation prompt.
+**Status:** Phase 1A is accepted and committed. The current human task authorizes Phase 1B only.
 
-### Phase 1A — Vancouver-only destination suggestions (current assignment)
+### Phase 1A — Vancouver-only destination suggestions (accepted)
 
 - Preserve broad origin autocomplete behavior.
 - Destination autocomplete sends a MapTiler bbox derived from the authoritative City of Vancouver polygon, requests enough candidates to account for filtering, and returns at most the existing five suggestions in provider order.
@@ -21,15 +21,19 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Keep the API backward compatible for callers that omit the optional search role. Handle empty/malformed results and upstream errors using current sanitized behavior.
 - Limit code changes to the geocoding adapter/API, autocomplete request, focused tests, and factual project state.
 
-### Subsequent Phase 1 slices (not authorized by this assignment)
+### Phase 1B — Automatic first-route selection (current assignment)
 
-- **1B — Automatic route selection:** select and highlight the first returned route after successful generation while retaining manual route changes.
+- On successful route generation, select the first usable candidate in response order. Use the existing selected card and map styling and the selected route for manually initiated analysis. Keep manual route selection available.
+- Clear the old selection and dependent analysis when a new search starts. Empty and failed searches leave the selection clear. Preserve cancellation and stale-response guards so an older request cannot replace current results or selection.
+
+### Deferred Phase 1 slices
+
 - **1C — Typography:** increase undersized interface text by approximately 2–4 points and review/refine visual formatting.
 - **1D — Camera outage fallback:** deterministically recognize the known City of Vancouver outage placeholder using only each candidate intersection's primary image; skip unavailable intersections, try the next closest eligible candidate, cap attempts, keep displayed and analyzed cameras consistent, and do not use an LLM for outage detection.
 
 ### Verification and approval boundary
 
-Run focused geocoding and destination-validation tests, the backend test suite and Ruff, the frontend test suite and production build, and `git diff --check`. Use deterministic fixtures/mocked transports without live services. Provide a manual origin/destination dropdown checklist. Record implementation and verification in `PROJECT_STATE.md`; human review and manual verification precede acceptance. Do not stage, commit, push, or begin 1B–1D.
+Run the frontend test suite and production build, relevant backend regressions, and `git diff --check`. Use deterministic fixtures and mocked transports for single and multiple candidates, manual override, analysis request identity, empty and failed responses, and out-of-order completion. Provide a manual browser checklist and record implementation and verification in `PROJECT_STATE.md`. Human review and manual verification precede acceptance. Do not stage, commit, push, or begin 1C–1D.
 
 ## Completed correction assignment
 
