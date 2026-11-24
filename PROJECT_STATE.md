@@ -4,7 +4,7 @@
 
 - **Implementation checkout:** `feature/alpha-ux-stabilization`; the worktree was clean at task start. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current objective:** Phase 1B automatic first-route selection is the active implementation. Phase 1A is accepted and committed. Phases 1C and 1D are deferred.
+- **Current objective:** Phase 1B regression coverage follow-up. Phase 1A is accepted and committed. Phases 1C and 1D are deferred.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
@@ -13,9 +13,9 @@
 
 **Phase 1A verification:** The developer reported successful manual browser testing. The follow-up verified both autocomplete roles and added a mocked MapTiler integration test for polygon filtering. The focused backend suite (41 tests), full backend suite (479 tests), Ruff, frontend suite (14 files), production build, and `git diff --check` passed.
 
-**Phase 1B — Ready for human review.** Find Routes selects the first usable candidate in response order. The selected card, map highlight, and manually initiated analysis use the same route. Users can select any alternative. A new search clears the selection and dependent analysis, and empty or failed searches leave the selection clear. Existing cancellation and request-sequence guards suppress superseded results.
+**Phase 1B — Implementation committed at `7385f3b`.** Find Routes selects the first usable candidate in response order. The selected card, map highlight, and manually initiated analysis use the same route. Users can select any alternative. A new search clears the selection and dependent analysis, and empty or failed searches leave the selection clear. Existing cancellation and request-sequence guards suppress superseded results.
 
-**Phase 1B verification:** The frontend suite (15 files), TypeScript/Vite production build, routing and analysis API regressions (39 tests), Ruff, and `git diff --check` passed. The build emitted the existing large-chunk advisory. Frontend behavioral tests cover card state, map inputs, analysis payloads, manual override, and response ordering with mocked requests. Visual browser verification is pending. No paid API calls were made.
+**Phase 1B verification:** Manual browser testing passed per the developer, and independent Claude Code QA reported no confirmed application defects. Implementation checks included 39 routing and analysis API regressions and Ruff. The test-only follow-up covers late HTTP and network failures, rendered panel resets, and edits to either input during a search without a replacement request. The 12 focused cases, full frontend suite (15 files), TypeScript/Vite production build, and `git diff --check` passed. Seven scratch mutations that survived the committed tests were caught by the follow-up. The build emitted the existing large-chunk advisory. The follow-up is ready for human review.
 
 ## Alpha UX implementation status
 
@@ -80,7 +80,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Review Phase 1B and verify card and map highlighting in the browser before human acceptance.
+Review the Phase 1B regression coverage follow-up.
 
 **Alpha UX presentation refinement (2026-10-30):** The map-side panel now groups direct Road Ahead, nearby Road Ahead, and DriveBC Open511 in that order; only direct findings are open by default, and relocated event lists are absent from lower supporting information. Frontend tests and build passed; a local CSS fixture demonstrated map adjacency and independent panel scrolling. Full application visual behavior remains for human review. No backend, API, normalized data, inference, provider, infrastructure, or dependency changes; no external requests or paid inference.
 

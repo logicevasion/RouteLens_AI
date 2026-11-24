@@ -63,6 +63,14 @@ function mountApp(fetch) {
     map() { return render().find((element) => element.type === 'VancouverMap').props; },
     stage() { return render().find((element) => element.type === 'JourneyStageLayout').props; },
     status() { return render().find((element) => element.props.className === 'route-request-status').props.children.filter(Boolean).join(' '); },
+    panel() {
+      const panel = render().find((element) => element.type === 'aside' && element.props.className === 'intelligence-panel');
+      const nodes = [...elements(panel)];
+      const overview = nodes.find((element) => element.props.className === 'journey-overview');
+      const heading = [...elements(overview)].find((element) => element.type === 'h3').props.children;
+      const status = nodes.find((element) => element.props.className === 'panel-status').props.children;
+      return { heading, status: status.filter((child) => typeof child === 'string').join('').trim() };
+    },
   };
 }
 
@@ -171,6 +179,7 @@ for (const [outcome, finishSearch, expectedStatus] of [
     app.button('find-routes-button').onClick();
     searches[0].resolve(response({ routes: [first, second] }));
     await setImmediate();
+    assert.deepEqual(app.panel(), { heading: 'Route selected', status: 'Route selected' });
     app.button('analyze-button').onClick();
     assert.equal(app.stage().stage, 'understand');
     assert.equal(app.stage().analysis.status, 'loading');
@@ -178,6 +187,8 @@ for (const [outcome, finishSearch, expectedStatus] of [
     app.button('find-routes-button').onClick();
     expectSelection(app, [], null);
     assert.match(app.status(), /Requesting driving alternatives/);
+    const clearedPanel = { heading: 'No journey selected', status: 'Waiting for a journey' };
+    assert.deepEqual(app.panel(), clearedPanel);
     assert.equal(app.stage().stage, 'plan');
     assert.equal(app.stage().analysis.status, 'idle');
     assert.equal(analyses[0].signal.aborted, true);
@@ -190,8 +201,12 @@ for (const [outcome, finishSearch, expectedStatus] of [
     finishSearch(searches[1]);
     await setImmediate();
     assert.equal(app.stage().analysis.status, 'idle');
-    if (outcome === 'new routes') expectSelection(app, [second, first], second);
-    else expectSelection(app, [], null);
+    if (outcome === 'new routes') {
+      expectSelection(app, [second, first], second);
+    } else {
+      expectSelection(app, [], null);
+      assert.deepEqual(app.panel(), clearedPanel);
+    }
     assert.equal(app.button('find-routes-button').disabled, false);
     assert.match(app.status(), expectedStatus);
   });
@@ -217,3 +232,44 @@ test('a superseded response body cannot replace the newer results or manual sele
   await setImmediate();
   expectSelection(app, [second, first], first);
 });
+
+for (const [failure, finishSearch] of [
+  ['HTTP error', (request) => request.resolve(response({}, 503))],
+  ['network rejection', (request) => request.reject(new Error('Offline'))],
+]) {
+  test(`a late ${failure} cannot replace newer route results or selection`, async () => {
+    const { app, searches } = await setup();
+    app.button('find-routes-button').onClick();
+    app.controls('journey-origin').onQueryEdit();
+    app.controls('journey-origin').onSelect({ ...origin, name: 'Other origin' });
+    app.button('find-routes-button').onClick();
+    searches[1].resolve(response({ routes: [second, first] }));
+    await setImmediate();
+    expectSelection(app, [second, first], second);
+
+    finishSearch(searches[0]);
+    await setImmediate();
+    expectSelection(app, [second, first], second);
+    assert.equal(app.status(), '2 routes available.');
+  });
+}
+
+for (const input of ['origin', 'destination']) {
+  test(`editing the ${input} discards an in-flight search without starting another`, async () => {
+    const { app, searches } = await setup();
+    app.button('find-routes-button').onClick();
+    assert.match(app.status(), /Requesting driving alternatives/);
+
+    app.controls(`journey-${input}`).onQueryEdit();
+    assert.equal(searches[0].signal.aborted, true);
+    assert.equal(app.status(), '');
+
+    // This mock still resolves after abort so the test exercises stale-response handling.
+    searches[0].resolve(response({ routes: [first, second] }));
+    await setImmediate();
+    assert.equal(searches.length, 1);
+    expectSelection(app, [], null);
+    assert.equal(app.status(), '');
+    assert.equal(app.button('find-routes-button').disabled, true);
+  });
+}
