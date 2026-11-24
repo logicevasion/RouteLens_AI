@@ -11,9 +11,11 @@
 
 Phase 1A adds an optional `role` to geocoding search while preserving the default origin behavior. Destination requests use the official City of Vancouver polygon bounds as MapTiler's bbox, request up to the provider maximum of 10 candidates, apply the existing municipal polygon validator, and return at most five results in provider order. Submit-time destination validation is unchanged. Phases 1B–1D have not been implemented.
 
-**Verification:** Full backend suite passed (478 tests); Ruff passed for `backend/app` and `backend/tests`; frontend suite passed (14 test files, 0 failures); TypeScript/Vite production build passed with the existing large-chunk advisory; and `git diff --check` passed. No live provider requests were made. Human review and manual origin/destination dropdown verification remain pending.
+**QA follow-up:** Phase 1A implementation is committed at `6aa083a`. The developer reported successful manual browser testing, and independent Claude Code QA found no functional defects. The follow-up replaces the source-text assertion with component-driven fetch assertions for both roles and adds a mocked MapTiler API integration test for municipal polygon filtering. A scratch-copy mutation that hard-codes `role=origin` passed the old test and failed the new destination assertion.
 
-**Status:** Phase 1A implementation is ready for human review; it is not yet human accepted.
+**Verification:** The focused backend suite passed (41 tests), the full backend suite passed (479 tests), and Ruff passed for `backend/app` and `backend/tests`. All 14 frontend test files passed. The TypeScript/Vite production build passed with the existing large-chunk advisory, and `git diff --check` passed.
+
+**Status:** The test follow-up is ready for human review.
 
 ## Alpha UX implementation status
 

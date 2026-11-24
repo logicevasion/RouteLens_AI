@@ -6,7 +6,7 @@ import httpx
 import pytest
 from shapely.geometry import Point
 
-from app.geocoding import GeocodingConfigurationError, GeocodingUpstreamError
+from app.geocoding import GeocodingConfigurationError, GeocodingUpstreamError, MapTilerGeocoder
 from app.geography import CITY_OF_VANCOUVER
 from app.main import app
 from app.models import Location
@@ -137,6 +137,45 @@ def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest
     assert empty_response.json() == []
     assert destination_response.status_code == 200
     assert roles == [False, False, True]
+
+
+def test_search_filters_destinations_through_maptiler_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Lonsdale Quay falls within Vancouver's bounding rectangle but outside the municipal polygon.
+    quay_lon, quay_lat = -123.0826, 49.3099
+    places = [
+        ("lonsdale-quay", "Lonsdale Quay", [quay_lon, quay_lat]),
+        ("city-hall", "Vancouver City Hall", [-123.1146, 49.2606]),
+    ]
+    payload = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "id": place_id,
+                "text": name,
+                "geometry": {"type": "Point", "coordinates": coordinates},
+            }
+            for place_id, name, coordinates in places
+        ],
+    }
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=payload)
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: MapTilerGeocoder("test-key", transport=transport))
+    destination = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "destination"})
+    origin = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "origin"})
+
+    assert destination.status_code == origin.status_code == 200
+    assert [item["provider_id"] for item in destination.json()] == ["city-hall"]
+    assert [item["provider_id"] for item in origin.json()] == ["lonsdale-quay", "city-hall"]
+    destination_request, origin_request = requests
+    west, south, east, north = map(float, destination_request.url.params["bbox"].split(","))
+    assert west < quay_lon < east and south < quay_lat < north
+    assert "bbox" not in origin_request.url.params
 
 
 def test_search_rejects_unknown_role() -> None:
