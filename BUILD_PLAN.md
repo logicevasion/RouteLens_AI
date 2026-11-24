@@ -11,7 +11,7 @@ This file defines the currently selected bounded assignment. Planning approval d
 
 ## Phase 1 — UX Stabilization
 
-**Status:** Phases 1A and 1B are accepted and committed. The current human task authorizes Phase 1C only.
+**Status:** Phases 1A, 1B, and 1C are accepted. Phase 1D is implemented and pending human review.
 
 ### Phase 1A — Vancouver-only destination suggestions (accepted)
 
@@ -26,15 +26,18 @@ This file defines the currently selected bounded assignment. Planning approval d
 - On successful route generation, select the first usable candidate in response order. Use the existing selected card and map styling and the selected route for manually initiated analysis. Keep manual route selection available.
 - Clear the old selection and dependent analysis when a new search starts. Empty and failed searches leave the selection clear. Preserve cancellation and stale-response guards so an older request cannot replace current results or selection.
 
-### Phase 1C — Typography readability (current assignment)
+### Phase 1C — Typography readability (accepted)
 
 - Increase undersized frontend text by approximately 2–4 px where appropriate. Preserve the existing visual hierarchy, application behavior, and MapLibre basemap labels.
 - Check wrapping for long location names and narrow viewports. Run the existing frontend tests, production build, and `git diff --check`. Use available browser tooling for a lightweight layout check.
 - Record verification in `PROJECT_STATE.md` and provide a manual browser checklist for human review. Human developers retain staging, commits, pushes, and deployment.
 
-### Phase 1D — Camera outage fallback (deferred)
+### Phase 1D — Camera outage fallback (ready for human review)
 
-- Deterministically recognize the known City of Vancouver outage placeholder using only each candidate intersection's primary image; skip unavailable intersections, try the next closest eligible candidate, cap attempts, keep displayed and analyzed cameras consistent, and do not use an LLM for outage detection.
+- Screen the first validated-URL view at up to four intersections in the existing proximity order. Skip confirmed placeholders and unavailable primaries. Fetch other directions only at the selected intersection.
+- Use the supplied JPEG as the source for an embedded SHA-256 and a small Pillow template tolerant of recompression and resizing. Preserve the original JPEG as a regression fixture.
+- Bind browser-triggered vision to the gallery's selected intersection and current frame identities through a response/request header and cache-only validation. Keep the existing JSON response and briefing lifecycle. Exclude placeholders before inference or cached image delivery.
+- Verify offline with fixture-backed camera responses and a mocked vision provider. Review browser behavior and check current City feed variants as a separate manual verification.
 
 ## Completed correction assignment
 

@@ -521,7 +521,7 @@ class OpenRouterVisionAdapter:
         if abs(calculated_distance - selected.distance_metres) > 2.0:
             return _failure("no_eligible_frames", selected=selected)
 
-        fresh_by_id = {view.view_id for view in selection.views if not view.stale}
+        fresh_by_id = {view.view_id: view for view in selection.views if not view.stale}
         included: list[tuple[CameraView, StoredFrame, bytes]] = []
         excluded: list[ExcludedViewProvenance] = []
         views = camera.directional_views[:MAX_VIEWS_PER_INTERSECTION]
@@ -568,6 +568,13 @@ class OpenRouterVisionAdapter:
             frame, body = current
             if len(body) > MAX_FRAME_BYTES or len(body) > MAX_TOTAL_IMAGE_BYTES:
                 excluded.append(ExcludedViewProvenance(view_id=view.view_id, direction_label=view.direction_label, reason="oversized"))
+                continue
+            selected_frame = fresh_by_id[view.view_id]
+            if (
+                selected_frame.sha256 is not None
+                and (frame.sha256 != selected_frame.sha256 or frame.retrieved_at != selected_frame.retrieved_at)
+            ) or frame.offline_placeholder:
+                excluded.append(ExcludedViewProvenance(view_id=view.view_id, direction_label=view.direction_label, reason="invalid_or_mismatched"))
                 continue
             included.append((view, frame, body))
             break

@@ -210,10 +210,9 @@ Required behavior:
 
 - Ingest the official geolocated Vancouver camera catalogue.
 - Enrich catalogue records through official camera pages to discover directional image URLs.
-- Find nearby camera intersections and select the nearest usable intersection.
-- An intersection is usable when at least one valid current directional image can be retrieved.
+- Screen up to four nearby camera intersections in proximity order. A usable intersection has a valid current primary frame (the first directional view with a validated URL in catalogue order) that does not match the known outage graphic.
 - Retrieve and display usable directional views from the selected intersection in the camera gallery.
-- For each inference attempt, send exactly one eligible directional image selected by the backend from that intersection in canonical catalogue order. Do not substitute another intersection.
+- For each inference attempt, send exactly one eligible directional image selected by the backend from the gallery's intersection in canonical catalogue order. If the gallery selection no longer matches the current cached frames or an image matches the known outage graphic, exclude the mismatched selection or affected image from inference.
 - Associate the assessment with the backend-selected intersection and image provenance.
 
 Camera AI may assess:

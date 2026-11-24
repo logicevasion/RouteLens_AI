@@ -1,4 +1,5 @@
 import type { AnalysisRequest, AnalysisState } from './analysisTypes';
+import type { DestinationCameraSelection } from './cameras';
 
 export const CAMERA_VISION_TIMEOUT_MS = 70_000;
 
@@ -172,9 +173,22 @@ export function normalizeCameraVisionResult(value: unknown): CameraVisionResult 
     semantic_mismatch: semanticMismatch };
 }
 
-export async function fetchCameraVision(trip: AnalysisRequest, signal: AbortSignal): Promise<CameraVisionResult> {
+export async function fetchCameraVision(
+  trip: AnalysisRequest, signal: AbortSignal, gallery?: Promise<DestinationCameraSelection>,
+): Promise<CameraVisionResult> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (gallery) {
+    const selection = await gallery;
+    signal.throwIfAborted();
+    if (selection.status === 'stale') return unavailableCameraVision('stale_frames_only');
+    if (!selection.intersection) return unavailableCameraVision('no_selected_intersection');
+    if (selection.status !== 'available' || !selection.selectionFingerprint) {
+      return unavailableCameraVision('no_eligible_frames');
+    }
+    headers['X-Camera-Selection'] = selection.selectionFingerprint;
+  }
   const response = await fetch('/api/cameras/observe', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trip), signal,
+    method: 'POST', headers, body: JSON.stringify(trip), signal,
   });
   if (!response.ok) throw new Error('Camera vision request unavailable');
   const result = normalizeCameraVisionResult(await response.json());

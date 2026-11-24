@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 
 import httpx
+import pytest
 from PIL import Image
+from test_camera_images import OFFLINE_FIXTURE, FakeCatalogueStore, catalogue_result, intersection
 
 from app import camera_images as images
 from app.main import app
@@ -347,3 +350,103 @@ def test_observe_rejects_client_selected_intersection_model_and_image_inputs(mon
     assert response.status_code == 422
     assert service.nearest_calls == 0
     assert adapter.budget.path.exists() is False
+
+
+@pytest.mark.parametrize("has_fallback", [True, False])
+def test_gallery_fallback_and_vision_share_selected_frames(monkeypatch, tmp_path, has_fallback):
+    near = intersection("offline-near", 49.2827, -123.1207, count=2)
+    far = intersection("fallback", 49.2830, -123.1207, count=2).model_copy(
+        update={"name": "Maple St & W 4th Ave"}
+    )
+    offline = OFFLINE_FIXTURE.read_bytes()
+    live = jpeg("green")
+    clock = [NOW]
+    upstream_calls = []
+    provider_calls = []
+
+    def camera_response(request):
+        upstream_calls.append(request.url.path)
+        is_live = has_fallback and request.url.path.endswith("-0.jpg") and "offline-near" not in request.url.path
+        return httpx.Response(
+            200, headers={"content-type": "image/jpeg"}, content=live if is_live else offline
+        )
+
+    def vision_response(request):
+        parts = json.loads(request.content)["messages"][1]["content"]
+        provider_calls.append(base64.b64decode(parts[-1]["image_url"]["url"].split(",", 1)[1]))
+        return httpx.Response(200, json=provider_response(["view-0"]))
+
+    service = images.DestinationCameraService(
+        catalogue_store=FakeCatalogueStore(catalogue_result([near, far])),
+        image_store=images.CameraImageStore(
+            cache_dir=tmp_path / "frames", transport=httpx.MockTransport(camera_response),
+            now=lambda: clock[0],
+        ),
+    )
+    adapter = OpenRouterVisionAdapter(
+        api_key="test-key", transport=httpx.MockTransport(vision_response),
+        budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW,
+    )
+    monkeypatch.setattr("app.routes.camera_service", service)
+    monkeypatch.setattr("app.routes.vision_adapter", adapter)
+
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            gallery = await client.post("/api/cameras/nearest", json={"destination": DESTINATION.model_dump()})
+            assert gallery.status_code == 200
+            selected = gallery.json()
+            if not has_fallback:
+                assert selected["status"] == "unavailable"
+                assert images.SELECTION_HEADER not in gallery.headers
+                response = await client.post("/api/cameras/observe", json=trip_payload())
+                assert response.json()["observation"]["failure_code"] == "no_selected_intersection"
+                assert len(upstream_calls) == 2
+                assert not provider_calls and not adapter.budget.path.exists()
+                return
+
+            assert selected["intersection"]["intersection_id"] == far.intersection_id
+            assert selected["intersection"]["official_page_url"] == far.official_page_url
+            assert [view["view_id"] for view in selected["views"]] == ["view-0"]
+            assert "sha256" not in selected["views"][0]
+            panel_frame = await client.get(selected["views"][0]["image_reference"])
+            assert panel_frame.content == live
+            blocked = await client.get(images._image_reference(far.intersection_id, "view-1"))
+            assert blocked.status_code == 404
+            headers = {images.SELECTION_HEADER: gallery.headers[images.SELECTION_HEADER]}
+            response = await client.post("/api/cameras/observe", json=trip_payload(), headers=headers)
+            assert response.status_code == 200
+            observation = response.json()["observation"]
+            assert observation["intersection_id"] == far.intersection_id
+            assert observation["intersection_name"] == selected["intersection"]["name"]
+            assert observation["distance_from_destination_metres"] == selected["intersection"]["distance_metres"]
+            assert observation["included_views"][0]["retrieved_at"] == selected["views"][0]["retrieved_at"]
+            assert provider_calls == [live]
+            assert len(upstream_calls) == 3
+
+            clock[0] += timedelta(seconds=service.image_store.ttl_seconds)
+            changed = await client.post("/api/cameras/observe", json=trip_payload(), headers=headers)
+            assert changed.json()["observation"]["failure_code"] == "no_eligible_frames"
+            assert provider_calls == [live]
+            assert len(upstream_calls) == 3
+
+    asyncio.run(exercise())
+
+
+def test_vision_excludes_offline_bytes_even_if_gallery_view_was_previously_selected(monkeypatch, tmp_path):
+    service, adapter, catalogue, store, selection = setup_api(monkeypatch, tmp_path)
+    camera = catalogue.intersections[0]
+    view = camera.directional_views[0]
+    data_path, metadata_path = images._frame_paths(store.cache_dir, camera.intersection_id, view.view_id)
+    frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
+    offline = OFFLINE_FIXTURE.read_bytes()
+    data_path.write_bytes(offline)
+    metadata_path.write_text(frame.model_copy(update={
+        "sha256": images.hashlib.sha256(offline).hexdigest(),
+        "byte_length": len(offline), "width": 300, "height": 205,
+    }).model_dump_json())
+    service.selection = selection.model_copy(update={"views": selection.views[:1]})
+
+    result = post("/api/cameras/observe", trip_payload()).json()["observation"]
+    assert result["failure_code"] == "no_eligible_frames"
+    assert result["included_views"] == []
+    assert not adapter.budget.path.exists()

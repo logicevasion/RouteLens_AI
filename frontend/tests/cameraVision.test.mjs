@@ -33,7 +33,7 @@ const result = (overrides = {}) => ({
 
 test('explicit Analyze Journey wiring calls vision once with the captured canonical Trip', async () => {
   assert.equal((appSource.match(/fetchCameraVision\(/g) ?? []).length, 1);
-  assert.match(appSource, /const cameraResultPromise = fetchCameraVision\(request, visionRequestController\.signal\)/);
+  assert.match(appSource, /const cameraResultPromise = fetchCameraVision\(request, visionRequestController\.signal, galleryPromise\)/);
   assert.match(appSource, /onAnalyze=\{\(\) => void analyzeJourney\(\)\}/);
   assert.doesNotMatch(appSource.slice(appSource.indexOf('async function findRoutes()'), appSource.indexOf('function selectRoute')), /fetchCameraVision/);
   assert.match(appSource, /selectedCameraId=\{cameraState/); // markers remain display-only
@@ -47,6 +47,29 @@ test('explicit Analyze Journey wiring calls vision once with the captured canoni
     assert.equal(calls[0][0], '/api/cameras/observe');
     assert.deepEqual(JSON.parse(calls[0][1].body), trip);
     assert.equal(value.observation.intersection_id, 'cam-42');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('vision waits for the gallery selection and sends its fingerprint with the canonical Trip', async () => {
+  const originalFetch = globalThis.fetch;
+  const fingerprint = 'a'.repeat(64);
+  const calls = [];
+  let resolveGallery;
+  const gallery = new Promise((resolve) => { resolveGallery = resolve; });
+  globalThis.fetch = async (...args) => { calls.push(args); return Response.json(result()); };
+  try {
+    const signal = new AbortController().signal;
+    const pending = vision.fetchCameraVision(trip, signal, gallery);
+    assert.equal(calls.length, 0);
+    resolveGallery({ status: 'available', intersection: { intersection_id: 'cam-42' }, selectionFingerprint: fingerprint });
+    assert.equal((await pending).observation.intersection_id, 'cam-42');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][1].headers['X-Camera-Selection'], fingerprint);
+    assert.deepEqual(JSON.parse(calls[0][1].body), trip);
+
+    const unavailable = await vision.fetchCameraVision(trip, signal, Promise.resolve({ status: 'unavailable', intersection: null }));
+    assert.equal(unavailable.observation.failure_code, 'no_selected_intersection');
+    assert.equal(calls.length, 1);
   } finally { globalThis.fetch = originalFetch; }
 });
 

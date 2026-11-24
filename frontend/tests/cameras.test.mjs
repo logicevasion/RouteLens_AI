@@ -38,7 +38,7 @@ test('sends the canonical destination to the application camera API and normaliz
   let request;
   globalThis.fetch = async (...args) => {
     request = args;
-    return { ok: true, json: async () => result() };
+    return Response.json(result(), { headers: { 'X-Camera-Selection': 'a'.repeat(64) } });
   };
   try {
     const value = await cameras.fetchDestinationCamera(destination, new AbortController().signal);
@@ -47,6 +47,7 @@ test('sends the canonical destination to the application camera API and normaliz
     assert.deepEqual(JSON.parse(request[1].body), { destination });
     assert.equal(value.intersection.name, 'Hornby St and Robson St');
     assert.equal(value.views[0].direction_label, 'South - Main St');
+    assert.equal(value.selectionFingerprint, 'a'.repeat(64));
   } finally { globalThis.fetch = originalFetch; }
 });
 

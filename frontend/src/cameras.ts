@@ -46,6 +46,8 @@ export type CameraState =
   | { status: 'success'; requestKey: string; result: DestinationCamera }
   | { status: 'error'; requestKey: string };
 
+export type DestinationCameraSelection = DestinationCamera & { selectionFingerprint: string | null };
+
 export function boundedCameraViewIndex(index: number, viewCount: number): number {
   if (!Number.isFinite(index) || !Number.isFinite(viewCount) || viewCount <= 0) return 0;
   return Math.min(viewCount - 1, Math.max(0, Math.trunc(index)));
@@ -173,7 +175,7 @@ export function normalizeDestinationCamera(value: unknown): DestinationCamera | 
   };
 }
 
-export async function fetchDestinationCamera(destination: Location, signal: AbortSignal): Promise<DestinationCamera> {
+export async function fetchDestinationCamera(destination: Location, signal: AbortSignal): Promise<DestinationCameraSelection> {
   const response = await fetch('/api/cameras/nearest', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ destination }), signal,
@@ -183,7 +185,8 @@ export async function fetchDestinationCamera(destination: Location, signal: Abor
   if (!result || result.destination.latitude !== destination.latitude || result.destination.longitude !== destination.longitude) {
     throw new Error('Camera service returned an unreadable result');
   }
-  return result;
+  const fingerprint = response.headers.get('X-Camera-Selection');
+  return { ...result, selectionFingerprint: fingerprint && /^[a-f0-9]{64}$/.test(fingerprint) ? fingerprint : null };
 }
 
 function normalizeNearbyCamera(value: unknown): NearbyCameraMarker | null {

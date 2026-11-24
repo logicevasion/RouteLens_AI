@@ -2,9 +2,9 @@
 
 ## Current repository and SDD status
 
-- **Implementation checkout:** `feature/alpha-ux-stabilization`; the worktree was clean at task start. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 are accepted baseline work.
+- **Implementation checkout:** `feature/alpha-ux-stabilization`; the supplied outage JPEG was the only untracked work at Phase 1D start. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current objective:** Phase 1C typography readability. Phases 1A and 1B are accepted and committed. Phase 1D camera outage fallback remains deferred.
+- **Current objective:** Phase 1D camera outage fallback is ready for human review. Phases 1A, 1B, and 1C are human accepted.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
@@ -17,9 +17,15 @@
 
 **Phase 1B verification:** Manual browser testing passed per the developer, and independent Claude Code QA reported no confirmed application defects. Implementation checks included 39 routing and analysis API regressions and Ruff. The test-only follow-up covers late HTTP and network failures, rendered panel resets, and edits to either input during a search without a replacement request. The 12 focused cases, full frontend suite (15 files), TypeScript/Vite production build, and `git diff --check` passed. Seven scratch mutations that survived the committed tests were caught by the follow-up. The build emitted the existing large-chunk advisory.
 
-**Phase 1C — Implemented, pending human review.** Shared 11–13 px sizes cover captions, metadata, and body copy. Location fields and suggestion names use 14 px. Long suggestion names, route labels, and evidence now wrap, with narrower form and forecast layouts where space is limited. Changes are confined to frontend CSS and phase records.
+**Phase 1C — Accepted.** Shared 11–13 px sizes cover captions, metadata, and body copy. Location fields and suggestion names use 14 px. Long suggestion names, route labels, and evidence now wrap, with narrower form and forecast layouts where space is limited. Changes are confined to frontend CSS and phase records.
 
-**Phase 1C verification:** All 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. The build reported the existing large-chunk advisory. Headless Firefox checked production CSS with local planning and analysis fixtures at 10 widths from 320–1280 px, including long names, placeholder fit, horizontal overflow, forecast reflow, and desktop road-panel scrolling. Full application visual review is pending. No paid API calls were made.
+**Phase 1C verification:** All 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. The build reported the existing large-chunk advisory. Headless Firefox checked production CSS with local planning and analysis fixtures at 10 widths from 320–1280 px, including long names, placeholder fit, horizontal overflow, forecast reflow, and desktop road-panel scrolling.
+
+**Phase 1D — Ready for human review.** Selection checks the primary view at up to four nearest eligible intersections. Fresh usable primaries qualify for the gallery. Known placeholders and generic frame failures have distinct diagnostic codes. If fresh selection fails, a usable cached stale primary can still support the existing degraded gallery. Browser-triggered vision revalidates the gallery selection from cache before reserving an OpenRouter attempt. If it changes or expires, camera interpretation is unavailable for that attempt.
+
+**Phase 1D detection:** The supplied 300×205 progressive JPEG is retained unchanged. Camera retrieval and cache storage preserve source bytes. Resizing or recompressing the reference changed its digest, so matching uses an exact SHA-256 fast path plus a small comparison of background color and text layout on the already decoded frame. The compiled fingerprint works without loading the test fixture at runtime. Other graphics, crops, overlays, or substantial color shifts can escape detection. Cached outage frames follow the normal image TTL, so a recovered feed can remain skipped until refresh. Live variants and browser behavior await manual review. No live camera or paid provider requests were made.
+
+**Phase 1D verification:** The focused backend suite (109 tests), full backend suite (489 tests), Ruff, all 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. Backend tests blocked live DNS and socket connections. The build reported the existing large-chunk advisory.
 
 ## Alpha UX implementation status
 
@@ -84,7 +90,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Review Phase 1C in a browser at desktop and narrow widths, including long place names, route cards, and the expanded analysis evidence, before human acceptance.
+Review Phase 1D in a browser with mocked camera and provider responses. Confirm fallback, directional controls, matching gallery and briefing provenance, and the all-offline state. Check the detector against naturally occurring City outage images when available.
 
 **Alpha UX presentation refinement (2026-10-30):** The map-side panel now groups direct Road Ahead, nearby Road Ahead, and DriveBC Open511 in that order; only direct findings are open by default, and relocated event lists are absent from lower supporting information. Frontend tests and build passed; a local CSS fixture demonstrated map adjacency and independent panel scrolling. Full application visual behavior remains for human review. No backend, API, normalized data, inference, provider, infrastructure, or dependency changes; no external requests or paid inference.
 
