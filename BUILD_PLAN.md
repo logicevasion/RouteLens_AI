@@ -11,7 +11,7 @@ This file defines the currently selected bounded assignment. Planning approval d
 
 ## Phase 1 — UX Stabilization
 
-**Status:** Phase 1A is accepted and committed. The current human task authorizes Phase 1B only.
+**Status:** Phases 1A and 1B are accepted and committed. The current human task authorizes Phase 1C only.
 
 ### Phase 1A — Vancouver-only destination suggestions (accepted)
 
@@ -21,19 +21,20 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Keep the API backward compatible for callers that omit the optional search role. Handle empty/malformed results and upstream errors using current sanitized behavior.
 - Limit code changes to the geocoding adapter/API, autocomplete request, focused tests, and factual project state.
 
-### Phase 1B — Automatic first-route selection (current assignment)
+### Phase 1B — Automatic first-route selection (accepted)
 
 - On successful route generation, select the first usable candidate in response order. Use the existing selected card and map styling and the selected route for manually initiated analysis. Keep manual route selection available.
 - Clear the old selection and dependent analysis when a new search starts. Empty and failed searches leave the selection clear. Preserve cancellation and stale-response guards so an older request cannot replace current results or selection.
 
-### Deferred Phase 1 slices
+### Phase 1C — Typography readability (current assignment)
 
-- **1C — Typography:** increase undersized interface text by approximately 2–4 points and review/refine visual formatting.
-- **1D — Camera outage fallback:** deterministically recognize the known City of Vancouver outage placeholder using only each candidate intersection's primary image; skip unavailable intersections, try the next closest eligible candidate, cap attempts, keep displayed and analyzed cameras consistent, and do not use an LLM for outage detection.
+- Increase undersized frontend text by approximately 2–4 px where appropriate. Preserve the existing visual hierarchy, application behavior, and MapLibre basemap labels.
+- Check wrapping for long location names and narrow viewports. Run the existing frontend tests, production build, and `git diff --check`. Use available browser tooling for a lightweight layout check.
+- Record verification in `PROJECT_STATE.md` and provide a manual browser checklist for human review. Human developers retain staging, commits, pushes, and deployment.
 
-### Verification and approval boundary
+### Phase 1D — Camera outage fallback (deferred)
 
-Run the frontend test suite and production build, relevant backend regressions, and `git diff --check`. Use deterministic fixtures and mocked transports for single and multiple candidates, manual override, analysis request identity, empty and failed responses, and out-of-order completion. Provide a manual browser checklist and record implementation and verification in `PROJECT_STATE.md`. Human review and manual verification precede acceptance. Do not stage, commit, push, or begin 1C–1D.
+- Deterministically recognize the known City of Vancouver outage placeholder using only each candidate intersection's primary image; skip unavailable intersections, try the next closest eligible candidate, cap attempts, keep displayed and analyzed cameras consistent, and do not use an LLM for outage detection.
 
 ## Completed correction assignment
 
