@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import ipaddress
+import json
 import os
 import socket
 import tempfile
@@ -19,6 +20,7 @@ import httpx
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.camera_placeholder import matches_offline_placeholder
 from app.geography import validate_destination
 from app.models import Location
 from app.vancouver_cameras import (
@@ -43,6 +45,7 @@ MAX_IMAGE_PIXELS = 40_000_000
 MIN_IMAGE_WIDTH = 160
 MIN_IMAGE_HEIGHT = 120
 MAX_CANDIDATES = 12
+MAX_SCREENED_INTERSECTIONS = 4
 MAX_CANDIDATE_DISTANCE_METRES = 2_000
 MAX_NEARBY_MARKERS = 4
 MAX_VIEWS_PER_INTERSECTION = 12
@@ -52,6 +55,7 @@ IMAGE_TIMEOUT = httpx.Timeout(8.0, connect=3.0)
 IMAGE_OVERALL_TIMEOUT_SECONDS = 10.0
 DEFAULT_IMAGE_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "cache" / "vancouver_cameras" / "current"
 ALLOWED_IMAGE_FORMATS = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+SELECTION_HEADER = "X-Camera-Selection"
 
 
 class CameraImageError(Exception):
@@ -75,6 +79,7 @@ class CameraImageViewResult(BaseModel):
     width: int
     height: int
     content_type: str
+    sha256: str | None = Field(default=None, exclude=True)
 
 
 class CameraIntersectionResult(BaseModel):
@@ -119,6 +124,15 @@ class DestinationCameraResult(BaseModel):
     views: list[CameraImageViewResult] = Field(default_factory=list)
     stale_views: list[CameraImageViewResult] = Field(default_factory=list)
     diagnostics: CameraDiagnostics
+
+    def selection_fingerprint(self) -> str:
+        """Bind vision to the fresh views returned for this destination."""
+        material = [
+            self.destination.model_dump(),
+            self.intersection.model_dump() if self.intersection else None,
+            [(view.view_id, view.retrieved_at.isoformat(), view.sha256) for view in self.views],
+        ]
+        return hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest()
 
 
 class DestinationCameraRequest(BaseModel):
@@ -168,6 +182,7 @@ class StoredFrame(BaseModel):
     height: int
     byte_length: int
     sha256: str
+    offline_placeholder: bool = Field(default=False, exclude=True)
 
 
 def _now() -> datetime:
@@ -215,7 +230,7 @@ def _image_reference(intersection_id: str, view_id: str) -> str:
     return f"/api/cameras/images/{token}"
 
 
-def _validated_image(data: bytes, content_type: str) -> tuple[str, int, int]:
+def _validated_image(data: bytes, content_type: str, sha256: str) -> tuple[str, int, int, bool]:
     if not data or len(data) > MAX_IMAGE_BYTES:
         raise CameraImageError("image_size_invalid")
     normalized_type = content_type.split(";", 1)[0].strip().lower()
@@ -230,6 +245,7 @@ def _validated_image(data: bytes, content_type: str) -> tuple[str, int, int]:
                 image.verify()
             with Image.open(BytesIO(data)) as image:
                 image.load()
+                offline = matches_offline_placeholder(sha256, image)
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning):
         raise CameraImageError("image_decode_failed") from None
     if (
@@ -242,7 +258,7 @@ def _validated_image(data: bytes, content_type: str) -> tuple[str, int, int]:
         or width * height > MAX_IMAGE_PIXELS
     ):
         raise CameraImageError("image_dimensions_or_format_invalid")
-    return normalized_type, width, height
+    return normalized_type, width, height, offline
 
 
 def _frame_paths(cache_dir: Path, intersection_id: str, view_id: str) -> tuple[Path, Path]:
@@ -279,7 +295,7 @@ def _cached_frame(cache_dir: Path, intersection: CameraIntersection, view: Camer
             or frame.sha256 != hashlib.sha256(raw).hexdigest()
         ):
             return None
-        _validated_image(raw, frame.content_type)
+        _, _, _, frame.offline_placeholder = _validated_image(raw, frame.content_type, frame.sha256)
         return frame, raw
     except (OSError, ValueError, CameraImageError):
         for path in (data_path, metadata_path):
@@ -454,7 +470,8 @@ class CameraImageStore:
                             if len(chunks) > MAX_IMAGE_BYTES:
                                 raise CameraImageError("image_size_invalid")
                         body = bytes(chunks)
-                        content_type, width, height = _validated_image(body, content_type)
+                        digest = hashlib.sha256(body).hexdigest()
+                        content_type, width, height, offline = _validated_image(body, content_type, digest)
                         break
                 except (httpx.HTTPError, TimeoutError, OSError):
                     raise CameraImageError("upstream_unavailable") from None
@@ -470,7 +487,8 @@ class CameraImageStore:
             width=width,
             height=height,
             byte_length=len(body),
-            sha256=hashlib.sha256(body).hexdigest(),
+            sha256=digest,
+            offline_placeholder=offline,
         )
         data_path, metadata_path = _frame_paths(self.cache_dir, intersection.intersection_id, view.view_id)
         try:
@@ -499,7 +517,7 @@ class CameraImageStore:
                     return None
                 frame, body = cached
                 age = max(0, int((self.now().astimezone(timezone.utc) - frame.retrieved_at).total_seconds()))
-                if age > MAX_STALE_IMAGE_AGE_SECONDS:
+                if age > MAX_STALE_IMAGE_AGE_SECONDS or frame.offline_placeholder:
                     return None
                 return frame, body
         return None
@@ -510,7 +528,9 @@ class DestinationCameraService:
         self.catalogue_store = catalogue_store or VancouverCameraCatalogueStore()
         self.image_store = image_store or CameraImageStore()
 
-    async def nearest(self, destination: Location) -> DestinationCameraResult:
+    async def nearest(
+        self, destination: Location, *, cached_only: bool = False
+    ) -> DestinationCameraResult:
         if not validate_destination(destination).valid:
             raise ValueError("Destination must be inside the City of Vancouver municipal boundary.")
         catalogue_result = await self.catalogue_store.get_catalogue()
@@ -519,93 +539,128 @@ class DestinationCameraService:
             return DestinationCameraResult(destination=destination, status="unavailable", diagnostics=diagnostics)
         ranked = rank_intersections(catalogue_result.catalogue.intersections, destination)
         ranked = [pair for pair in ranked if pair[0].enrichment_status in {"inspected_with_views", "stale_previous_views"}]
-        _prune(
-            self.image_store.cache_dir,
-            {
-                _frame_key(camera.intersection_id, view.view_id)
-                for camera in catalogue_result.catalogue.intersections
-                for view in camera.directional_views
-            },
-        )
-        stale_candidates: list[tuple[CameraIntersection, float, list[CameraImageViewResult]]] = []
+        if not cached_only:
+            _prune(
+                self.image_store.cache_dir,
+                {
+                    _frame_key(camera.intersection_id, view.view_id)
+                    for camera in catalogue_result.catalogue.intersections
+                    for view in camera.directional_views
+                },
+            )
+        stale_candidate: tuple[
+            CameraIntersection, CameraIntersectionResult, CameraImageViewResult, bool
+        ] | None = None
         upstream_start = self.image_store.upstream_requests
-        for candidate_index, (intersection, distance) in enumerate(ranked):
-            if diagnostics.views_attempted >= MAX_VIEW_REQUESTS_PER_SELECTION:
-                break
-            diagnostics.candidates_attempted += 1
-            usable: list[CameraImageViewResult] = []
-            stale_views: list[CameraImageViewResult] = []
-            views = intersection.directional_views[:MAX_VIEWS_PER_INTERSECTION]
-            for view in views:
-                requests_used = self.image_store.upstream_requests - upstream_start
-                if (
-                    diagnostics.views_attempted >= MAX_VIEW_REQUESTS_PER_SELECTION
-                    or requests_used >= MAX_VIEW_REQUESTS_PER_SELECTION
-                ):
-                    break
-                diagnostics.views_attempted += 1
-                try:
+
+        async def inspect(
+            intersection: CameraIntersection, view: CameraView, *, stale_only: bool = False
+        ) -> CameraImageViewResult | None:
+            requests_used = self.image_store.upstream_requests - upstream_start
+            if diagnostics.views_attempted >= MAX_VIEW_REQUESTS_PER_SELECTION or (
+                not (cached_only or stale_only) and requests_used >= MAX_VIEW_REQUESTS_PER_SELECTION
+            ):
+                return None
+            diagnostics.views_attempted += 1
+            try:
+                if stale_only:
+                    cached = _cached_frame(self.image_store.cache_dir, intersection, view)
+                    result = None
+                    if cached:
+                        age = self.image_store.now().astimezone(timezone.utc) - cached[0].retrieved_at
+                        if self.image_store.ttl_seconds <= age.total_seconds() <= MAX_STALE_IMAGE_AGE_SECONDS:
+                            result = (*cached, True)
+                elif cached_only:
+                    cached = read_current_cached_frame(self.image_store, intersection, view)
+                    result = (*cached, False) if cached else None
+                else:
                     result = await self.image_store.get_view(
                         intersection,
                         view,
                         max_upstream_requests=MAX_VIEW_REQUESTS_PER_SELECTION - requests_used,
                     )
-                except CameraImageError as error:
-                    result = None
-                    diagnostics.failures.append(
-                        CameraViewFailure(view_id=view.view_id, error_code=str(error))
-                    )
                 if result is None:
-                    diagnostics.views_failed += 1
-                    continue
+                    raise CameraImageError("image_unavailable")
                 frame, _, stale = result
-                age = max(0, int((self.image_store.now().astimezone(timezone.utc) - frame.retrieved_at).total_seconds()))
-                view_result = CameraImageViewResult(
-                    view_id=view.view_id,
-                    direction_label=view.direction_label,
-                    image_reference=_image_reference(intersection.intersection_id, view.view_id),
-                    retrieved_at=frame.retrieved_at,
-                    source_capture_at=frame.source_capture_at,
-                    cache_age_seconds=age,
-                    stale=stale,
-                    width=frame.width,
-                    height=frame.height,
-                    content_type=frame.content_type,
+                if frame.offline_placeholder:
+                    raise CameraImageError("offline_placeholder")
+            except CameraImageError as error:
+                diagnostics.views_failed += 1
+                diagnostics.failures.append(
+                    CameraViewFailure(view_id=view.view_id, error_code=str(error))
                 )
-                (stale_views if stale else usable).append(view_result)
-                diagnostics.views_succeeded += 1
-            if usable:
-                diagnostics.fallback_used = candidate_index > 0
-                return DestinationCameraResult(
-                    destination=destination,
-                    status="available",
-                    intersection=CameraIntersectionResult(
-                        intersection_id=intersection.intersection_id,
-                        name=intersection.name,
-                        latitude=intersection.latitude,
-                        longitude=intersection.longitude,
-                        distance_metres=distance,
-                        official_page_url=intersection.official_page_url,
-                    ),
-                    views=usable,
-                    stale_views=stale_views,
-                    diagnostics=diagnostics,
-                )
-            if stale_views:
-                stale_candidates.append((intersection, distance, stale_views))
-        if stale_candidates:
-            intersection, distance, stale_views = stale_candidates[0]
+                return None
+            age = self.image_store.now().astimezone(timezone.utc) - frame.retrieved_at
+            diagnostics.views_succeeded += 1
+            return CameraImageViewResult(
+                view_id=view.view_id,
+                direction_label=view.direction_label,
+                image_reference=_image_reference(intersection.intersection_id, view.view_id),
+                retrieved_at=frame.retrieved_at,
+                source_capture_at=frame.source_capture_at,
+                cache_age_seconds=max(0, int(age.total_seconds())),
+                stale=stale,
+                width=frame.width,
+                height=frame.height,
+                content_type=frame.content_type,
+                sha256=frame.sha256,
+            )
+
+        for candidate_index, (intersection, distance) in enumerate(ranked[:MAX_SCREENED_INTERSECTIONS]):
+            diagnostics.candidates_attempted += 1
+            views = intersection.directional_views[:MAX_VIEWS_PER_INTERSECTION]
+            # Ignore catalogue slots that have no validated URL when choosing the primary.
+            primary = next(
+                (view for view in views if view.discovery_status == "url_validated" and view.image_url),
+                None,
+            )
+            if primary is None:
+                continue
+            screened = await inspect(intersection, primary)
+            if screened is None:
+                continue
+            metadata = CameraIntersectionResult(
+                intersection_id=intersection.intersection_id,
+                name=intersection.name,
+                latitude=intersection.latitude,
+                longitude=intersection.longitude,
+                distance_metres=distance,
+                official_page_url=intersection.official_page_url,
+            )
+            if screened.stale:
+                if stale_candidate is None:
+                    stale_candidate = (intersection, metadata, screened, candidate_index > 0)
+                continue
+
+            diagnostics.fallback_used = candidate_index > 0
+            usable = [screened]
+            stale_views = []
+            for view in views:
+                if view.view_id == primary.view_id:
+                    continue
+                gallery_view = await inspect(intersection, view)
+                if gallery_view is not None:
+                    (stale_views if gallery_view.stale else usable).append(gallery_view)
+            return DestinationCameraResult(
+                destination=destination,
+                status="available",
+                intersection=metadata,
+                views=usable,
+                stale_views=stale_views,
+                diagnostics=diagnostics,
+            )
+        if stale_candidate:
+            intersection, metadata, screened, diagnostics.fallback_used = stale_candidate
+            stale_views = [screened]
+            for view in intersection.directional_views[:MAX_VIEWS_PER_INTERSECTION]:
+                if view.view_id != screened.view_id and view.image_url:
+                    gallery_view = await inspect(intersection, view, stale_only=True)
+                    if gallery_view is not None:
+                        stale_views.append(gallery_view)
             return DestinationCameraResult(
                 destination=destination,
                 status="stale",
-                intersection=CameraIntersectionResult(
-                    intersection_id=intersection.intersection_id,
-                    name=intersection.name,
-                    latitude=intersection.latitude,
-                    longitude=intersection.longitude,
-                    distance_metres=distance,
-                    official_page_url=intersection.official_page_url,
-                ),
+                intersection=metadata,
                 stale_views=stale_views,
                 diagnostics=diagnostics,
             )

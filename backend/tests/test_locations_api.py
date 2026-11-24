@@ -6,7 +6,7 @@ import httpx
 import pytest
 from shapely.geometry import Point
 
-from app.geocoding import GeocodingConfigurationError, GeocodingUpstreamError
+from app.geocoding import GeocodingConfigurationError, GeocodingUpstreamError, MapTilerGeocoder
 from app.geography import CITY_OF_VANCOUVER
 from app.main import app
 from app.models import Location
@@ -107,8 +107,11 @@ def test_invalid_coordinates_are_rejected_by_api_model() -> None:
 
 
 def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    roles: list[bool] = []
+
     class FakeGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
+            roles.append(destination)
             if query == "missing place":
                 return []
             return [Location(name="Downtown", latitude=49.28249, longitude=-123.11814, provider_id="id.1")]
@@ -116,6 +119,9 @@ def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: FakeGeocoder())
     response = api_request("GET", "/api/geocoding/search", params={"q": "Downtown"})
     empty_response = api_request("GET", "/api/geocoding/search", params={"q": "missing place"})
+    destination_response = api_request(
+        "GET", "/api/geocoding/search", params={"q": "Downtown", "role": "destination"}
+    )
 
     assert response.status_code == 200
     assert response.json() == [
@@ -129,6 +135,52 @@ def test_search_returns_normalized_candidates_and_empty_list(monkeypatch: pytest
     ]
     assert empty_response.status_code == 200
     assert empty_response.json() == []
+    assert destination_response.status_code == 200
+    assert roles == [False, False, True]
+
+
+def test_search_filters_destinations_through_maptiler_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Lonsdale Quay falls within Vancouver's bounding rectangle but outside the municipal polygon.
+    quay_lon, quay_lat = -123.0826, 49.3099
+    places = [
+        ("lonsdale-quay", "Lonsdale Quay", [quay_lon, quay_lat]),
+        ("city-hall", "Vancouver City Hall", [-123.1146, 49.2606]),
+    ]
+    payload = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "id": place_id,
+                "text": name,
+                "geometry": {"type": "Point", "coordinates": coordinates},
+            }
+            for place_id, name, coordinates in places
+        ],
+    }
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=payload)
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: MapTilerGeocoder("test-key", transport=transport))
+    destination = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "destination"})
+    origin = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "origin"})
+
+    assert destination.status_code == origin.status_code == 200
+    assert [item["provider_id"] for item in destination.json()] == ["city-hall"]
+    assert [item["provider_id"] for item in origin.json()] == ["lonsdale-quay", "city-hall"]
+    destination_request, origin_request = requests
+    west, south, east, north = map(float, destination_request.url.params["bbox"].split(","))
+    assert west < quay_lon < east and south < quay_lat < north
+    assert "bbox" not in origin_request.url.params
+
+
+def test_search_rejects_unknown_role() -> None:
+    response = api_request("GET", "/api/geocoding/search", params={"q": "Vancouver", "role": "other"})
+    assert response.status_code == 422
 
 
 def test_search_rejects_short_or_blank_queries() -> None:
@@ -139,7 +191,7 @@ def test_search_rejects_short_or_blank_queries() -> None:
 
 def test_search_provider_failure_returns_safe_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class FailedGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
             raise GeocodingUpstreamError("Location search timed out. Please try again.")
 
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: FailedGeocoder())
@@ -151,7 +203,7 @@ def test_search_provider_failure_returns_safe_error(monkeypatch: pytest.MonkeyPa
 
 def test_search_missing_server_credential_returns_safe_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class UnconfiguredGeocoder:
-        async def search(self, query: str) -> list[Location]:
+        async def search(self, query: str, *, destination: bool = False) -> list[Location]:
             raise GeocodingConfigurationError("Location search is not configured on this server.")
 
     monkeypatch.setattr("app.routes.MapTilerGeocoder", lambda: UnconfiguredGeocoder())

@@ -15,8 +15,8 @@ RouteLens AI brings public road, weather, and camera evidence together around a 
 ## What the MVP does
 
 1. Choose an origin and a destination in Vancouver using place search.
-2. Request approximate driving-route candidates and explicitly select the one closest to the journey you intend to take.
-3. Select **Analyze Journey** to gather the available route and destination evidence.
+2. Select **Find Routes** to generate approximate driving routes. RouteLens selects the first usable route returned, and you can choose an alternative.
+3. Select **Analyze Journey** to gather evidence for the currently selected route and destination.
 4. Review the map and supporting panels, then read the source-grounded AI Journey Briefing.
 
 The briefing has three fixed topics:
@@ -31,7 +31,7 @@ Each topic can report that evidence is unavailable or insufficient. AI text is a
 
 ```mermaid
 flowchart LR
-  U[User selects locations and route] --> FE[React and TypeScript app]
+  U[User selects locations and finds routes] --> FE[React and TypeScript app]
   FE -->|Analyze Journey| API[FastAPI analysis API]
   API --> GEO[MapTiler geocoding and openrouteservice routes]
   API --> SOURCES[Road Ahead, DriveBC Open511, OpenWeather, ECCC SWOB, Vancouver cameras]
@@ -53,7 +53,7 @@ The React/Vite frontend sends application requests to the local FastAPI backend.
 | Web app | React, TypeScript, Vite, Tailwind CSS | Journey inputs, analysis state, and evidence panels |
 | Map | MapLibre GL JS with MapTiler | Vancouver basemap, geocoding, and place search |
 | API | Python, FastAPI, Pydantic, httpx, Shapely | Provider access, validation, normalization, and geographic relevance |
-| Driving routes | openrouteservice | Approximate route candidates for explicit user selection |
+| Driving routes | openrouteservice | Approximate route candidates with automatic first-route selection and manual alternatives |
 | Municipal road data | City of Vancouver Road Ahead | Construction and road closures |
 | Regional road data | DriveBC Open511 | Regional road events and route-relevant findings |
 | Weather | OpenWeather and ECCC GeoMet/SWOB | Current/near-term weather and measured station observations |
@@ -126,6 +126,7 @@ This portfolio MVP is not a legal determination of data or image rights. Review 
 - Supported journeys are driving journeys into the City of Vancouver. Origins may be elsewhere in the surrounding region; destinations outside Vancouver and journeys out of Vancouver are unsupported.
 - Route candidates are approximate context, not navigation directions, an ETA, or a guarantee that the route matches another navigation service.
 - Camera coverage is limited to available Vancouver views near the selected destination. A camera view is local evidence, not a description of the whole route or destination, and AI interpretation can be uncertain.
+- RouteLens checks the primary image at up to four nearest eligible camera intersections and skips matches to the known offline placeholder. OpenRouter interprets one eligible view from the gallery's validated selection. Matching against a newly captured live City outage image remains unverified. Camera interpretation can still arrive too late for the first briefing.
 - Data sources refresh on different schedules and may be missing, stale, delayed, or unavailable. The UI reports source status and freshness where available; a missing source does not mean conditions are clear.
 - Weather observations, forecasts, and camera appearance represent different kinds of evidence and should not be treated as interchangeable.
 

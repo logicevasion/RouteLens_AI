@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from io import BytesIO
+from pathlib import Path
 
 import httpx
 import pytest
@@ -10,6 +12,7 @@ from PIL import Image
 
 from app import camera_images as images
 from app import vancouver_cameras as catalogue_module
+from app.camera_placeholder import OFFLINE_SHA256
 from app.main import app
 from app.models import Location
 from app.vancouver_cameras import (
@@ -22,6 +25,7 @@ from app.vancouver_cameras import (
 
 NOW = datetime(2026, 10, 11, 20, 0, tzinfo=timezone.utc)
 DESTINATION = Location(name="Downtown Vancouver", latitude=49.2827, longitude=-123.1207)
+OFFLINE_FIXTURE = Path(__file__).with_name("fixtures") / "IMG-20261103-WA0002.jpg"
 
 
 def jpeg(color: str = "red", size: tuple[int, int] = (640, 480)) -> bytes:
@@ -84,13 +88,15 @@ class FakeCatalogueStore:
 
 def test_image_validation_checks_type_signature_decode_and_dimensions():
     body = jpeg()
-    assert images._validated_image(body, "image/jpeg") == ("image/jpeg", 640, 480)
+    assert images._validated_image(body, "image/jpeg", sha256(body).hexdigest()) == (
+        "image/jpeg", 640, 480, False
+    )
     for payload, content_type in ((body, "text/html"), (b"<html>error</html>", "image/jpeg"), (body[:80], "image/jpeg")):
         with pytest.raises(images.CameraImageError):
-            images._validated_image(payload, content_type)
+            images._validated_image(payload, content_type, sha256(payload).hexdigest())
     tiny = jpeg(size=(80, 80))
     with pytest.raises(images.CameraImageError, match="dimensions"):
-        images._validated_image(tiny, "image/jpeg")
+        images._validated_image(tiny, "image/jpeg", sha256(tiny).hexdigest())
 
 
 @pytest.mark.parametrize("status", [403, 404, 429, 500])
@@ -211,6 +217,9 @@ def test_expired_frame_refresh_replaces_atomically_and_stale_fallback_is_labeled
 
 def test_nearest_fresh_intersection_selected_and_partial_views_retained(tmp_path):
     near = intersection("near", 49.2827, -123.1207, count=5)
+    near.directional_views.insert(0, CameraView(
+        view_id="empty-slot", direction_label="Unavailable", discovery_status="slot_present",
+    ))
     farther = intersection("far", 49.2850, -123.1207, count=1)
     calls: list[str] = []
 
@@ -227,7 +236,8 @@ def test_nearest_fresh_intersection_selected_and_partial_views_retained(tmp_path
     assert result.status == "available"
     assert result.intersection.intersection_id == "near"
     assert len(result.views) == 4
-    assert result.diagnostics.views_failed == 1
+    assert result.views[0].view_id == "view-0"
+    assert result.diagnostics.views_failed == 2
     assert result.diagnostics.candidates_attempted == 1
     assert len(calls) == 5
 
@@ -245,6 +255,112 @@ def test_candidate_order_ties_are_stable_invalid_points_and_radius_are_excluded(
         for index in range(15)
     ]
     assert len(images.rank_intersections(many, DESTINATION)) == images.MAX_CANDIDATES
+
+
+def test_offline_fingerprint_matches_reference_and_recompressed_graphic():
+    reference = OFFLINE_FIXTURE.read_bytes()
+    assert sha256(reference).hexdigest() == OFFLINE_SHA256
+    assert images._validated_image(reference, "image/jpeg", OFFLINE_SHA256)[3]
+
+    with Image.open(BytesIO(reference)) as image:
+        buffer = BytesIO()
+        image.resize((720, 480), Image.Resampling.LANCZOS).save(buffer, "JPEG", quality=25)
+    reencoded = buffer.getvalue()
+    digest = sha256(reencoded).hexdigest()
+    assert digest != OFFLINE_SHA256
+    assert images._validated_image(reencoded, "image/jpeg", digest)[3]
+
+
+def test_offline_fingerprint_rejects_camera_scene_and_matching_plain_background():
+    scene = Path(__file__).resolve().parents[2] / "fixtures/openrouter/illustrative_camera_view_1.png"
+    for body, mime in ((scene.read_bytes(), "image/png"), (jpeg("#00659d"), "image/jpeg")):
+        assert not images._validated_image(body, mime, sha256(body).hexdigest())[3]
+
+
+def test_offline_fingerprint_rejects_grayscale_copy_of_reference():
+    buffer = BytesIO()
+    with Image.open(OFFLINE_FIXTURE) as image:
+        image.convert("L").save(buffer, "JPEG", quality=95)
+    body = buffer.getvalue()
+    assert not images._validated_image(body, "image/jpeg", sha256(body).hexdigest())[3]
+
+
+@pytest.mark.parametrize("offline_count", [1, 2, 3, 4])
+def test_offline_fallback_screens_primary_only_and_stops_after_four(tmp_path, offline_count):
+    candidates = [
+        intersection(f"candidate-{index}", 49.2827 + index * 0.0001, -123.1207, count=2)
+        for index in range(5)
+    ]
+    offline = OFFLINE_FIXTURE.read_bytes()
+    live = jpeg()
+    calls = []
+
+    def handler(request):
+        path = request.url.path
+        calls.append(path)
+        body = offline if path in {
+            f"/cameraimages/candidate-{index}-0.jpg" for index in range(offline_count)
+        } else live
+        return httpx.Response(200, headers={"content-type": "image/jpeg"}, content=body)
+
+    service = images.DestinationCameraService(
+        catalogue_store=FakeCatalogueStore(catalogue_result(candidates[::-1])),
+        image_store=images.CameraImageStore(
+            cache_dir=tmp_path, transport=httpx.MockTransport(handler), now=lambda: NOW
+        ),
+    )
+    result = asyncio.run(service.nearest(DESTINATION))
+    assert result.diagnostics.candidates_attempted == min(offline_count + 1, 4)
+    assert [failure.error_code for failure in result.diagnostics.failures] == [
+        "offline_placeholder"
+    ] * offline_count
+    expected_calls = [f"/cameraimages/candidate-{index}-0.jpg" for index in range(offline_count)]
+    if offline_count < 4:
+        assert result.status == "available"
+        assert result.intersection.intersection_id == f"candidate-{offline_count}"
+        assert result.diagnostics.fallback_used
+        assert [view.view_id for view in result.views] == ["view-0", "view-1"]
+        expected_calls += [f"/cameraimages/candidate-{offline_count}-{view}.jpg" for view in range(2)]
+    else:
+        assert result.status == "unavailable"
+        assert result.intersection is None
+        assert result.views == result.stale_views == []
+    assert calls == expected_calls
+    # Negative results use the existing fresh cache just like valid frames.
+    assert asyncio.run(service.nearest(DESTINATION)) == result
+    assert calls == expected_calls
+
+
+def test_primary_timeout_and_malformed_image_fall_through_as_generic_failures(tmp_path):
+    candidates = [
+        intersection(name, 49.2827 + index * 0.0001, -123.1207, count=2)
+        for index, name in enumerate(("timeout", "malformed", "usable"))
+    ]
+    calls = []
+
+    def handler(request):
+        path = request.url.path
+        calls.append(path)
+        if "timeout" in path:
+            raise httpx.ReadTimeout("internal transport details", request=request)
+        body = b"not a JPEG" if "malformed" in path else jpeg()
+        return httpx.Response(200, headers={"content-type": "image/jpeg"}, content=body)
+
+    service = images.DestinationCameraService(
+        catalogue_store=FakeCatalogueStore(catalogue_result(candidates)),
+        image_store=images.CameraImageStore(
+            cache_dir=tmp_path, transport=httpx.MockTransport(handler), now=lambda: NOW
+        ),
+    )
+    result = asyncio.run(service.nearest(DESTINATION))
+    assert result.intersection.intersection_id == "usable"
+    assert [failure.error_code for failure in result.diagnostics.failures] == [
+        "image_unavailable", "image_unavailable"
+    ]
+    assert calls == [
+        "/cameraimages/timeout-0.jpg", "/cameraimages/malformed-0.jpg",
+        "/cameraimages/usable-0.jpg", "/cameraimages/usable-1.jpg",
+    ]
 
 
 def test_stale_only_frames_are_returned_degraded_and_do_not_qualify_fresh_selection(tmp_path):

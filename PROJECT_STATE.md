@@ -2,15 +2,36 @@
 
 ## Current repository and SDD status
 
-- **Implementation checkout:** Alpha-UX-1 is accepted at `ed955d1` on `main`. Alpha-UX-2 is human accepted and ready for commit; its changes remain uncommitted.
+- **Implementation checkout:** `feature/alpha-ux-stabilization`. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 (`9ff8482`) are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current objective:** Prepare a small, access-protected friends-only alpha deployment. Authentication, usage tracking, and broader deployment planning remain deferred.
-- **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for Alpha-UX-2.
-- **Git control:** Human developers retain staging and Git history control. Alpha-UX-2 is ready for a human-controlled commit and push.
+- **Current status:** Phases 1A–1D are complete, manually verified, independently reviewed by Claude Code, and human accepted. Phase 1 is ready to merge into `main`.
+- **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
+
+## Phase 1 status
+
+**Phase 1A — Accepted.** Destination autocomplete uses the official Vancouver polygon bounds and filters candidates against the municipal polygon. It returns up to five suggestions in provider order. Origin autocomplete retains broad search, and submit-time destination validation still applies. The implementation is committed at `6aa083a`, and the regression test follow-up is committed at `fb9d1b4`.
+
+**Phase 1A verification:** The developer reported successful manual browser testing. The follow-up verified both autocomplete roles and added a mocked MapTiler integration test for polygon filtering. The focused backend suite (41 tests), full backend suite (479 tests), Ruff, frontend suite (14 files), production build, and `git diff --check` passed.
+
+**Phase 1B — Accepted.** Find Routes selects the first usable candidate in response order. The selected card, map highlight, and manually initiated analysis use the same route. Users can select any alternative. A new search clears the selection and dependent analysis, and empty or failed searches leave the selection clear. Existing cancellation and request-sequence guards suppress superseded results. The implementation was committed at `7385f3b` and the regression follow-up at `5544a32`.
+
+**Phase 1B verification:** Manual browser testing passed per the developer, and independent Claude Code QA reported no confirmed application defects. Implementation checks included 39 routing and analysis API regressions and Ruff. The test-only follow-up covers late HTTP and network failures, rendered panel resets, and edits to either input during a search without a replacement request. The 12 focused cases, full frontend suite (15 files), TypeScript/Vite production build, and `git diff --check` passed. Seven scratch mutations that survived the committed tests were caught by the follow-up. The build emitted the existing large-chunk advisory.
+
+**Phase 1C — Accepted.** Shared 11–13 px sizes cover captions, metadata, and body copy. Location fields and suggestion names use 14 px. Long suggestion names, route labels, and evidence now wrap, with narrower form and forecast layouts where space is limited. Changes are confined to frontend CSS and phase records.
+
+**Phase 1C verification:** All 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. The build reported the existing large-chunk advisory. Headless Firefox checked production CSS with local planning and analysis fixtures at 10 widths from 320–1280 px, including long names, placeholder fit, horizontal overflow, forecast reflow, and desktop road-panel scrolling.
+
+**Phase 1D — Accepted.** Selection screens up to four nearest eligible intersections in proximity order. The primary view is the first directional view with a validated URL in catalogue order. A known offline placeholder or unavailable primary causes selection to continue to the next candidate. Known placeholders and generic frame failures have distinct diagnostic codes. If fresh selection fails, a usable cached stale primary can still support the degraded gallery. Browser-triggered vision shares the gallery selection and revalidates it from cache before reserving an OpenRouter attempt for one eligible direction. If the selection changes or expires, camera interpretation is unavailable for that attempt. The implementation and QA follow-up are committed at `adf57a4` and `906882f`.
+
+**Phase 1D detection:** The supplied 300×205 progressive JPEG is retained unchanged. Camera retrieval and cache storage preserve source bytes. Resizing or recompressing the reference changed its digest, so matching uses an exact SHA-256 fast path plus a small comparison of background color and text layout on the already decoded frame. The compiled fingerprint works without loading the test fixture at runtime. Other graphics, crops, overlays, or substantial color shifts can escape detection. Cached outage frames follow the normal image TTL, so a recovered feed can remain skipped until refresh. Matching against a newly captured live City outage image remains unverified.
+
+**Phase 1D verification:** The focused backend suite (109 tests), full backend suite (489 tests), Ruff, all 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. Backend tests blocked live DNS and socket connections. Automated camera checks used fixtures and a mocked provider. The build reported the existing large-chunk advisory. The human developer confirmed manual verification.
+
+**Phase 1D QA follow-up:** Claude Code reported no confirmed production defects. Permanent tests now cover rejected gallery fingerprints, cached-frame identity changes, and grayscale lookalikes. Seven targeted mutations failed as expected in disposable copies. The focused backend suite (117 tests), full backend suite (497 tests), Ruff, and `git diff --check` passed. Claude Code accepted the follow-up, and all QA findings were resolved sufficiently for human acceptance.
 
 ## Alpha UX implementation status
 
-Alpha-UX-1 is the accepted baseline: Stage 1 retains the large map beside explicit route choice; Stage 2 enters immediately, preserves header and controls, scrolls once to the page top, and presents camera and deterministic weather/road summary evidence. The accepted stage transition, camera timing, UUID identity, cancellation and stale-response safeguards remain in the existing lifecycle.
+Alpha-UX-1 established Stage 1 with a large map beside the route controls and Stage 2 with immediate entry, persistent header and controls, one scroll to the page top, and camera and deterministic weather/road summary evidence. Phase 1B added automatic first-route selection in Stage 1 and retained manual choice of alternatives. The lifecycle retains the accepted stage transition, camera timing, UUID identity, cancellation, and stale-response safeguards.
 
 Alpha-UX-2 keeps the map mounted beside the independently scrollable Stage 2 road panel, with responsive stacking. The panel is titled **ROAD EVENTS & DISRUPTIONS**; direct City of Vancouver Road Ahead intersections are visible first, followed by collapsed, counted disclosures for nearby Road Ahead events and DriveBC Open511. Source-scoped event selection still reaches the shared map callback, and regional overlays, construction highlighting, route highlighting, and camera markers remain connected. Nearby and DriveBC event lists have been removed from lower supporting information; detailed source freshness/statuses, analysis context, full forecast intervals, and additional ECCC observations remain available there. The existing source-grounded AI briefing follows the map section, is labelled Experimental, retains its state content, and does not trigger inference from presentation or mounting.
 
@@ -22,7 +43,7 @@ Changed for Alpha-UX-2: `frontend/src/App.tsx`, `frontend/src/RoadAheadPanel.tsx
 
 ## Accepted implementation baseline
 
-Phases 0–10 are human accepted and complete; RouteLens AI MVP v1 is implementation-complete. The accepted product is a local, driving-only Vancouver journey companion with explicit route selection and on-demand analysis. The implementation covers the app/map and journey workflow (Phases 1–3), Road Ahead and DriveBC road evidence (4–5), OpenWeather and ECCC/SWOB weather evidence (6), Vancouver destination cameras (7), validated camera vision (8), the internal evidence bundle (9), and the three-topic AI Journey Briefing (10). This is a milestone summary; detailed acceptance evidence and limitations are preserved in the archive and integration notes.
+Phases 0–10 are human accepted and complete; RouteLens AI MVP v1 is implementation-complete. The product is a local, driving-only Vancouver journey companion with on-demand analysis of the currently selected route. The implementation covers the app/map and journey workflow (Phases 1–3), Road Ahead and DriveBC road evidence (4–5), OpenWeather and ECCC/SWOB weather evidence (6), Vancouver destination cameras (7), validated camera vision (8), the internal evidence bundle (9), and the three-topic AI Journey Briefing (10). This is a milestone summary; detailed acceptance evidence and limitations are preserved in the archive and integration notes.
 
 **Phase 10 status:** Human acceptance is explicit in archived `PROJECT_STATE_pre-QAR1.md`, Section 53: Assignment 10D and Phase 10 are accepted and complete, following two successful live end-to-end briefing tests after the final reliability hotfix. The older pending-acceptance language in Sections 51–52 is historical and superseded by Section 53. Acceptance is not used to infer a Git commit.
 
@@ -43,7 +64,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 - `AGENTS.md` and `APP_SPEC.md` remain governing documents. `BUILD_PLAN.md` defines the current bounded approved assignment; this file records implementation reality. Historical decisions and evidence remain discoverable in the archives and integration notes.
 - Codex may implement only separately authorized assignments. Future accepted assignments should be summarized here rather than appended as full implementation transcripts.
-- RouteLens remains driving-only for the datathon MVP, with Vancouver destinations, explicit candidate-route selection, and manual/on-demand analysis. It is a journey companion, not a navigation replacement.
+- RouteLens remains driving-only for the datathon MVP, with Vancouver destinations, a manually adjustable route selection, and on-demand analysis. It is a journey companion.
 - Source evidence remains distinct and provenance-bearing. Missing/empty evidence is not an all-clear; camera retrieval time is not a verified capture time; Point proximity is not route overlap; camera observations are not authoritative speed, congestion, or meteorological measurements.
 - The Phase 8/10 integrations use `google/gemma-4-31b-it` through OpenRouter with separate vision and briefing ledgers, role-specific quotas/estimates, and provider/account billing as authoritative. QAR-1 preserves these controls while coordinating aggregate local estimates.
 - The later Phase 8D record authorizes current validated City of Vancouver camera frames to be sent to OpenRouter solely for the private, noncommercial prototype under existing limits; it supersedes the earlier 8B restriction. It does not authorize bulk/history collection, public redistribution, commercial deployment, or broader external sharing. Provider-side processing/retention and external image-use rights remain considerations for any expansion.
@@ -52,6 +73,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 ## Current limitations and external considerations
 
 - Occasional camera unavailability, the limits of one directional view, temporal/geographic differences between images and weather, and possible model factual errors remain. References and deterministic source selection support review but do not prove every generated claim is entailed; human source comparison remains relevant.
+- The existing first-briefing camera interpretation timing issue remains open. Camera interpretation that completes after the briefing's evidence cutoff can appear after the first briefing has already been generated.
 - A historical repeated backend run stalled at `test_openweather_products_are_reported_independently[current]`. The confirmed unmocked Road Ahead requests were corrected in QAR-2, but the exact cause of that earlier stall was not established. The existing frontend production build reports a nonblocking large-bundle advisory.
 - Provider model/routing capabilities, prices, account restrictions, and cumulative account spending can change. Provider/account billing is authoritative; local role ledgers do not establish total historical/account usage. Reconcile current cumulative usage against the project limit before further paid inference. No provider/account reconciliation was performed for this documentation task.
 
@@ -71,9 +93,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Commit and push the human-accepted Alpha-UX-2 implementation. Next, plan a minimal protected deployment for a small group of friends using the existing development environment. Full Google OAuth and usage analytics remain deferred.
-
-**Alpha UX presentation refinement (2026-10-30):** The map-side panel now groups direct Road Ahead, nearby Road Ahead, and DriveBC Open511 in that order; only direct findings are open by default, and relocated event lists are absent from lower supporting information. Frontend tests and build passed; a local CSS fixture demonstrated map adjacency and independent panel scrolling. Full application visual behavior remains for human review. No backend, API, normalized data, inference, provider, infrastructure, or dependency changes; no external requests or paid inference.
+Phase 1 is ready for the human developer to merge into `main`. Phase 2 security and API cost controls are the next planned development focus. Implementation has yet to begin.
 
 ## Archive and integration-note references
 

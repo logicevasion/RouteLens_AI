@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from app.geocoding import (
+    DESTINATION_PROVIDER_LIMIT,
     MAX_CANDIDATES,
     GeocodingConfigurationError,
     GeocodingUpstreamError,
@@ -15,6 +16,7 @@ from app.geocoding import (
     normalize_feature,
     normalize_response,
 )
+from app.geography import CITY_OF_VANCOUVER
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "maptiler"
 DOWNTOWN_FIXTURE = FIXTURES / "geocoding_selected_downtown_vancouver.json"
@@ -114,6 +116,57 @@ def test_successful_request_uses_safe_bounded_regional_parameters() -> None:
     assert params["autocomplete"] == "true"
     assert params["country"] == "ca"
     assert params["proximity"] == "-123.1207,49.2827"
+    assert "bbox" not in params
+
+
+def test_destination_search_uses_city_bbox_filters_polygon_and_keeps_provider_order() -> None:
+    boundary_point = CITY_OF_VANCOUVER.boundary.interpolate(0.5, normalized=True)
+    features = [
+        _feature("inside-first", -123.1207, 49.2827),
+        _feature("burnaby", -123.003, 49.248),
+        _feature("on-boundary", boundary_point.x, boundary_point.y),
+        _feature("richmond", -123.137414, 49.163168),
+        _feature("inside-last", -123.135, 49.255),
+        _feature("inside-sixth", -123.13, 49.26),
+    ]
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["params"] = dict(request.url.params)
+        return httpx.Response(200, json={"type": "FeatureCollection", "features": features})
+
+    geocoder = MapTilerGeocoder("test-secret", transport=httpx.MockTransport(handler))
+    result = asyncio.run(geocoder.search("Vancouver", destination=True))
+
+    assert [item.provider_id for item in result] == ["inside-first", "on-boundary", "inside-last", "inside-sixth"]
+    params = captured["params"]
+    west, south, east, north = CITY_OF_VANCOUVER.bounds
+    assert params["bbox"] == f"{west},{south},{east},{north}"
+    assert params["limit"] == str(DESTINATION_PROVIDER_LIMIT)
+
+
+def test_destination_search_caps_displayed_suggestions_after_filtering() -> None:
+    features = [_feature(f"inside-{index}", -123.12, 49.28) for index in range(DESTINATION_PROVIDER_LIMIT)]
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"type": "FeatureCollection", "features": features})
+
+    result = asyncio.run(
+        MapTilerGeocoder("test-secret", transport=httpx.MockTransport(handler)).search(
+            "Vancouver", destination=True
+        )
+    )
+    assert len(result) == MAX_CANDIDATES
+    assert [item.provider_id for item in result] == [f"inside-{index}" for index in range(MAX_CANDIDATES)]
+
+
+def _feature(identifier: str, longitude: float, latitude: float) -> dict:
+    return {
+        "type": "Feature",
+        "id": identifier,
+        "text": identifier,
+        "geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+    }
 
 
 @pytest.mark.parametrize("status_code", [401, 403, 429, 500])

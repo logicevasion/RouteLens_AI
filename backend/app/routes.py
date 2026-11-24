@@ -1,12 +1,15 @@
 """Focused geocoding and destination validation endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from typing import Literal
+
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import ValidationError
 
 from app.analysis import JourneyAnalysis, Trip, analyze_journey
 from app.briefing_contracts import BriefingEvidenceRequestV1, BriefingResultV1
 from app.camera_images import (
+    SELECTION_HEADER,
     CameraImageConfigurationError,
     DestinationCameraRequest,
     DestinationCameraResult,
@@ -107,13 +110,14 @@ def _vision_failure(code: str, *, status: str = "unavailable") -> AdapterResult:
 @router.get("/geocoding/search", response_model=list[Location])
 async def search_locations(
     q: str = Query(min_length=2, max_length=200),
+    role: Literal["origin", "destination"] = Query(default="origin"),
 ) -> list[Location]:
-    """Return normalized suggestions using Metro Vancouver as search proximity."""
+    """Return normalized origin or Vancouver-eligible destination suggestions."""
     query = q.strip()
     if len(query) < 2:
         raise HTTPException(status_code=422, detail="Query must contain at least 2 characters.")
     try:
-        return await MapTilerGeocoder().search(query)
+        return await MapTilerGeocoder().search(query, destination=role == "destination")
     except GeocodingConfigurationError as error:
         raise HTTPException(status_code=503, detail=str(error)) from None
     except GeocodingUpstreamError as error:
@@ -190,10 +194,15 @@ async def analyze_trip(trip: Trip) -> JourneyAnalysis:
 
 
 @router.post("/cameras/nearest", response_model=DestinationCameraResult)
-async def nearest_destination_camera(request: DestinationCameraRequest) -> DestinationCameraResult:
+async def nearest_destination_camera(
+    request: DestinationCameraRequest, response: Response
+) -> DestinationCameraResult:
     """Retrieve current validated camera views for a canonical Vancouver destination."""
     try:
-        return await _camera_service().nearest(request.destination)
+        selection = await _camera_service().nearest(request.destination)
+        if selection.status == "available":
+            response.headers[SELECTION_HEADER] = selection.selection_fingerprint()
+        return selection
     except ValueError as error:
         raise HTTPException(
             status_code=422,
@@ -207,11 +216,18 @@ async def nearest_destination_camera(request: DestinationCameraRequest) -> Desti
 
 
 @router.post("/cameras/observe", response_model=AdapterResult)
-async def observe_destination_cameras(trip: Trip) -> AdapterResult:
+async def observe_destination_cameras(
+    trip: Trip, camera_selection: str | None = Header(default=None, alias=SELECTION_HEADER)
+) -> AdapterResult:
     """Return internal vision evidence for the backend-selected destination intersection."""
-    service = _camera_service()
     try:
-        selection = await service.nearest(trip.destination)
+        service = _camera_service()
+        if camera_selection is None:
+            selection = await service.nearest(trip.destination)
+        else:
+            # Check the gallery's selection against current cached frames without
+            # retrying failed image downloads or inferring for a different selection.
+            selection = await service.nearest(trip.destination, cached_only=True)
     except ValueError as error:
         raise HTTPException(
             status_code=422,
@@ -224,6 +240,12 @@ async def observe_destination_cameras(trip: Trip) -> AdapterResult:
     # changed or substituted destination cannot reuse the selection's frames.
     if selection.destination != trip.destination:
         return _vision_failure("journey_context_mismatch", status="error")
+    if camera_selection is not None and (
+        selection.status != "available" or camera_selection != selection.selection_fingerprint()
+    ):
+        return _vision_failure("no_eligible_frames")
+    if selection.intersection is None:
+        return _vision_failure("no_selected_intersection")
 
     catalogue_result = await service.catalogue_store.get_catalogue()
     return await _vision_adapter().analyze_selected_intersection(
