@@ -217,6 +217,9 @@ def test_expired_frame_refresh_replaces_atomically_and_stale_fallback_is_labeled
 
 def test_nearest_fresh_intersection_selected_and_partial_views_retained(tmp_path):
     near = intersection("near", 49.2827, -123.1207, count=5)
+    near.directional_views.insert(0, CameraView(
+        view_id="empty-slot", direction_label="Unavailable", discovery_status="slot_present",
+    ))
     farther = intersection("far", 49.2850, -123.1207, count=1)
     calls: list[str] = []
 
@@ -233,7 +236,8 @@ def test_nearest_fresh_intersection_selected_and_partial_views_retained(tmp_path
     assert result.status == "available"
     assert result.intersection.intersection_id == "near"
     assert len(result.views) == 4
-    assert result.diagnostics.views_failed == 1
+    assert result.views[0].view_id == "view-0"
+    assert result.diagnostics.views_failed == 2
     assert result.diagnostics.candidates_attempted == 1
     assert len(calls) == 5
 
@@ -271,6 +275,14 @@ def test_offline_fingerprint_rejects_camera_scene_and_matching_plain_background(
     scene = Path(__file__).resolve().parents[2] / "fixtures/openrouter/illustrative_camera_view_1.png"
     for body, mime in ((scene.read_bytes(), "image/png"), (jpeg("#00659d"), "image/jpeg")):
         assert not images._validated_image(body, mime, sha256(body).hexdigest())[3]
+
+
+def test_offline_fingerprint_rejects_grayscale_copy_of_reference():
+    buffer = BytesIO()
+    with Image.open(OFFLINE_FIXTURE) as image:
+        image.convert("L").save(buffer, "JPEG", quality=95)
+    body = buffer.getvalue()
+    assert not images._validated_image(body, "image/jpeg", sha256(body).hexdigest())[3]
 
 
 @pytest.mark.parametrize("offline_count", [1, 2, 3, 4])

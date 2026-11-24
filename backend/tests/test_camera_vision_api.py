@@ -432,19 +432,116 @@ def test_gallery_fallback_and_vision_share_selected_frames(monkeypatch, tmp_path
     asyncio.run(exercise())
 
 
-def test_vision_excludes_offline_bytes_even_if_gallery_view_was_previously_selected(monkeypatch, tmp_path):
+@pytest.mark.parametrize("change", [
+    "forged", "malformed", "destination", "image_bytes", "retrieved_at", "primary_offline"
+])
+def test_observe_rejects_stale_or_unrelated_gallery_fingerprint(monkeypatch, tmp_path, change):
+    primary = intersection("primary", DESTINATION.latitude, DESTINATION.longitude)
+    fallback = intersection("fallback", DESTINATION.latitude + 0.0003, DESTINATION.longitude)
+    live = jpeg("green")
+    store = images.CameraImageStore(
+        cache_dir=tmp_path / "frames", now=lambda: NOW,
+        transport=httpx.MockTransport(lambda request: httpx.Response(
+            200, headers={"content-type": "image/jpeg"}, content=live,
+        )),
+    )
+    provider_calls = []
+
+    def provider(request):
+        provider_calls.append(request)
+        return httpx.Response(200, json=provider_response(["view-0"]))
+
+    adapter = OpenRouterVisionAdapter(
+        api_key="test-key", transport=httpx.MockTransport(provider),
+        budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW,
+    )
+    service = images.DestinationCameraService(
+        catalogue_store=FakeCatalogueStore(catalogue_result([primary, fallback])), image_store=store,
+    )
+    monkeypatch.setattr("app.routes.camera_service", service)
+    monkeypatch.setattr("app.routes.vision_adapter", adapter)
+
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            payload = trip_payload()
+            gallery = await client.post("/api/cameras/nearest", json={"destination": payload["destination"]})
+            assert gallery.json()["intersection"]["intersection_id"] == primary.intersection_id
+            fingerprint = gallery.headers[images.SELECTION_HEADER]
+            if change == "forged":
+                fingerprint = ("0" if fingerprint[0] != "0" else "1") + fingerprint[1:]
+            elif change == "malformed":
+                fingerprint = "not-a-fingerprint"
+            elif change == "destination":
+                payload["destination"]["name"] = "Another destination at the same coordinates"
+            else:
+                data_path, metadata_path = images._frame_paths(store.cache_dir, primary.intersection_id, "view-0")
+                frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
+                if change == "retrieved_at":
+                    frame = frame.model_copy(update={"retrieved_at": NOW - timedelta(seconds=1)})
+                elif change == "image_bytes":
+                    # Keep the view and its retrieval time identical so the digest decides the match.
+                    body = jpeg("blue")
+                    assert body != live
+                    data_path.write_bytes(body)
+                    frame = frame.model_copy(update={
+                        "sha256": images.hashlib.sha256(body).hexdigest(), "byte_length": len(body),
+                    })
+                else:
+                    # Seed an equally fresh candidate with the same view ID and frame bytes.
+                    # Only the intersection distinguishes its fingerprint from the original one.
+                    assert await store.get_view(fallback, fallback.directional_views[0]) is not None
+                    body = OFFLINE_FIXTURE.read_bytes()
+                    data_path.write_bytes(body)
+                    frame = frame.model_copy(update={
+                        "sha256": images.hashlib.sha256(body).hexdigest(), "byte_length": len(body),
+                        "width": 300, "height": 205,
+                    })
+                metadata_path.write_text(frame.model_dump_json())
+
+            requests_before = store.upstream_requests
+            rejected = await client.post(
+                "/api/cameras/observe", json=payload, headers={images.SELECTION_HEADER: fingerprint},
+            )
+            assert rejected.status_code == 200
+            observation = rejected.json()["observation"]
+            assert observation["failure_code"] == "no_eligible_frames"
+            assert observation["included_views"] == []
+            assert store.upstream_requests == requests_before
+            assert not provider_calls and not adapter.budget.path.exists()
+
+            # The current selection is still valid and can reach the mocked provider.
+            current = await client.post("/api/cameras/nearest", json={"destination": payload["destination"]})
+            accepted = await client.post(
+                "/api/cameras/observe", json=payload,
+                headers={images.SELECTION_HEADER: current.headers[images.SELECTION_HEADER]},
+            )
+            observation = accepted.json()["observation"]
+            expected_id = fallback.intersection_id if change == "primary_offline" else primary.intersection_id
+            assert observation["intersection_id"] == expected_id
+            assert observation["status"] == "available"
+            assert len(provider_calls) == 1
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("change", ["offline", "digest"])
+def test_vision_excludes_replaced_cached_view_after_selection(monkeypatch, tmp_path, change):
     service, adapter, catalogue, store, selection = setup_api(monkeypatch, tmp_path)
     camera = catalogue.intersections[0]
     view = camera.directional_views[0]
     data_path, metadata_path = images._frame_paths(store.cache_dir, camera.intersection_id, view.view_id)
     frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
-    offline = OFFLINE_FIXTURE.read_bytes()
-    data_path.write_bytes(offline)
+    body = OFFLINE_FIXTURE.read_bytes() if change == "offline" else jpeg("green")
+    width, height = (300, 205) if change == "offline" else (frame.width, frame.height)
+    selected_view = selection.views[0]
+    if change == "digest":
+        selected_view = selected_view.model_copy(update={"sha256": frame.sha256})
+    data_path.write_bytes(body)
     metadata_path.write_text(frame.model_copy(update={
-        "sha256": images.hashlib.sha256(offline).hexdigest(),
-        "byte_length": len(offline), "width": 300, "height": 205,
+        "sha256": images.hashlib.sha256(body).hexdigest(), "byte_length": len(body),
+        "width": width, "height": height,
     }).model_dump_json())
-    service.selection = selection.model_copy(update={"views": selection.views[:1]})
+    service.selection = selection.model_copy(update={"views": [selected_view]})
 
     result = post("/api/cameras/observe", trip_payload()).json()["observation"]
     assert result["failure_code"] == "no_eligible_frames"

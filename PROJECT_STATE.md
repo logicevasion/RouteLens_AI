@@ -27,6 +27,8 @@
 
 **Phase 1D verification:** The focused backend suite (109 tests), full backend suite (489 tests), Ruff, all 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed. Backend tests blocked live DNS and socket connections. The build reported the existing large-chunk advisory.
 
+**Phase 1D QA follow-up:** Claude Code reported no confirmed production defects. Permanent tests now cover rejected gallery fingerprints, cached-frame identity changes, and grayscale lookalikes. Seven targeted mutations failed as expected in disposable copies. The focused backend suite (117 tests), full backend suite (497 tests), Ruff, and `git diff --check` passed. Live City outage variants still await review.
+
 ## Alpha UX implementation status
 
 Alpha-UX-1 is the accepted baseline: Stage 1 retains the large map beside explicit route choice; Stage 2 enters immediately, preserves header and controls, scrolls once to the page top, and presents camera and deterministic weather/road summary evidence. The accepted stage transition, camera timing, UUID identity, cancellation and stale-response safeguards remain in the existing lifecycle.
