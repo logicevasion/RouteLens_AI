@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.api_usage import Operation, observe_usage
 from app.road_ahead import (
     CACHE_TTL_SECONDS,
     DATASETS,
@@ -151,7 +152,7 @@ def test_malformed_collection_envelope_is_rejected(payload) -> None:
         validate_page(payload, expected_offset=0, requested_limit=PAGE_SIZE)
 
 
-def test_paginated_download_retrieves_every_page_and_validates_total(tmp_path) -> None:
+def test_paginated_download_retrieves_every_page_and_validates_total(tmp_path, usage_store) -> None:
     records = [
         {"recordid": f"row-{index}", "geom": None, "project": f"Project {index}"}
         for index in range(PAGE_SIZE + 1)
@@ -169,11 +170,17 @@ def test_paginated_download_retrieves_every_page_and_validates_total(tmp_path) -
             json={"total_count": len(records), "results": records[offset : offset + limit]},
         )
 
-    result = asyncio.run(client_for(tmp_path, handler).get_data())
+    with observe_usage(usage_store):
+        result = asyncio.run(client_for(tmp_path, handler).get_data())
     assert requests == [0, PAGE_SIZE, 0, PAGE_SIZE]
     assert set(selected_fields) == {"*,recordid"}
     assert all(status.success for status in result.source_statuses)
     assert len(result.events) == 2 * (PAGE_SIZE + 1)
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {
+        (day, Operation.ROAD_AHEAD_CLOSURES): 2,
+        (day, Operation.ROAD_AHEAD_CONSTRUCTION): 2,
+    }
 
 
 def test_truncated_page_does_not_replace_cache_and_uses_stale_data(tmp_path) -> None:

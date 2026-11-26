@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 import app.eccc_swob as swob
+from app.api_usage import Operation, observe_usage
 from app.eccc_swob import (
     EcccSwobClient,
     parse_feature_collection,
@@ -297,7 +298,7 @@ def page_response(features: list[dict], matched: int, offset: int) -> httpx.Resp
     return httpx.Response(200, json=collection(selected, matched=matched))
 
 
-def test_pagination_completes_snapshot_and_uses_bounded_fixed_query(tmp_path, monkeypatch):
+def test_pagination_completes_snapshot_and_uses_bounded_fixed_query(tmp_path, monkeypatch, usage_store):
     all_features = [feature(f"s-{index}", source_id=f"id-{index}") for index in range(swob.PAGE_SIZE + 2)]
     requests = []
 
@@ -306,7 +307,8 @@ def test_pagination_completes_snapshot_and_uses_bounded_fixed_query(tmp_path, mo
         return page_response(all_features, len(all_features), int(request.url.params["offset"]))
 
     monkeypatch.setattr(swob, "MAX_RECORDS", 2000)
-    result = asyncio.run(client(tmp_path, handler).fetch_regional_observations())
+    with observe_usage(usage_store):
+        result = asyncio.run(client(tmp_path, handler).fetch_regional_observations())
     assert result.status.success and result.status.available and result.status.refreshed
     assert result.status.records_received == swob.PAGE_SIZE + 2
     assert result.diagnostics.station_count == swob.PAGE_SIZE + 2
@@ -316,6 +318,8 @@ def test_pagination_completes_snapshot_and_uses_bounded_fixed_query(tmp_path, mo
     assert requests[0].url.params["datetime"].endswith("Z/2026-10-11T13:30:00Z")
     assert requests[0].url.params["sortby"] == "date_tm-value"
     assert requests[0].url.params["limit"] == "500"
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, Operation.ECCC_PAGE): 2}
 
 
 def test_valid_empty_feed_is_available_and_cached(tmp_path):

@@ -17,6 +17,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from app.api_usage import Operation, usage_hooks
 from app.road_ahead import CityEvent
 
 DETAIL_TIMEOUT_SECONDS = 7.0
@@ -303,7 +304,12 @@ class RoadAheadDetailEnricher:
     async def _download(self, source_url: str) -> str:
         current_url = source_url
         expected_path = urlparse(source_url).path
-        async with httpx.AsyncClient(timeout=DETAIL_TIMEOUT_SECONDS, follow_redirects=False, transport=self.transport) as client:
+        async with httpx.AsyncClient(
+            timeout=DETAIL_TIMEOUT_SECONDS,
+            follow_redirects=False,
+            transport=self.transport,
+            event_hooks=usage_hooks(Operation.ROAD_AHEAD_DETAIL),
+        ) as client:
             for redirect_count in range(MAX_REDIRECTS + 1):
                 if not _safe_url(current_url) or urlparse(current_url).path != expected_path:
                     raise _InvalidPage

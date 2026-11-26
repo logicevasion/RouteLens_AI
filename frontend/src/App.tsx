@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ApiUsageDisclosure from './ApiUsageDisclosure';
 import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
@@ -735,6 +736,7 @@ export default function App() {
         </a>
         <div className="topbar-meta">
           <span className="region-label"><span className="region-dot" /> Vancouver, BC</span>
+          <ApiUsageDisclosure />
           <div className={`backend-status status-${backendStatus}`} role="status" aria-live="polite">
             <span className="backend-dot" aria-hidden="true" />
             {statusLabels[backendStatus]}

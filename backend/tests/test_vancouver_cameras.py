@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from app import vancouver_cameras as cameras
+from app.api_usage import Operation, observe_usage
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "vancouver_cameras"
 NOW = datetime(2026, 10, 11, 20, 0, tzinfo=timezone.utc)
@@ -282,7 +283,7 @@ def test_partial_page_enrichment_preserves_previous_views_with_stale_label() -> 
     assert result.diagnostics.pages_failing_enrichment == 1
 
 
-def test_concurrent_gets_coalesce_refresh_and_never_fetch_image_bytes(tmp_path: Path) -> None:
+def test_concurrent_gets_coalesce_refresh_and_never_fetch_image_bytes(tmp_path: Path, usage_store) -> None:
     calls: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -303,10 +304,16 @@ def test_concurrent_gets_coalesce_refresh_and_never_fetch_image_bytes(tmp_path: 
     async def run():
         return await asyncio.gather(store.get_catalogue(), store.get_catalogue())
 
-    first, second = asyncio.run(run())
+    with observe_usage(usage_store):
+        first, second = asyncio.run(run())
     assert first.available and second.cache_hit
     assert calls.count("opendata.vancouver.ca/api/explore/v2.1/catalog/datasets/web-cam-url-links/records") == 1
     assert all("cameraimages" not in call for call in calls)
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {
+        (day, Operation.CAMERA_CATALOGUE): 1,
+        (day, Operation.CAMERA_PAGE): 1,
+    }
 
 
 def test_cache_rejects_unsafe_view_url_and_stale_fallback_when_unavailable(tmp_path: Path) -> None:

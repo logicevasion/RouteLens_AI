@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import httpx
 
+from app.api_usage import Operation, usage_hooks
 from app.geography import CITY_OF_VANCOUVER, validate_destination
 from app.models import Location
 
@@ -149,6 +150,7 @@ class MapTilerGeocoder:
             async with httpx.AsyncClient(
                 timeout=REQUEST_TIMEOUT_SECONDS,
                 transport=self._transport,
+                event_hooks=usage_hooks(Operation.MAPTILER_GEOCODING),
             ) as client:
                 response = await client.get(f"{MAPTILER_ENDPOINT}/{encoded_query}.json", params=params)
         except httpx.TimeoutException:

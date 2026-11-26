@@ -15,6 +15,8 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from app.api_usage import Operation, usage_hooks
+
 SOURCE = "ECCC GeoMet/SWOB"
 COLLECTION = "swob-realtime"
 ITEMS_URL = f"https://api.weather.gc.ca/collections/{COLLECTION}/items"
@@ -661,6 +663,7 @@ class EcccSwobClient:
             timeout=REQUEST_TIMEOUT,
             follow_redirects=False,
             transport=self._transport,
+            event_hooks=usage_hooks(Operation.ECCC_PAGE),
             headers={"Accept": "application/geo+json, application/json", "User-Agent": "RouteLens-AI/1.0"},
         ) as client:
             while total is None or len(all_features) < total:

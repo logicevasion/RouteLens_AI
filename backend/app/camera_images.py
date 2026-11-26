@@ -20,6 +20,7 @@ import httpx
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api_usage import Operation, usage_hooks
 from app.camera_placeholder import matches_offline_placeholder
 from app.geography import validate_destination
 from app.models import Location
@@ -444,6 +445,7 @@ class CameraImageStore:
                         timeout=IMAGE_TIMEOUT,
                         follow_redirects=False,
                         transport=self.transport,
+                        event_hooks=usage_hooks(Operation.CAMERA_FRAME),
                         headers={"User-Agent": "RouteLensAI/0.1 (bounded current camera frame)"},
                     ) as client, client.stream("GET", url) as response:
                         if response.is_redirect:

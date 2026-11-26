@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.api_usage import Operation, observe_usage
 from app.openweather import (
     DailyRequestBudget,
     OpenWeatherClient,
@@ -350,7 +351,7 @@ def test_concurrent_calls_share_refresh(tmp_path):
     assert all(result.current.status.available and result.forecast.status.available for result in results)
 
 
-def test_budget_exhaustion_uses_stale_cache_without_request(tmp_path):
+def test_budget_exhaustion_uses_stale_cache_without_request(tmp_path, usage_store):
     calls = []
 
     def handler(request):
@@ -362,13 +363,19 @@ def test_budget_exhaustion_uses_stale_cache_without_request(tmp_path):
         api_key="test", cache_dir=cache, daily_request_limit=2,
         transport=httpx.MockTransport(handler), now=lambda: NOW,
     )
-    asyncio.run(client.get_weather(COORDS.latitude, COORDS.longitude, evaluation_time=NOW))
-    later = NOW + timedelta(seconds=601)
-    client.now = lambda: later
-    exhausted = asyncio.run(client.get_weather(COORDS.latitude, COORDS.longitude, evaluation_time=later))
+    with observe_usage(usage_store):
+        asyncio.run(client.get_weather(COORDS.latitude, COORDS.longitude, evaluation_time=NOW))
+        later = NOW + timedelta(seconds=601)
+        client.now = lambda: later
+        exhausted = asyncio.run(client.get_weather(COORDS.latitude, COORDS.longitude, evaluation_time=later))
     assert len(calls) == 2
     assert exhausted.current.status.stale and exhausted.forecast.status.stale
     assert "budget exhausted" in (exhausted.current.status.error or "")
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {
+        (day, Operation.OPENWEATHER_CURRENT): 1,
+        (day, Operation.OPENWEATHER_TIMELINE): 1,
+    }
 
 
 def test_http_failure_does_not_leak_key_or_provider_body(tmp_path):

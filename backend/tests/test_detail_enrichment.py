@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.api_usage import Operation, observe_usage
 from app.detail_enrichment import (
     DETAIL_CACHE_TTL_SECONDS,
     MAX_CONCURRENT_REQUESTS,
@@ -189,7 +190,7 @@ def test_redirect_to_unapproved_host_is_rejected(tmp_path: Path) -> None:
     assert len(requests) == 1
 
 
-def test_same_host_http_to_https_redirect_is_allowed(tmp_path: Path) -> None:
+def test_same_host_http_to_https_redirect_is_allowed(tmp_path: Path, usage_store) -> None:
     requests: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -198,9 +199,17 @@ def test_same_host_http_to_https_redirect_is_allowed(tmp_path: Path) -> None:
             return httpx.Response(301, headers={"location": str(request.url).replace("http://", "https://")})
         return httpx.Response(200, headers={"content-type": "text/html; charset=utf-8"}, text=html("detail_closure.html"))
 
-    result = asyncio.run(RoadAheadDetailEnricher(cache_dir=tmp_path, transport=httpx.MockTransport(handler), now=lambda: NOW).enrich(event()))
+    enricher = RoadAheadDetailEnricher(
+        cache_dir=tmp_path, transport=httpx.MockTransport(handler), now=lambda: NOW
+    )
+    with observe_usage(usage_store):
+        result = asyncio.run(enricher.enrich(event()))
+        cached = asyncio.run(enricher.enrich(event()))
     assert result.availability == "available"
+    assert cached.from_cache
     assert requests[0].startswith("http://") and requests[1].startswith("https://")
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, Operation.ROAD_AHEAD_DETAIL): 2}
 
 
 def test_non_html_response_is_unavailable(tmp_path: Path) -> None:

@@ -11,7 +11,7 @@ This file defines the currently selected bounded assignment. Planning approval d
 
 ## Phase 1 — UX Stabilization
 
-**Status:** Phases 1A–1D are complete. All four passed manual verification and independent Claude Code review and were accepted by the human developer. Phase 1 is ready to merge into `main`.
+**Status:** Phases 1A–1D are complete. All four passed manual verification and independent Claude Code review and were accepted by the human developer.
 
 ### Phase 1A — Vancouver-only destination suggestions (accepted)
 
@@ -40,9 +40,11 @@ This file defines the currently selected bounded assignment. Planning approval d
 - Fixture-backed camera responses and a mocked vision provider verified the fallback and gallery-to-vision consistency. Browser behavior was manually verified. Matching against a newly captured live City outage image remains unverified, and the existing first-briefing camera interpretation timing issue remains open.
 - All Phase 1D QA follow-up findings were addressed to Claude Code's and the human developer's satisfaction. The follow-up passed 497 backend tests and Ruff. Earlier Phase 1D verification passed all 15 frontend test files and the TypeScript/Vite production build with the existing large-chunk advisory. [Detailed verification](PROJECT_STATE.md#phase-1-status)
 
-## Phase 2 — Security and API cost controls (planned)
+## Phase 2 — API usage visibility and controls
 
-Phase 2 is the next development focus after Phase 1 merges. Implementation has yet to begin and requires a separate bounded assignment.
+- **Phase 2A complete.** Read-only audit of provider integrations, caches, budgets, and tracking feasibility.
+- **Phase 2B implemented and ready for review.** SQLite stores backend request-attempt counts per operation and UTC date. `GET /api/usage` supplies the header's API Usage disclosure with aggregate counts over 30 UTC dates, including today. The read-only `backend/scripts/api_usage_report.py` accepts `--days`, `--daily`, and `--operations`. Browser-side MapTiler resources are untracked, and calls before instrumentation have no historical records. Tracking is best effort and surfaces known gaps or database unavailability. [Implementation and verification](PROJECT_STATE.md#phase-2-status)
+- **Phase 2C deferred.** Separately authorize any lightweight daily quotas. Phase 2B preserves existing provider budgets and performs no quota enforcement.
 
 ## Completed correction assignment
 

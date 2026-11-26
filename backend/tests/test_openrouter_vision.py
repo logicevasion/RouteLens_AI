@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from app import camera_images as images
 from app import openrouter_vision as vision_module
+from app.api_usage import Operation, observe_usage
 from app.models import Location
 from app.openrouter_vision import (
     INTRO_PROMPT,
@@ -342,7 +343,7 @@ def test_snapshot_identity_depends_on_selected_frame_and_model_prompt_schema(tmp
     assert adapter._snapshot_identity(camera.intersection_id, [(west, frame, body)]) != base
 
 
-def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path):
+def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path, usage_store):
     _, catalogue, store, selection = setup_snapshot(tmp_path)
     calls = 0
 
@@ -352,8 +353,9 @@ def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path):
         return httpx.Response(200, json=provider_response(["view-east"]))
 
     adapter = OpenRouterVisionAdapter(api_key="test", transport=httpx.MockTransport(handler), budget=AttemptBudget(tmp_path / "budget.json", now=lambda: NOW), now=lambda: NOW)
-    first = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
-    second = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
+    with observe_usage(usage_store):
+        first = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
+        second = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
     assert calls == 1 and second.cache_reused
     image_path, _ = images._frame_paths(store.cache_dir, "intersection-1", "view-east")
     replacement = jpeg("green")
@@ -362,9 +364,12 @@ def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path):
     frame = images.StoredFrame.model_validate_json(metadata_path.read_text())
     frame = frame.model_copy(update={"sha256": images.hashlib.sha256(replacement).hexdigest(), "byte_length": len(replacement)})
     metadata_path.write_text(frame.model_dump_json())
-    third = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
+    with observe_usage(usage_store):
+        third = asyncio.run(adapter.analyze_selected_intersection(selection, catalogue, store))
     assert calls == 2 and not third.cache_reused
     assert first.observation.included_views[0].sha256 != third.observation.included_views[0].sha256
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, Operation.OPENROUTER_VISION): 2}
 
 
 def test_expired_underlying_frame_prevents_result_reuse(tmp_path):

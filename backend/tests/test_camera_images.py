@@ -12,6 +12,7 @@ from PIL import Image
 
 from app import camera_images as images
 from app import vancouver_cameras as catalogue_module
+from app.api_usage import Operation, observe_usage
 from app.camera_placeholder import OFFLINE_SHA256
 from app.main import app
 from app.models import Location
@@ -123,7 +124,7 @@ def test_rejects_unapproved_url_and_redirect(tmp_path):
     assert asyncio.run(store.get_view(item, item.directional_views[0])) is None
 
 
-def test_transport_timeout_and_redirect_budget_are_bounded(tmp_path):
+def test_transport_timeout_and_redirect_budget_are_bounded(tmp_path, usage_store):
     item = intersection("near", 49.2827, -123.1207)
 
     def timeout(request):
@@ -136,12 +137,22 @@ def test_transport_timeout_and_redirect_budget_are_bounded(tmp_path):
 
     def redirect(request):
         calls.append(request.url.path)
-        return httpx.Response(302, headers={"location": "/replacement.jpg"})
+        if request.url.path != "/replacement.jpg":
+            return httpx.Response(302, headers={"location": "/replacement.jpg"})
+        return httpx.Response(200, headers={"content-type": "image/jpeg"}, content=jpeg())
 
     store = images.CameraImageStore(cache_dir=tmp_path, transport=httpx.MockTransport(redirect))
-    assert asyncio.run(store.get_view(item, item.directional_views[0], max_upstream_requests=1)) is None
+    view = item.directional_views[0]
+    with observe_usage(usage_store):
+        assert asyncio.run(store.get_view(item, view, max_upstream_requests=1)) is None
     assert len(calls) == 1
     assert store.upstream_requests == 1
+    with observe_usage(usage_store):
+        assert asyncio.run(store.get_view(item, view)) is not None
+        assert asyncio.run(store.get_view(item, view)) is not None
+    assert len(calls) == 3
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, Operation.CAMERA_FRAME): 3}
 
 
 def test_oversized_response_is_rejected_before_decode(tmp_path):
@@ -529,7 +540,7 @@ def test_nearby_api_validates_destination_and_reports_catalogue_failure(monkeypa
     assert unavailable.calls == 1
 
 
-def test_api_contract_and_image_endpoint(monkeypatch, tmp_path):
+def test_api_contract_and_image_endpoint(monkeypatch, tmp_path, usage_store):
     item = intersection("near", 49.2827, -123.1207)
     body = jpeg()
     transport = httpx.MockTransport(lambda request: httpx.Response(200, headers={"content-type": "image/jpeg"}, content=body))
@@ -561,3 +572,5 @@ def test_api_contract_and_image_endpoint(monkeypatch, tmp_path):
     assert image_response.content == body
     assert invalid.status_code == 404
     assert outside.status_code == 422
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, Operation.CAMERA_FRAME): 1}
