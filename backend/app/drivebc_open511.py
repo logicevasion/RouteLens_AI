@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import httpx
 
+from app.api_usage import Operation, usage_hooks
 from app.road_ahead import CityEvent, SourceStatus
 
 API_BASE = "https://api.open511.gov.bc.ca"
@@ -301,6 +302,7 @@ class DriveBCOpen511Client:
                 timeout=REQUEST_TIMEOUT_SECONDS,
                 transport=self._transport,
                 follow_redirects=False,
+                event_hooks=usage_hooks(Operation.DRIVEBC_PAGE),
             ) as client:
                 nonlocal offset, pages, next_url
                 while True:

@@ -217,6 +217,10 @@ frontend/dist/
 data/cache/
 backend/data/cache/
 
+# Persistent runtime API usage counters and SQLite sidecars
+api-usage.sqlite3
+api-usage.sqlite3-*
+
 # PyPI configuration file
 .pypirc
 

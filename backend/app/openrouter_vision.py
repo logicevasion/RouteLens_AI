@@ -24,6 +24,7 @@ from pydantic import (
     field_validator,
 )
 
+from app.api_usage import Operation, usage_hooks
 from app.camera_images import (
     MAX_IMAGE_BYTES,
     MAX_VIEWS_PER_INTERSECTION,
@@ -612,7 +613,9 @@ class OpenRouterVisionAdapter:
             payload = self._payload(included)
             try:
                 async with httpx.AsyncClient(
-                    timeout=httpx.Timeout(REQUEST_TIMEOUT_SECONDS), transport=self.transport
+                    timeout=httpx.Timeout(REQUEST_TIMEOUT_SECONDS),
+                    transport=self.transport,
+                    event_hooks=usage_hooks(Operation.OPENROUTER_VISION),
                 ) as client:
                     response = await asyncio.wait_for(
                         client.post(

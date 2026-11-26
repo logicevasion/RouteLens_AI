@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 import httpx
@@ -10,6 +11,7 @@ import pytest
 from app.main import app
 from app.models import Location
 from app.routing import (
+    OpenRouteServiceRouter,
     RoutingAuthenticationError,
     RoutingConfigurationError,
     RoutingNoRouteError,
@@ -130,6 +132,64 @@ def test_provider_failure_uses_machine_readable_safe_error(
 
     assert response.status_code == status
     assert response.json()["detail"]["code"] == code
+
+
+@pytest.mark.parametrize(
+    ("failure", "diagnostic"),
+    [
+        ("upstream", "openrouteservice.upstream_http_error status=503"),
+        ("transport", "openrouteservice.transport_error exception_class=ConnectError"),
+    ],
+)
+def test_routing_logs_the_failure_stage_without_exposing_request_details(
+    monkeypatch, caplog, failure, diagnostic,
+):
+    dispatches = []
+    private_detail = "synthetic-secret https://provider.invalid/?token=private"
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        dispatches.append(request)
+        if failure == "transport":
+            raise httpx.ConnectError(private_detail, request=request)
+        return httpx.Response(503, text=private_detail)
+
+    router = OpenRouteServiceRouter("synthetic-secret", transport=httpx.MockTransport(transport))
+    monkeypatch.setattr("app.routes.OpenRouteServiceRouter", lambda: router)
+    with caplog.at_level(logging.WARNING, logger="app.routing"):
+        response = api_request(request_payload())
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": {
+            "code": "routing_provider_unavailable",
+            "message": "Driving routes are temporarily unavailable.",
+        },
+    }
+    assert len(dispatches) == 1
+    records = [record for record in caplog.records if record.name == "app.routing"]
+    assert [record.getMessage() for record in records] == [diagnostic]
+    assert all(record.exc_info is None for record in records)
+    assert "synthetic-secret" not in caplog.text
+    assert "provider.invalid" not in caplog.text
+
+
+def test_routing_dispatches_only_to_the_heigit_directions_endpoint(monkeypatch, caplog):
+    requests = []
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, str(request.url)))
+        return httpx.Response(410)
+
+    router = OpenRouteServiceRouter("synthetic-key", transport=httpx.MockTransport(transport))
+    monkeypatch.setattr("app.routes.OpenRouteServiceRouter", lambda: router)
+    response = api_request(request_payload())
+
+    assert requests == [
+        ("POST", "https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson"),
+    ]
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "routing_provider_unavailable"
+    assert "openrouteservice.upstream_http_error status=410" in caplog.messages
 
 
 def test_health_endpoint_remains_available() -> None:

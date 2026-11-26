@@ -79,6 +79,13 @@ You will need Python 3.10 or newer, Node.js with npm, and provider credentials f
    | `OPENWEATHER_API_KEY` | Current and near-term weather |
    | `OPENROUTER_API_KEY` | Camera interpretation and AI briefing |
 
+   | Daily quota setting | Default | Scope |
+   | --- | --- | --- |
+   | `MAPTILER_GEOCODING_DAILY_LIMIT` | 200 | Backend location searches across all visitors |
+   | `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` | 100 | Backend driving-route searches across all visitors |
+
+   The backend reads these limits at startup from the process environment or root `.env`, with process values taking precedence. Omit a setting to use its default. Each limit must be a positive whole number within SQLite's signed 64-bit integer range. Zero and malformed values prevent startup. The limits are independent, reset at midnight UTC, and survive backend restarts when the usage database is retained. Existing OpenWeather and OpenRouter budget controls remain in effect.
+
    The backend also accepts optional settings `OPENWEATHER_DAILY_REQUEST_LIMIT`, `SWOB_BBOX`, `SWOB_CACHE_TTL_SECONDS`, and `CAMERA_IMAGE_CACHE_TTL_SECONDS`. ECCC SWOB and DriveBC Open511 do not require credentials in the current implementation. Transit is deferred and its template key is not used by the MVP. The AI model is configured in the backend; the model identifier is not an environment setting.
 
 2. Install backend dependencies from the repository root:
@@ -108,6 +115,24 @@ You will need Python 3.10 or newer, Node.js with npm, and provider credentials f
    ```
 
    Open the local URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` requests to the backend at `http://localhost:8000`.
+
+## API usage reports
+
+The backend stores usage in `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in the process environment to use another persistent directory. Relative paths resolve from the repository root. Production backend workers that share global quotas must use the same persistent SQLite database and quota settings. Point the CLI at the same directory.
+
+```bash
+backend/.venv/bin/python backend/scripts/api_usage_report.py --days 30 --daily --operations
+```
+
+The command is read-only. `--days` selects the number of UTC dates including today and defaults to 30. `--daily` adds per-date totals, and `--operations` adds per-operation totals.
+
+MapTiler geocoding and openrouteservice directions each reserve one attempt in SQLite before HTTP transport. The atomic reservation also records the attempt. Once committed, it counts even if the request is cancelled, times out, receives a provider error, or fails during transport setup. Exhausted requests return HTTP 429 with `daily_quota_exhausted` and a `Retry-After` in seconds until midnight UTC. Unsafe admission returns sanitized HTTP 503 with `daily_quota_unavailable` before provider transport. Excessive concurrent admissions, long worker backlogs, or SQLite contention can trigger temporary 503s while preserving the cap.
+
+Each debounced autocomplete request consumes one geocoding slot when admitted. The 200/day default provides additional headroom. Quota enforcement covers the existing request-scoped provider calls. New background or standalone callers must explicitly integrate equivalent enforcement.
+
+The public API Usage disclosure shows counts for the last 30 UTC dates including today. Its Vancouver camera row counts only image requests. The CLI includes camera catalogue, page, and image requests. Counts represent backend-observed HTTP attempts or committed quota reservations. Provider-account billing totals are authoritative. Browser-side MapTiler map resources are untracked.
+
+A dedicated accounting worker serializes writes and drains the queue on graceful shutdown. Uncapped monitoring is best effort. An abrupt exit can lose pending writes, and exceptional cross-process SQLite contention can cause missed writes.
 
 ## Data credits and licensing
 

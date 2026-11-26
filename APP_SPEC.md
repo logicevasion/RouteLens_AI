@@ -477,6 +477,14 @@ Each external integration is independently fallible.
 
 A single unavailable source should not normally invalidate the entire journey analysis.
 
+### API Usage and Daily Quotas
+
+SQLite persists backend-observed HTTP attempts by operation and UTC date. The public API Usage disclosure shows a rolling 30-day UTC window and counts only image requests for Vancouver cameras. The read-only diagnostic CLI also includes camera catalogue and page requests. Browser-side MapTiler map resources are untracked. These are application counts. Provider-account billing totals are authoritative.
+
+A dedicated in-process worker serializes accounting and drains queued writes on graceful shutdown. Uncapped monitoring is best effort and keeps provider requests independent of accounting failures, with sanitized diagnostics.
+
+MapTiler backend geocoding and openrouteservice directions default to 200 and 100 attempts per UTC day across all visitors. The respective overrides are `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT`. Each request reserves and counts one attempt atomically in SQLite before provider transport, and the reservation survives restarts when storage persists. At exhaustion the backend returns HTTP 429 `daily_quota_exhausted` with `Retry-After` until midnight UTC. If admission cannot safely complete, it fails closed with sanitized HTTP 503 `daily_quota_unavailable`. Existing OpenWeather daily controls and OpenRouter budgets still apply.
+
 ## 10. Frontend and Presentation Contract
 
 ### Desktop Layout and Alpha UX v1

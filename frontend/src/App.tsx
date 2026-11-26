@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ApiUsageDisclosure from './ApiUsageDisclosure';
 import VancouverMap from './VancouverMap';
 import LocationAutocomplete from './LocationAutocomplete';
 import type { DestinationValidation, Location } from './locationTypes';
@@ -88,11 +89,14 @@ function routingErrorMessage(error: RoutingApiError | null, status: number): str
       return error.detail.message ?? 'Choose a destination inside the City of Vancouver.';
     case 'routing_rate_limited':
       return 'Route service is busy. Please wait a moment and try again.';
+    case 'daily_quota_exhausted':
+      return "Route searches have reached today's usage limit. Please try again tomorrow.";
     case 'routing_timeout':
       return 'Route service took too long to respond. Please try again.';
     case 'routing_not_configured':
     case 'routing_authentication_failed':
     case 'routing_provider_unavailable':
+    case 'daily_quota_unavailable':
       return 'Driving routes are temporarily unavailable. Please try again.';
     default:
       return status >= 500
@@ -735,6 +739,7 @@ export default function App() {
         </a>
         <div className="topbar-meta">
           <span className="region-label"><span className="region-dot" /> Vancouver, BC</span>
+          <ApiUsageDisclosure />
           <div className={`backend-status status-${backendStatus}`} role="status" aria-live="polite">
             <span className="backend-dot" aria-hidden="true" />
             {statusLabels[backendStatus]}

@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from typing import Any
 
 import httpx
 
+from app.api_usage import Operation, usage_hooks
 from app.models import Location, RouteCandidate
 
-ORS_ENDPOINT = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+ORS_ENDPOINT = "https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson"
 REQUEST_TIMEOUT_SECONDS = 12.0
 ALTERNATIVE_ROUTES = {"target_count": 3, "share_factor": 0.6, "weight_factor": 1.4}
+logger = logging.getLogger(__name__)
 
 
 class RoutingError(Exception):
@@ -140,17 +143,21 @@ class OpenRouteServiceRouter:
             async with httpx.AsyncClient(
                 timeout=REQUEST_TIMEOUT_SECONDS,
                 transport=self._transport,
+                event_hooks=usage_hooks(Operation.ORS_DIRECTIONS),
             ) as client:
                 response = await client.post(
                     ORS_ENDPOINT,
                     json=body,
                     headers={"Authorization": self._api_key},
                 )
-        except httpx.TimeoutException:
-            raise RoutingTimeoutError("The routing provider timed out. Please try again.") from None
-        except httpx.RequestError:
+        except httpx.RequestError as error:
+            logger.warning("openrouteservice.transport_error exception_class=%s", type(error).__name__)
+            if isinstance(error, httpx.TimeoutException):
+                raise RoutingTimeoutError("The routing provider timed out. Please try again.") from None
             raise RoutingUpstreamError("Driving routes are temporarily unavailable.") from None
 
+        if response.status_code >= 400:
+            logger.warning("openrouteservice.upstream_http_error status=%d", response.status_code)
         if response.status_code in (401, 403):
             raise RoutingAuthenticationError("The routing provider rejected its configured credential.")
         if response.status_code == 429:

@@ -17,6 +17,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
+from app.api_usage import Operation, usage_hooks
 from app.briefing_contracts import (
     BriefingEvidenceRequestV1,
     BriefingResultV1,
@@ -476,7 +477,11 @@ class OpenRouterBriefingAdapter:
     async def _dispatch(self, payload: dict[str, Any]) -> tuple[int, bytes]:
         timeout = httpx.Timeout(REQUEST_TIMEOUT_SECONDS, connect=10.0)
         async with (
-            httpx.AsyncClient(transport=self.transport, timeout=timeout) as client,
+            httpx.AsyncClient(
+                transport=self.transport,
+                timeout=timeout,
+                event_hooks=usage_hooks(Operation.OPENROUTER_BRIEFING),
+            ) as client,
             client.stream("POST", CHAT_COMPLETIONS_URL,
                           headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
                           json=payload) as response,

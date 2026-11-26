@@ -23,6 +23,8 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.api_usage import Operation, usage_hooks
+
 SOURCE_NAME = "City of Vancouver Open Data Portal"
 DATASET_ID = "web-cam-url-links"
 CATALOGUE_URL = (
@@ -532,6 +534,7 @@ async def _fetch_catalogue_records(
         timeout=REQUEST_TIMEOUT,
         transport=transport,
         follow_redirects=False,
+        event_hooks=usage_hooks(Operation.CAMERA_CATALOGUE),
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
     ) as client:
         offset = 0
@@ -692,6 +695,7 @@ async def build_catalogue(
         timeout=REQUEST_TIMEOUT,
         transport=transport,
         follow_redirects=False,
+        event_hooks=usage_hooks(Operation.CAMERA_PAGE),
         headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
     ) as client:
         async def bounded_inspect(item: CameraIntersection) -> tuple[CameraIntersection, int]:

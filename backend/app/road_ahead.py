@@ -16,6 +16,8 @@ from urllib.parse import unquote, urlparse
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api_usage import Operation, usage_hooks
+
 PORTAL_API = "https://opendata.vancouver.ca/api/explore/v2.1/catalog/datasets"
 REQUEST_TIMEOUT_SECONDS = 20.0
 PAGE_SIZE = 100
@@ -45,6 +47,10 @@ DATASETS = (
         "Project under construction",
     ),
 )
+DATASET_USAGE_OPERATIONS = {
+    "closures": Operation.ROAD_AHEAD_CLOSURES,
+    "construction": Operation.ROAD_AHEAD_CONSTRUCTION,
+}
 
 
 class CityEvent(BaseModel):
@@ -331,7 +337,11 @@ class RoadAheadClient:
         offset = 0
         total: int | None = None
         try:
-            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS, transport=self._transport) as client:
+            async with httpx.AsyncClient(
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                transport=self._transport,
+                event_hooks=usage_hooks(DATASET_USAGE_OPERATIONS[spec.key]),
+            ) as client:
                 while total is None or offset < total:
                     response = await client.get(
                         spec.url,

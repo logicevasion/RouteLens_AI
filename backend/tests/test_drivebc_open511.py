@@ -10,6 +10,7 @@ import httpx
 import pytest
 
 import app.drivebc_open511 as open511
+from app.api_usage import Operation, observe_usage
 from app.drivebc_open511 import DriveBCOpen511Client, normalize_event
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "open511"
@@ -191,7 +192,7 @@ def test_redirect_is_not_followed_or_cached(tmp_path):
     assert not client.cache_path.exists()
 
 
-def test_documented_next_url_pagination_retrieves_every_page(tmp_path):
+def test_documented_next_url_pagination_retrieves_every_page(tmp_path, usage_store):
     records = [event_record(index) for index in range(5)]
     requests = []
 
@@ -205,10 +206,14 @@ def test_documented_next_url_pagination_retrieves_every_page(tmp_path):
             link = f"/events?format=json&status=ACTIVE&bbox={open511.DEFAULT_BBOX}&limit=2&offset={offset + len(page)}"
         return httpx.Response(200, json=page_payload(page, offset, next_url=link))
 
-    result = asyncio.run(make_client(tmp_path, handler, page_size=2).get_data())
+    with observe_usage(usage_store):
+        result = asyncio.run(make_client(tmp_path, handler, page_size=2).get_data())
     assert requests == [0, 2, 4]
     assert result.source_status.records_received == 5
     assert len(result.events) == 5
+    day = usage_store.today()
+    asyncio.run(usage_store.flush())
+    assert usage_store.read_report(day, day).counts == {(day, Operation.DRIVEBC_PAGE): 3}
 
 
 def test_exact_full_final_page_is_confirmed_by_empty_offset_probe(tmp_path):

@@ -7,10 +7,10 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.api_usage import DailyQuotaUnavailable, Operation, observe_usage
 from app.models import Location
 from app.routing import (
     ALTERNATIVE_ROUTES,
-    ORS_ENDPOINT,
     REQUEST_TIMEOUT_SECONDS,
     OpenRouteServiceRouter,
     RoutingAuthenticationError,
@@ -97,7 +97,9 @@ def test_missing_credentials_fails_before_http_request() -> None:
         asyncio.run(OpenRouteServiceRouter(api_key=" ").routes(*locations()))
 
 
-def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parameters() -> None:
+def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parameters(
+    usage_store, caplog,
+) -> None:
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -108,10 +110,11 @@ def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parame
 
     origin, destination = locations()
     router = OpenRouteServiceRouter("test-secret", transport=httpx.MockTransport(handler))
-    routes = asyncio.run(router.routes(origin, destination))
+    with observe_usage(usage_store):
+        routes = asyncio.run(router.routes(origin, destination))
 
     assert len(routes) == 3
-    assert captured["url"] == ORS_ENDPOINT
+    assert captured["url"] == "https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson"
     assert captured["headers"]["authorization"] == "test-secret"
     body = captured["body"]
     assert body["coordinates"] == [
@@ -122,6 +125,30 @@ def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parame
     assert body["instructions"] is False
     assert body["alternative_routes"] == ALTERNATIVE_ROUTES
     assert REQUEST_TIMEOUT_SECONDS > 0
+    day = usage_store.today()
+    asyncio.run(usage_store.flush())
+    assert usage_store.read_report(day, day).counts == {(day, Operation.ORS_DIRECTIONS): 1}
+    assert not any(record.name == "app.routing" for record in caplog.records)
+
+
+def test_executor_rejection_fails_closed_and_logs_admission_failure(usage_store, caplog):
+    def unexpected_dispatch(_request):
+        pytest.fail("routing dispatched after the accounting worker closed")
+
+    router = OpenRouteServiceRouter(
+        "synthetic-key", transport=httpx.MockTransport(unexpected_dispatch)
+    )
+
+    usage_store.initialize()
+    usage_store.close()
+    with observe_usage(usage_store), pytest.raises(DailyQuotaUnavailable):
+        asyncio.run(router.routes(*locations()))
+    report = usage_store.read_report(*usage_store.window(30))
+    assert report.counts == {} and not report.gaps
+    assert (
+        "api_usage.admission_error operation=openrouteservice.directions exception_class=RuntimeError"
+        in caplog.messages
+    )
 
 
 @pytest.mark.parametrize(
@@ -145,7 +172,7 @@ def test_provider_http_failures_are_categorized_and_sanitized(status: int, excep
     assert "provider.invalid" not in str(caught.value)
 
 
-def test_timeout_is_sanitized() -> None:
+def test_timeout_is_sanitized(caplog) -> None:
     def handler(_: httpx.Request) -> httpx.Response:
         raise httpx.ReadTimeout("https://provider.invalid/?token=secret")
 
@@ -154,6 +181,7 @@ def test_timeout_is_sanitized() -> None:
         asyncio.run(router.routes(*locations()))
     assert "secret" not in str(caught.value)
     assert "provider.invalid" not in str(caught.value)
+    assert caplog.messages == ["openrouteservice.transport_error exception_class=ReadTimeout"]
 
 
 def test_ors_unroutable_point_error_is_distinguished_from_provider_failure() -> None:

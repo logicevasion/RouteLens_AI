@@ -7,6 +7,7 @@ import * as jsxRuntime from 'react/jsx-runtime';
 
 const src = new URL('../src/', import.meta.url);
 const componentStubs = new Set(['./VancouverMap', './LocationAutocomplete', './RoadAheadPanel', './DestinationWeatherPanel', './JourneyStageLayout']);
+const tsxModules = new Set(['./App', './ApiUsageDisclosure']);
 const compiled = new Map();
 
 // Run App and its controls/panel handlers with the real request builders and normalizers.
@@ -37,7 +38,7 @@ function mountApp(fetch) {
     if (componentStubs.has(name)) return { default: name.slice(2) };
     if (modules.has(name)) return modules.get(name);
     if (!compiled.has(name)) {
-      const fileName = `${name}.${name === './App' ? 'tsx' : 'ts'}`;
+      const fileName = `${name}.${tsxModules.has(name) ? 'tsx' : 'ts'}`;
       const source = readFileSync(new URL(fileName, src), 'utf8');
       const { outputText } = ts.transpileModule(source, {
         fileName,
@@ -62,6 +63,7 @@ function mountApp(fetch) {
     cards() { return render().filter((element) => element.props.className?.split(' ').includes('route-candidate')); },
     map() { return render().find((element) => element.type === 'VancouverMap').props; },
     stage() { return render().find((element) => element.type === 'JourneyStageLayout').props; },
+    usage() { return render().find((element) => element.props.className === 'api-usage'); },
     status() { return render().find((element) => element.props.className === 'route-request-status').props.children.filter(Boolean).join(' '); },
     panel() {
       const panel = render().find((element) => element.type === 'aside' && element.props.className === 'intelligence-panel');
@@ -102,6 +104,7 @@ const response = (body, status = 200) => ({ ok: status < 400, status, json: asyn
 async function setup() {
   const searches = [];
   const analyses = [];
+  const usage = [];
   const app = mountApp((url, options) => {
     if (url === '/api/locations/validate-destination') return Promise.resolve(response({ valid: true, reason: null }));
     if (url === '/api/routes/driving' || url === '/api/trips/analyze') {
@@ -113,13 +116,97 @@ async function setup() {
     if (['/api/cameras/observe', '/api/cameras/nearest', '/api/cameras/nearby'].includes(url)) {
       return Promise.resolve(response({}, 503));
     }
+    if (url === '/api/usage') {
+      const { promise, resolve } = Promise.withResolvers();
+      usage.push({ signal: options.signal, resolve });
+      return promise;
+    }
     throw new Error(`Unexpected request: ${url}`);
   });
   app.controls('journey-origin').onSelect(origin);
   app.controls('journey-destination').onSelect(destination);
   await setImmediate();
-  return { app, searches, analyses };
+  return { app, searches, analyses, usage };
 }
+
+const usageReport = {
+  status: 'ok',
+  start_date: '2026-10-28',
+  end_date: '2026-11-26',
+  providers: [
+    { provider: 'maptiler', status: 'tracked', attempts: 12 },
+    { provider: 'openrouteservice', status: 'tracked', attempts: 0 },
+    { provider: 'vancouver_traffic_cameras', status: 'tracked', attempts: 3 },
+    { provider: 'maptiler_map_resources', status: 'untracked', attempts: null },
+  ],
+};
+
+function usageText(app, tag) {
+  return [...elements(app.usage())].filter((node) => node.type === tag)
+    .map((node) => [node.props.children].flat().join(''));
+}
+
+test('usage loads on opening and preserves route selection and on-demand analysis', async () => {
+  const { app, searches, analyses, usage } = await setup();
+  assert.deepEqual(usageText(app, 'summary'), ['API Usage']);
+  assert.equal(app.usage().props.open, undefined);
+  assert.equal(usage.length, 0);
+  app.button('find-routes-button').onClick();
+  searches[0].resolve(response({ routes: [first, second] }));
+  await setImmediate();
+  app.cards()[1].props.onClick();
+
+  app.usage().props.onToggle({ currentTarget: { open: true } });
+  assert.equal(usage.length, 1);
+  assert.deepEqual(usageText(app, 'h2'), ['API Usage — Last 30 Days']);
+  assert.ok(usageText(app, 'p').includes('Loading usage…'));
+  usage[0].resolve(response(usageReport));
+  await setImmediate();
+  assert.ok(usageText(app, 'p').includes('2026-10-28 – 2026-11-26 (UTC)'));
+  assert.deepEqual(usageText(app, 'dt'), [
+    'MapTiler geocoding', 'openrouteservice', 'Vancouver camera images', 'MapTiler map resources',
+  ]);
+  assert.deepEqual(usageText(app, 'dd'), ['12', '0', '3', 'Untracked']);
+  assert.ok(usageText(app, 'p').some((text) => text.includes('Camera counts cover image requests only.')));
+  expectSelection(app, [first, second], second);
+  assert.equal(analyses.length, 0);
+  app.button('analyze-button').onClick();
+  assert.equal(analyses[0].body.selected_route.candidate_id, second.id);
+  assert.equal(app.stage().stage, 'understand');
+  assert.equal(usage.length, 1);
+  analyses[0].resolve(response({}, 503));
+  await setImmediate();
+});
+
+test('usage shows errors and recovers on reopening, with explicit tracking states', async () => {
+  const { app, usage } = await setup();
+  const toggle = (open) => app.usage().props.onToggle({ currentTarget: { open } });
+  toggle(true);
+  usage[0].resolve(response({}, 503));
+  await setImmediate();
+  assert.ok(usageText(app, 'p').some((text) => text.includes('Could not load API usage')));
+  toggle(false);
+  assert.equal(usage[0].signal.aborted, true);
+  toggle(true);
+  assert.ok(usageText(app, 'p').includes('Loading usage…'));
+  usage[1].resolve(response({ ...usageReport, status: 'degraded' }));
+  await setImmediate();
+  assert.ok(usageText(app, 'p').some((text) => text.includes('Counts may be incomplete')));
+  assert.deepEqual(usageText(app, 'dd'), ['12', '0', '3', 'Untracked']);
+
+  toggle(false);
+  toggle(true);
+  usage[2].resolve(response({
+    ...usageReport,
+    status: 'unavailable',
+    providers: usageReport.providers.map((row) => row.status === 'tracked'
+      ? { ...row, status: 'unavailable', attempts: null }
+      : row),
+  }));
+  await setImmediate();
+  assert.ok(usageText(app, 'p').includes('Usage tracking is currently unavailable.'));
+  assert.deepEqual(usageText(app, 'dd'), ['Untracked']);
+});
 
 function expectSelection(app, candidates, selected) {
   assert.deepEqual(app.map().routes, candidates);
@@ -134,6 +221,21 @@ function expectSelection(app, candidates, selected) {
   }
   assert.equal(app.button('analyze-button').disabled, !selected);
 }
+
+test('route searches distinguish the local daily limit from an upstream rate limit', async () => {
+  const { app, searches, analyses } = await setup();
+  for (const [status, code, message] of [
+    [429, 'daily_quota_exhausted', "Route searches have reached today's usage limit. Please try again tomorrow."],
+    [503, 'routing_rate_limited', 'Route service is busy. Please wait a moment and try again.'],
+  ]) {
+    app.button('find-routes-button').onClick();
+    searches.at(-1).resolve(response({ detail: { code } }, status));
+    await setImmediate();
+    assert.equal(app.status(), message);
+    expectSelection(app, [], null);
+    assert.equal(analyses.length, 0);
+  }
+});
 
 for (const candidates of [[first], [first, second]]) {
   test(`selects the first of ${candidates.length} returned routes and analyzes it on demand`, async () => {

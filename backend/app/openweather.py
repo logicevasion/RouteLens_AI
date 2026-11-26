@@ -18,6 +18,8 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from app.api_usage import Operation, usage_hooks
+
 SOURCE = "OpenWeather"
 CURRENT_PRODUCT = "onecall4_current"
 TIMELINE_PRODUCT = "onecall4_timeline_15min"
@@ -556,6 +558,10 @@ class OpenWeatherClient:
                 transport=self.transport,
                 timeout=REQUEST_TIMEOUT,
                 follow_redirects=False,
+                event_hooks=usage_hooks(
+                    Operation.OPENWEATHER_CURRENT if product == CURRENT_PRODUCT
+                    else Operation.OPENWEATHER_TIMELINE
+                ),
             ) as client, client.stream(
                 "GET",
                 url,

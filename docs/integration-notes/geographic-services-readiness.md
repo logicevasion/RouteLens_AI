@@ -12,7 +12,9 @@ The MapTiler `streets-v4-dark` style request succeeded with style version 8 and 
 
 ## openrouteservice
 
-Credential `OPENROUTESERVICE_API_KEY` was found in `.env`; its value was not displayed or saved. Three authenticated requests succeeded against `POST https://api.openrouteservice.org/v2/directions/driving-car/geojson`, using the `driving-car` profile, an Authorization header, and GeoJSON coordinates in `[longitude, latitude]` order from the selected MapTiler features. Requests set `units=m`, `instructions=false`, and `alternative_routes={"target_count":3,"share_factor":0.6,"weight_factor":1.4}`.
+**Current endpoint.** Use `POST https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson` with the existing `OPENROUTESERVICE_API_KEY`. The provider retired the host used in the readiness sample on November 24, 2026. [Migration guide](https://ask.openrouteservice.org/t/deprecating-api-openrouteservice-org-in-favour-of-api-heigit-org/7912/) and [shutdown notice](https://ask.openrouteservice.org/t/url-api-openrouteservice-org-removed/8189)
+
+In the historical readiness sample, credential `OPENROUTESERVICE_API_KEY` was found in `.env` and its value was kept private. Three authenticated requests succeeded against the former endpoint, `POST https://api.openrouteservice.org/v2/directions/driving-car/geojson`, using the `driving-car` profile, an Authorization header, and GeoJSON coordinates in `[longitude, latitude]` order from the selected MapTiler features. Requests set `units=m`, `instructions=false`, and `alternative_routes={"target_count":3,"share_factor":0.6,"weight_factor":1.4}`.
 
 All three journeys returned three GeoJSON `LineString` features in a `FeatureCollection`, each with `properties.summary.distance` (metres), `duration` (seconds), and `way_points`; route geometry contained hundreds of coordinate pairs. Journey summaries were:
 

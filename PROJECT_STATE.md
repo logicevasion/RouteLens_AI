@@ -2,9 +2,9 @@
 
 ## Current repository and SDD status
 
-- **Implementation checkout:** `feature/alpha-ux-stabilization`. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 (`9ff8482`) are accepted baseline work.
+- **Implementation checkout:** `feature/api-usage-controls`. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 (`9ff8482`) are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current status:** Phases 1A–1D are complete, manually verified, independently reviewed by Claude Code, and human accepted. Phase 1 is ready to merge into `main`.
+- **Current status:** Phases 1A–1D are accepted and merged into `main`. Phase 2 codebase implementation and QA are accepted. Phase 2D verification is complete, and the codebase is ready for human review and merge. Production deployment and live verification are deferred.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
@@ -29,6 +29,30 @@
 
 **Phase 1D QA follow-up:** Claude Code reported no confirmed production defects. Permanent tests now cover rejected gallery fingerprints, cached-frame identity changes, and grayscale lookalikes. Seven targeted mutations failed as expected in disposable copies. The focused backend suite (117 tests), full backend suite (497 tests), Ruff, and `git diff --check` passed. Claude Code accepted the follow-up, and all QA findings were resolved sufficiently for human acceptance.
 
+## Phase 2 status
+
+**Phase 2A — Complete.** The read-only audit covered runtime providers, caching, existing budgets, and feasible dispatch-level instrumentation.
+
+**Phase 2B — Accepted.** Manual browser verification and independent QA passed. Dispatch accounting was implemented at `3e15368` and the reliability follow-up at `57344fa`. The header's API Usage disclosure opens a read-only `GET /api/usage` report over 30 UTC dates including today. The public Vancouver camera images row counts frame requests. Run `backend/.venv/bin/python backend/scripts/api_usage_report.py --days 30 --daily --operations` from the repository root for diagnostic totals that include catalogue, HTML-page, and frame attempts. Uncapped pagination and followed redirects count per outbound attempt.
+
+The app and CLI share `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in both process environments to use a different persistent directory. Relative paths resolve from the repo root. SQLite keeps one count per UTC date and operation, plus UTC dates with known missed monitoring writes. Uncapped requests proceed if accounting fails, and reports mark the affected dates degraded. Gap dates first held in process memory are saved with the next successful increment. Unreadable data produces an unavailable report.
+
+**Routing endpoint migration.** The developer reproduced upstream HTTP 410 from the retired openrouteservice host. The same failure affected Phase 1. HeiGIT removed the old host on November 24, 2026. The adapter now uses `https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson` with the existing key, request payload, parser, timeout, usage accounting, and sanitized diagnostics. The 54 focused tests, all 510 backend tests, Ruff, and `git diff --check` passed offline. [Provider shutdown notice](https://ask.openrouteservice.org/t/url-api-openrouteservice-org-removed/8189)
+
+**Camera-count verification.** The public API and CLI were tested against the same temporary database. The 9 focused backend tests, all 511 backend tests, 14 focused frontend tests, all 15 frontend test files, Ruff, the production build, and `git diff --check` passed. The existing SQLite concurrency test failed on the first run alongside the frontend build and passed on the isolated rerun.
+
+**Phase 2B reliability follow-up.** One dedicated executor serializes SQLite work per process. Shutdown drains queued writes and releases the worker. The follow-up probes recorded all 220 attempts without measurable delay to unrelated default-executor work. An independent two-process check recorded all 40 increments. All 122 focused tests, 518 backend tests, Ruff, and `git diff --check` passed offline.
+
+**Phase 2 limitations.** Browser-side MapTiler resources and requests predating instrumentation have no counters. The README covers best-effort write loss, autocomplete quota use, fail-closed behavior under load, and the shared-storage and request-scope requirements. [API usage reports](README.md#api-usage-reports)
+
+**Phase 2C — Accepted.** MapTiler geocoding and openrouteservice directions use independent, global quotas. The defaults are 200 and 100 attempts per UTC day, respectively. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` are validated at startup after `.env` loading. Both must be positive integers. A short `BEGIN IMMEDIATE` transaction on the existing accounting worker conditionally increments the same daily row used by the dashboard and CLI. The HTTPX hook reserves once before transport. A committed slot survives a restart and remains used after an upstream failure, cancellation, or transport setup error. Counts are application reservations and best-effort observations, so provider-account totals can differ.
+
+Capped operations return a local HTTP 429 with `daily_quota_exhausted` and `Retry-After` until midnight UTC, or sanitized HTTP 503 with `daily_quota_unavailable` when admission fails. Admission waits up to one second with at most 128 queued or running admissions per worker. Existing provider error responses, uncapped best-effort accounting, and OpenWeather and OpenRouter budgets remain in effect.
+
+**Phase 2C acceptance.** The developer accepted `e807dd6` after manual testing and independent QA with non-blocking findings. The subsequent MapTiler default increase remains in the working tree. Its focused tests verified the 200/201 MapTiler and 100/101 openrouteservice boundaries and that a MapTiler override of 100 takes precedence.
+
+**Phase 2D — Ready for human review and merge.** All 540 backend tests, Ruff, all 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed with the final 200/100 defaults. The backend run reported 24 multiprocessing fork deprecation warnings, and Vite reported its existing large-chunk advisory. Verification used a temporary checkout with the established environments, mocked providers, no real `.env`, and zero outbound backend attempts. The worktree contains only the expected quota adjustment and reconciliation files. There are no staged changes or unexpected untracked files.
+
 ## Alpha UX implementation status
 
 Alpha-UX-1 established Stage 1 with a large map beside the route controls and Stage 2 with immediate entry, persistent header and controls, one scroll to the page top, and camera and deterministic weather/road summary evidence. Phase 1B added automatic first-route selection in Stage 1 and retained manual choice of alternatives. The lifecycle retains the accepted stage transition, camera timing, UUID identity, cancellation, and stale-response safeguards.
@@ -39,7 +63,7 @@ Changed for Alpha-UX-2: `frontend/src/App.tsx`, `frontend/src/RoadAheadPanel.tsx
 
 **Verification:** Focused `node --test tests/alphaUx2Layout.test.mjs tests/roadAheadMap.test.mjs` passed (2 test files); `cd frontend && npm test` passed (13 test files, 0 failures); `cd frontend && npm run build` passed with the existing nonblocking large-chunk advisory; and `git diff --check` passed. Fixture-backed coverage checks panel order and labels, direct/nearby/DriveBC counts and qualified zero states, selection callback wiring, native closed disclosures, source-specific geometry/status semantics, no duplicated lower event lists, supporting forecast details, and retained lifecycle regressions. Headless Chrome with local representative HTML and application CSS confirmed map and panel side by side, keyboard-focusable closed disclosures, and 527 px of independent panel scroll range with a disclosure expanded. This was a CSS/layout fixture, not the React application or MapLibre; narrow-screen behavior and live-page proportions still require human review. No external requests or paid inference were used.
 
-**Status:** Alpha-UX-1 and Alpha-UX-2 are human accepted. The Alpha UX v1 presentation reorganization is complete. Protected-alpha access controls, deployment, and usage tracking have not been implemented.
+**Status:** Alpha-UX-1 and Alpha-UX-2 are human accepted. The Alpha UX v1 presentation reorganization is complete.
 
 ## Accepted implementation baseline
 
@@ -93,7 +117,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Phase 1 is ready for the human developer to merge into `main`. Phase 2 security and API cost controls are the next planned development focus. Implementation has yet to begin.
+The developer reviews and commits the quota adjustment and reconciliation, then merges `feature/api-usage-controls` into `main`. Phase 2 production deployment and live verification are deferred to the separate AWS session in Vancouver. The next planned development work is ShellSquire and AgentGuard Lab. [Deferred deployment checklist](BUILD_PLAN.md#deferred-aws-deployment-and-live-verification)
 
 ## Archive and integration-note references
 

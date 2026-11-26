@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from app.analysis import JourneyAnalysis, Trip, analyze_journey
+from app.api_usage import DailyQuotaExhausted, DailyQuotaUnavailable
 from app.briefing_contracts import BriefingEvidenceRequestV1, BriefingResultV1
 from app.camera_images import (
     SELECTION_HEADER,
@@ -107,6 +108,20 @@ def _vision_failure(code: str, *, status: str = "unavailable") -> AdapterResult:
     )
 
 
+def _quota_error(
+    error: DailyQuotaExhausted | DailyQuotaUnavailable, *, exhausted: str, unavailable: str
+) -> HTTPException:
+    if isinstance(error, DailyQuotaExhausted):
+        return HTTPException(
+            status_code=429,
+            detail={"code": "daily_quota_exhausted", "message": exhausted},
+            headers={"Retry-After": str(error.retry_after)},
+        )
+    return HTTPException(
+        status_code=503, detail={"code": "daily_quota_unavailable", "message": unavailable}
+    )
+
+
 @router.get("/geocoding/search", response_model=list[Location])
 async def search_locations(
     q: str = Query(min_length=2, max_length=200),
@@ -118,6 +133,12 @@ async def search_locations(
         raise HTTPException(status_code=422, detail="Query must contain at least 2 characters.")
     try:
         return await MapTilerGeocoder().search(query, destination=role == "destination")
+    except (DailyQuotaExhausted, DailyQuotaUnavailable) as error:
+        raise _quota_error(
+            error,
+            exhausted="Location search has reached today's usage limit. Please try again tomorrow.",
+            unavailable="Location search is temporarily unavailable. Please try again.",
+        ) from None
     except GeocodingConfigurationError as error:
         raise HTTPException(status_code=503, detail=str(error)) from None
     except GeocodingUpstreamError as error:
@@ -147,6 +168,12 @@ async def get_driving_routes(request: DrivingRouteRequest) -> DrivingRoutesRespo
 
     try:
         candidates = await OpenRouteServiceRouter().routes(request.origin, request.destination)
+    except (DailyQuotaExhausted, DailyQuotaUnavailable) as error:
+        raise _quota_error(
+            error,
+            exhausted="Route searches have reached today's usage limit. Please try again tomorrow.",
+            unavailable="Driving routes are temporarily unavailable. Please try again.",
+        ) from None
     except RoutingConfigurationError as error:
         raise HTTPException(
             status_code=503,

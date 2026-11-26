@@ -10,6 +10,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from app.api_usage import Operation, observe_usage
 from app.briefing_contracts import (
     BriefingEvidenceRequestV1,
     BriefingResultV1,
@@ -717,17 +718,21 @@ def test_failed_budget_replacement_prevents_provider_dispatch(tmp_path, monkeypa
     assert path.read_bytes() == prior
 
 
-def test_duplicate_attempt_dispatches_only_once(tmp_path):
+def test_duplicate_attempt_dispatches_only_once(tmp_path, usage_store):
     calls = []
     budget_path = tmp_path / "budget"
     adapter = OpenRouterBriefingAdapter(api_key="key", transport=httpx.MockTransport(lambda _: (calls.append(1), completion())[1]),
                                         budget=BriefingAttemptBudget(budget_path, vision_path=tmp_path / "v", now=lambda: NOW), now=lambda: NOW)
     async def execute():
         return await asyncio.gather(adapter.generate(valid_request()), adapter.generate(valid_request()))
-    results = asyncio.run(execute())
+    with observe_usage(usage_store):
+        results = asyncio.run(execute())
     assert len(calls) == 1
     assert sorted(item.failure_code or "ok" for item in results) == ["duplicate_attempt", "ok"]
     assert len(json.loads(budget_path.read_text())["attempts"]) == 1
+    day = usage_store.today()
+    asyncio.run(usage_store.flush())
+    assert usage_store.read_report(day, day).counts == {(day, Operation.OPENROUTER_BRIEFING): 1}
 
 
 def test_different_uuid_attempts_dispatch_independently_even_if_local_counters_repeat(tmp_path):
