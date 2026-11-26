@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.api_usage import Operation, observe_usage
+from app.api_usage import DailyQuotaUnavailable, Operation, observe_usage
 from app.models import Location
 from app.routing import (
     ALTERNATIVE_ROUTES,
@@ -131,20 +131,22 @@ def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parame
     assert not any(record.name == "app.routing" for record in caplog.records)
 
 
-def test_executor_rejection_logs_hook_failure_and_still_returns_routes(usage_store, caplog):
+def test_executor_rejection_fails_closed_and_logs_admission_failure(usage_store, caplog):
+    def unexpected_dispatch(_request):
+        pytest.fail("routing dispatched after the accounting worker closed")
+
     router = OpenRouteServiceRouter(
-        "synthetic-key", transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload()))
+        "synthetic-key", transport=httpx.MockTransport(unexpected_dispatch)
     )
 
     usage_store.initialize()
     usage_store.close()
-    with observe_usage(usage_store):
-        routes = asyncio.run(router.routes(*locations()))
-    assert len(routes) == 3
+    with observe_usage(usage_store), pytest.raises(DailyQuotaUnavailable):
+        asyncio.run(router.routes(*locations()))
     report = usage_store.read_report(*usage_store.window(30))
-    assert report.counts == {} and report.gaps == {usage_store.today()}
+    assert report.counts == {} and not report.gaps
     assert (
-        "api_usage.request_hook_error operation=openrouteservice.directions exception_class=RuntimeError"
+        "api_usage.admission_error operation=openrouteservice.directions exception_class=RuntimeError"
         in caplog.messages
     )
 

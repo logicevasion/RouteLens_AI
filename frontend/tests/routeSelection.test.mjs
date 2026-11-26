@@ -222,6 +222,21 @@ function expectSelection(app, candidates, selected) {
   assert.equal(app.button('analyze-button').disabled, !selected);
 }
 
+test('route searches distinguish the local daily limit from an upstream rate limit', async () => {
+  const { app, searches, analyses } = await setup();
+  for (const [status, code, message] of [
+    [429, 'daily_quota_exhausted', "Route searches have reached today's usage limit. Please try again tomorrow."],
+    [503, 'routing_rate_limited', 'Route service is busy. Please wait a moment and try again.'],
+  ]) {
+    app.button('find-routes-button').onClick();
+    searches.at(-1).resolve(response({ detail: { code } }, status));
+    await setImmediate();
+    assert.equal(app.status(), message);
+    expectSelection(app, [], null);
+    assert.equal(analyses.length, 0);
+  }
+});
+
 for (const candidates of [[first], [first, second]]) {
   test(`selects the first of ${candidates.length} returned routes and analyzes it on demand`, async () => {
     const { app, searches, analyses } = await setup();

@@ -81,7 +81,7 @@ export default function ApiUsageDisclosure() {
       <summary>API Usage</summary>
       <section className="api-usage-panel" aria-label="API usage report">
         <h2>API Usage — Last 30 Days</h2>
-        <p>Backend-observed outbound attempts. Camera counts cover image requests only. Provider-account totals may differ.</p>
+        <p>Backend request attempts include quota reservations. Camera counts cover image requests only. Provider-account totals may differ.</p>
         <div aria-live="polite">
           {state.kind === 'loading' && <p>Loading usage…</p>}
           {state.kind === 'error' && <p>Could not load API usage. Reopen to try again.</p>}

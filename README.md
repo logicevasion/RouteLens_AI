@@ -79,6 +79,13 @@ You will need Python 3.10 or newer, Node.js with npm, and provider credentials f
    | `OPENWEATHER_API_KEY` | Current and near-term weather |
    | `OPENROUTER_API_KEY` | Camera interpretation and AI briefing |
 
+   | Daily quota setting | Default | Scope |
+   | --- | --- | --- |
+   | `MAPTILER_GEOCODING_DAILY_LIMIT` | 100 | Backend location searches across all visitors |
+   | `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` | 100 | Backend driving-route searches across all visitors |
+
+   The backend reads these limits at startup from the process environment or root `.env`, with process values taking precedence. Omit a setting to use its default. Each limit must be a positive whole number within SQLite's signed 64-bit integer range. Zero and malformed values prevent startup. The limits are independent, reset at midnight UTC, and survive backend restarts when the usage database is retained. Existing OpenWeather and OpenRouter budget controls remain in effect.
+
    The backend also accepts optional settings `OPENWEATHER_DAILY_REQUEST_LIMIT`, `SWOB_BBOX`, `SWOB_CACHE_TTL_SECONDS`, and `CAMERA_IMAGE_CACHE_TTL_SECONDS`. ECCC SWOB and DriveBC Open511 do not require credentials in the current implementation. Transit is deferred and its template key is not used by the MVP. The AI model is configured in the backend; the model identifier is not an environment setting.
 
 2. Install backend dependencies from the repository root:
@@ -111,13 +118,17 @@ You will need Python 3.10 or newer, Node.js with npm, and provider credentials f
 
 ## API usage reports
 
-The backend stores usage in `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in the process environment to use another persistent directory. Relative paths resolve from the repository root. Run the CLI with the same directory setting as the backend.
+The backend stores usage in `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in the process environment to use another persistent directory. Relative paths resolve from the repository root. Use the same directory for all backend workers and the CLI, and configure the same limits on each backend worker.
 
 ```bash
 backend/.venv/bin/python backend/scripts/api_usage_report.py --days 30 --daily --operations
 ```
 
-The command is read-only. `--days` selects the number of UTC dates including today and defaults to 30. `--daily` adds per-date totals, and `--operations` adds per-operation totals. The counts are best-effort observations of backend request attempts. Provider-account totals can differ.
+The command is read-only. `--days` selects the number of UTC dates including today and defaults to 30. `--daily` adds per-date totals, and `--operations` adds per-operation totals.
+
+MapTiler geocoding and openrouteservice each reserve one attempt in the usage database just before HTTP transport. A reservation counts even if the request is cancelled, times out, receives a provider error, or fails during transport setup. Exhausted requests return HTTP 429 with `daily_quota_exhausted` and a `Retry-After` in seconds until the next UTC day. When a reservation cannot be made safely, the backend returns HTTP 503 with `daily_quota_unavailable` and skips the provider request. Rejections before reservation use no quota.
+
+The public API Usage disclosure shows rolling 30-day request counts. The dashboard and CLI include quota reservations and best-effort observations for uncapped operations. Provider-account totals can differ. Browser-side MapTiler map resources are outside this backend quota and accounting.
 
 ## Data credits and licensing
 

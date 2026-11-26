@@ -43,8 +43,8 @@ This file defines the currently selected bounded assignment. Planning approval d
 ## Phase 2 — API usage visibility and controls
 
 - **Phase 2A complete.** Read-only audit of provider integrations, caches, budgets, and tracking feasibility.
-- **Phase 2B implemented and ready for review.** SQLite stores backend request-attempt counts per operation and UTC date. `GET /api/usage` supplies the header's API Usage disclosure with aggregate counts over 30 UTC dates, including today. The read-only `backend/scripts/api_usage_report.py` accepts `--days`, `--daily`, and `--operations`. Browser-side MapTiler resources are untracked, and calls before instrumentation have no historical records. Tracking is best effort and surfaces known gaps or database unavailability. [Implementation and verification](PROJECT_STATE.md#phase-2-status)
-- **Phase 2C deferred.** Separately authorize any lightweight daily quotas. Phase 2B preserves existing provider budgets and performs no quota enforcement.
+- **Phase 2B accepted.** The 30-day usage disclosure and read-only CLI passed manual verification and independent Claude Code QA. Commit `57344fa` resolved SQLite contention and failure isolation. [Implementation and verification](PROJECT_STATE.md#phase-2-status)
+- **Phase 2C implemented.** MapTiler geocoding and openrouteservice directions each default to 100 globally shared reservations per UTC day. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` set independent positive integer limits. SQLite commits each admission to the existing daily totals before dispatch and the date rolls over at midnight UTC. Reservations count even when transport or the provider fails. Exhaustion returns HTTP 429 with `Retry-After`. Unsafe admission fails closed with HTTP 503. Uncapped monitoring remains best effort and existing OpenWeather and OpenRouter controls remain in effect. Manual browser testing and independent Claude Code QA are pending before human acceptance. [Configuration and usage reporting](README.md#api-usage-reports)
 
 ## Completed correction assignment
 

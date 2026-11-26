@@ -1,4 +1,4 @@
-"""Best-effort aggregate accounting for application-side HTTP attempts."""
+"""Aggregate accounting and daily admission for application-side HTTP attempts."""
 
 from __future__ import annotations
 
@@ -14,11 +14,16 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
+from math import ceil
 from pathlib import Path
-from threading import Lock
+from threading import BoundedSemaphore, Event, Lock
 
 DEFAULT_DAYS = 30
 BUSY_TIMEOUT_SECONDS = 0.25
+ADMISSION_TIMEOUT_SECONDS = 1.0
+MAX_PENDING_ADMISSIONS = 128
+DEFAULT_DAILY_LIMIT = 100
+MAX_SQLITE_INTEGER = 2**63 - 1
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 logger = logging.getLogger(__name__)
 
@@ -46,10 +51,40 @@ class Operation(str, Enum):
 
 PROVIDERS = tuple(dict.fromkeys(operation.provider for operation in Operation))
 BROWSER_MAP_PROVIDER = "maptiler_map_resources"
+DAILY_LIMIT_ENV = {
+    Operation.MAPTILER_GEOCODING: "MAPTILER_GEOCODING_DAILY_LIMIT",
+    Operation.ORS_DIRECTIONS: "OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT",
+}
 
 
 class UsageUnavailable(Exception):
     """The database could not provide a report."""
+
+
+class DailyQuotaExhausted(Exception):
+    def __init__(self, retry_after: int) -> None:
+        self.retry_after = retry_after
+
+
+class DailyQuotaUnavailable(Exception):
+    """The application could not safely reserve a quota slot."""
+
+
+def configured_daily_limits() -> dict[Operation, int]:
+    limits = {}
+    for operation, name in DAILY_LIMIT_ENV.items():
+        value = os.environ.get(name, str(DEFAULT_DAILY_LIMIT)).strip()
+        try:
+            if value.isascii() and value.isdecimal():
+                limit = int(value)
+                if 1 <= limit <= MAX_SQLITE_INTEGER:
+                    limits[operation] = limit
+                    continue
+        except ValueError:
+            # Python may reject unusually long decimal strings during conversion.
+            pass
+        raise ValueError(f"{name} must be an integer between 1 and {MAX_SQLITE_INTEGER}.")
+    return limits
 
 
 def configured_usage_path() -> Path:
@@ -83,11 +118,22 @@ class UsageReport:
 
 
 class UsageStore:
-    def __init__(self, path: Path, *, now: Callable[[], datetime] = utc_now) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        now: Callable[[], datetime] = utc_now,
+        daily_limits: dict[Operation, int] | None = None,
+    ) -> None:
         self.path = path.absolute()
         self._now = now
+        self._daily_limits = (
+            dict.fromkeys(DAILY_LIMIT_ENV, DEFAULT_DAILY_LIMIT)
+            if daily_limits is None else daily_limits.copy()
+        )
         self._gap_dates: set[date] = set()
         self._gap_lock = Lock()
+        self._admission_slots = BoundedSemaphore(MAX_PENDING_ADMISSIONS)
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="api-usage")
 
     def today(self) -> date:
@@ -142,6 +188,79 @@ class UsageStore:
         """Drain accepted writes and release the worker."""
         self._executor.shutdown(wait=True)
 
+    @staticmethod
+    def _write_gaps(connection: sqlite3.Connection, gaps: set[date]) -> None:
+        if gaps:
+            connection.executemany(
+                "INSERT OR IGNORE INTO api_usage_gaps (utc_date) VALUES (?)",
+                ((gap.isoformat(),) for gap in gaps),
+            )
+
+    async def reserve(self, operation: Operation) -> None:
+        """Require a committed quota reservation before allowing dispatch."""
+        if not self._admission_slots.acquire(blocking=False):
+            raise DailyQuotaUnavailable
+        abandoned = Event()
+        try:
+            job = self._executor.submit(self._reserve_attempt, operation, abandoned)
+        except Exception as error:  # noqa: BLE001 - Failed submissions must block dispatch.
+            self._admission_slots.release()
+            self._log_admission_error(operation, error)
+            raise DailyQuotaUnavailable from None
+
+        # Keep the slot occupied until the worker retires the job, including when
+        # callers time out or cancel while jobs are queued behind accounting writes.
+        job.add_done_callback(lambda _: self._admission_slots.release())
+        result = asyncio.wrap_future(job)
+        # Observe any worker error even if the request has stopped waiting.
+        result.add_done_callback(lambda finished: finished.exception())
+        try:
+            retry_after = await asyncio.wait_for(asyncio.shield(result), ADMISSION_TIMEOUT_SECONDS)
+        except Exception as error:  # noqa: BLE001 - Any admission failure must block dispatch.
+            self._log_admission_error(operation, error)
+            raise DailyQuotaUnavailable from None
+        finally:
+            abandoned.set()
+        if retry_after is not None:
+            raise DailyQuotaExhausted(retry_after)
+
+    @staticmethod
+    def _log_admission_error(operation: Operation, error: Exception) -> None:
+        logger.warning(
+            "api_usage.admission_error operation=%s exception_class=%s",
+            operation.value,
+            type(error).__name__,
+        )
+
+    def _reserve_attempt(self, operation: Operation, abandoned: Event) -> int | None:
+        if abandoned.is_set():
+            return None
+        with self._gap_lock:
+            gaps = self._gap_dates.copy()
+        with closing(self._open_writer()) as connection, connection:
+            # SQLite serializes writers across connections and processes. Read the
+            # UTC date after taking the lock in case the request waited across midnight.
+            connection.execute("BEGIN IMMEDIATE")
+            self._ensure_schema(connection)
+            if abandoned.is_set():
+                return None
+            now = self._now().astimezone(timezone.utc)
+            updated = connection.execute(
+                """
+                INSERT INTO api_usage (utc_date, operation, attempts) VALUES (?, ?, 1)
+                ON CONFLICT (utc_date, operation) DO UPDATE SET attempts = attempts + 1
+                WHERE attempts < ?
+                """,
+                (now.date().isoformat(), operation.value, self._daily_limits[operation]),
+            )
+            if not updated.rowcount:
+                reset = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                return ceil((reset - now).total_seconds())
+            self._write_gaps(connection, gaps)
+        with self._gap_lock:
+            self._gap_dates.difference_update(gaps)
+        return None
+
     def record(self, operation: Operation, day: date) -> None:
         """Atomically increment one daily row, using a short, bounded write."""
         with self._gap_lock:
@@ -156,11 +275,7 @@ class UsageStore:
                     """,
                     (day.isoformat(), operation.value),
                 )
-                if gaps:
-                    connection.executemany(
-                        "INSERT OR IGNORE INTO api_usage_gaps (utc_date) VALUES (?)",
-                        ((gap.isoformat(),) for gap in gaps),
-                    )
+                self._write_gaps(connection, gaps)
         except (sqlite3.Error, OSError, ValueError):
             self._record_gap(day)
             logger.warning("API usage attempt could not be recorded for %s", operation.value)
@@ -254,10 +369,16 @@ def observe_usage(store: UsageStore) -> Iterator[None]:
 
 
 def usage_hooks(operation: Operation) -> dict[str, list[Callable[[object], Awaitable[None]]]]:
-    """Count each HTTPX dispatch, including accepted redirects, when scoped to the app."""
+    """Reserve capped attempts or observe uncapped HTTPX dispatches in the app."""
     store = _active_store.get()
     if store is None:
         return {}
+
+    if operation in DAILY_LIMIT_ENV:
+        async def reserve_before_request(_request: object) -> None:
+            await store.reserve(operation)
+
+        return {"request": [reserve_before_request]}
 
     async def before_request(_request: object) -> None:
         try:

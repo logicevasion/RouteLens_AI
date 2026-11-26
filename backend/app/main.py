@@ -15,6 +15,7 @@ from app.api_usage import (
     PROVIDERS,
     Operation,
     UsageStore,
+    configured_daily_limits,
     configured_usage_path,
     observe_usage,
 )
@@ -46,7 +47,7 @@ async def track_provider_attempts(request: Request) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="RouteLens AI API", version="0.1.0", lifespan=lifespan)
-app.state.usage = UsageStore(usage_path)
+app.state.usage = UsageStore(usage_path, daily_limits=configured_daily_limits())
 app.include_router(router, dependencies=[Depends(track_provider_attempts)])
 
 

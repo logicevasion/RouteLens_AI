@@ -75,6 +75,15 @@ export default function LocationAutocomplete({
           const response = await fetch(`/api/geocoding/search?${params.toString()}`, {
             signal: controller.signal,
           });
+          if (response.status === 429) {
+            const error = await response.json();
+            if (error?.detail?.code === 'daily_quota_exhausted') {
+              if (!controller.signal.aborted && requestSequence.current === requestId) {
+                setSearchError("Location search has reached today's usage limit. Please try again tomorrow.");
+              }
+              return;
+            }
+          }
           if (!response.ok) throw new Error('Search unavailable');
           const result: unknown = await response.json();
           if (!Array.isArray(result)) throw new Error('Search unavailable');

@@ -38,6 +38,8 @@ export type RoutingErrorCode =
   | 'routing_not_configured'
   | 'routing_authentication_failed'
   | 'routing_rate_limited'
+  | 'daily_quota_exhausted'
+  | 'daily_quota_unavailable'
   | 'no_route_found'
   | 'routing_timeout'
   | 'routing_provider_unavailable';

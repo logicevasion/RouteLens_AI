@@ -40,7 +40,7 @@ def main() -> int:
         return 1
 
     print(f"API usage · {report.start} through {report.end} inclusive (UTC)")
-    print("Best-effort backend-observed outbound attempts. Provider-account totals may differ.")
+    print("Backend request attempts include quota reservations. Provider-account totals may differ.")
     print("MapTiler browser map resources are untracked.")
     if report.gaps:
         print("Degraded tracking on " + ", ".join(map(str, sorted(report.gaps))) + ".")

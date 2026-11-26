@@ -139,29 +139,11 @@ class OpenRouteServiceRouter:
             "instructions": False,
             "alternative_routes": ALTERNATIVE_ROUTES,
         }
-        usage_hook_failed = False
-
-        async def run_usage_hooks(request: httpx.Request) -> None:
-            nonlocal usage_hook_failed
-            try:
-                for hook in request_hooks:
-                    await hook(request)
-            except Exception as error:
-                usage_hook_failed = True
-                logger.warning(
-                    "openrouteservice.usage_hook_error exception_class=%s", type(error).__name__
-                )
-                raise
-
         try:
-            event_hooks = usage_hooks(Operation.ORS_DIRECTIONS)
-            request_hooks = event_hooks.get("request", [])
-            if request_hooks:
-                event_hooks["request"] = [run_usage_hooks]
             async with httpx.AsyncClient(
                 timeout=REQUEST_TIMEOUT_SECONDS,
                 transport=self._transport,
-                event_hooks=event_hooks,
+                event_hooks=usage_hooks(Operation.ORS_DIRECTIONS),
             ) as client:
                 response = await client.post(
                     ORS_ENDPOINT,
@@ -169,10 +151,7 @@ class OpenRouteServiceRouter:
                     headers={"Authorization": self._api_key},
                 )
         except httpx.RequestError as error:
-            if not usage_hook_failed:
-                logger.warning(
-                    "openrouteservice.transport_error exception_class=%s", type(error).__name__
-                )
+            logger.warning("openrouteservice.transport_error exception_class=%s", type(error).__name__)
             if isinstance(error, httpx.TimeoutException):
                 raise RoutingTimeoutError("The routing provider timed out. Please try again.") from None
             raise RoutingUpstreamError("Driving routes are temporarily unavailable.") from None

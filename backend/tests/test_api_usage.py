@@ -23,6 +23,7 @@ from app.api_usage import (
     usage_hooks,
 )
 from app.main import app
+from app.vancouver_cameras import fetch_catalogue_records
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "api_usage_report.py"
 
@@ -231,33 +232,38 @@ def test_app_records_failures_and_transport_errors_but_not_validation_or_probes(
     assert b"synthetic" not in usage_store.path.read_bytes()
 
 
-def test_contended_write_does_not_gate_provider_and_gap_survives_recovery(
-    monkeypatch, usage_store, caplog
-):
-    geocoder = geocoding.MapTilerGeocoder(
-        api_key="synthetic",
-        transport=httpx.MockTransport(
-            lambda _: httpx.Response(200, json={"type": "FeatureCollection", "features": []})
-        ),
+@pytest.fixture
+def fetch_empty_catalogue(usage_store):
+    transport = httpx.MockTransport(
+        lambda _: httpx.Response(200, json={"total_count": 0, "results": []})
     )
-    monkeypatch.setattr(routes, "MapTilerGeocoder", lambda: geocoder)
+
+    async def fetch():
+        with observe_usage(usage_store):
+            records, _ = await fetch_catalogue_records(transport=transport)
+        assert records == []
+
+    return fetch
+
+
+def test_contended_write_does_not_gate_provider_and_gap_survives_recovery(
+    fetch_empty_catalogue, usage_store, caplog,
+):
     async def run():
         async with running_api() as client:
             with closing(sqlite3.connect(usage_store.path)) as blocker:
                 blocker.execute("BEGIN IMMEDIATE")
-                response = await client.get("/api/geocoding/search", params={"q": "test"})
-                assert response.json() == []
+                await fetch_empty_catalogue()
                 payload = (await client.get("/api/usage")).json()
                 assert payload["status"] == "degraded"
-                assert rows_by_provider(payload)["maptiler"] == ("tracked", 0)
-            response = await client.get("/api/geocoding/search", params={"q": "test"})
-            assert response.json() == []
-            payload = (await client.get("/api/usage")).json()
-            assert rows_by_provider(payload)["maptiler"] == ("tracked", 1)
+            await fetch_empty_catalogue()
+            await usage_store.flush()
+            report = usage_store.read_report(*usage_store.window(30))
+            assert report.operation_totals()[Operation.CAMERA_CATALOGUE] == 1
 
     asyncio.run(run())
 
-    assert "could not be recorded for maptiler.geocoding" in caplog.text
+    assert "could not be recorded for vancouver_traffic_cameras.catalogue" in caplog.text
     assert str(usage_store.path) not in caplog.text
     assert "synthetic" not in caplog.text
     reopened = UsageStore(usage_store.path)
@@ -266,39 +272,30 @@ def test_contended_write_does_not_gate_provider_and_gap_survives_recovery(
 
 @pytest.mark.parametrize("failure", ["hook", "record", "read"])
 def test_unexpected_accounting_failure_does_not_interrupt_provider(
-    usage_store, monkeypatch, caplog, failure,
+    fetch_empty_catalogue, usage_store, monkeypatch, caplog, failure,
 ):
     def fail(*_args):
         raise TypeError("synthetic secret https://example.invalid/private?key=hidden")
 
     method = {"hook": "count_dispatch", "record": "record", "read": "read_report"}[failure]
     monkeypatch.setattr(usage_store, method, fail)
-    geocoder = geocoding.MapTilerGeocoder(
-        api_key="synthetic",
-        transport=httpx.MockTransport(
-            lambda _: httpx.Response(200, json={"type": "FeatureCollection", "features": []})
-        ),
-    )
-    monkeypatch.setattr(routes, "MapTilerGeocoder", lambda: geocoder)
-
     async def run():
         async with running_api() as client:
-            provider_response = await client.get("/api/geocoding/search", params={"q": "test"})
-            assert provider_response.status_code == 200 and provider_response.json() == []
+            await fetch_empty_catalogue()
             return await client.get("/api/usage")
 
     response = asyncio.run(run())
     assert response.status_code == 200
     if failure == "read":
         assert response.json()["status"] == "unavailable"
-        assert rows_by_provider(response.json())["maptiler"] == ("unavailable", None)
+        assert rows_by_provider(response.json())["vancouver_traffic_cameras"] == ("unavailable", None)
         assert "api_usage.report_error exception_class=TypeError" in caplog.messages
     else:
         assert response.json()["status"] == "degraded"
-        assert rows_by_provider(response.json())["maptiler"] == ("tracked", 0)
         stage = "request_hook" if failure == "hook" else "record"
         assert (
-            f"api_usage.{stage}_error operation=maptiler.geocoding exception_class=TypeError"
+            f"api_usage.{stage}_error operation=vancouver_traffic_cameras.catalogue "
+            "exception_class=TypeError"
             in caplog.messages
         )
     assert "synthetic secret" not in caplog.text

@@ -139,11 +139,10 @@ def test_provider_failure_uses_machine_readable_safe_error(
     [
         ("upstream", "openrouteservice.upstream_http_error status=503"),
         ("transport", "openrouteservice.transport_error exception_class=ConnectError"),
-        ("usage_hook", "openrouteservice.upstream_http_error status=503"),
     ],
 )
 def test_routing_logs_the_failure_stage_without_exposing_request_details(
-    monkeypatch, usage_store, caplog, failure, diagnostic,
+    monkeypatch, caplog, failure, diagnostic,
 ):
     dispatches = []
     private_detail = "synthetic-secret https://provider.invalid/?token=private"
@@ -153,12 +152,6 @@ def test_routing_logs_the_failure_stage_without_exposing_request_details(
         if failure == "transport":
             raise httpx.ConnectError(private_detail, request=request)
         return httpx.Response(503, text=private_detail)
-
-    if failure == "usage_hook":
-        def fail_before_transport(_operation):
-            raise httpx.ConnectError(private_detail)
-
-        monkeypatch.setattr(usage_store, "count_dispatch", fail_before_transport)
 
     router = OpenRouteServiceRouter("synthetic-secret", transport=httpx.MockTransport(transport))
     monkeypatch.setattr("app.routes.OpenRouteServiceRouter", lambda: router)
@@ -176,13 +169,6 @@ def test_routing_logs_the_failure_stage_without_exposing_request_details(
     records = [record for record in caplog.records if record.name == "app.routing"]
     assert [record.getMessage() for record in records] == [diagnostic]
     assert all(record.exc_info is None for record in records)
-    if failure == "usage_hook":
-        assert (
-            "api_usage.request_hook_error operation=openrouteservice.directions exception_class=ConnectError"
-            in caplog.messages
-        )
-        usage_store.initialize()
-        assert usage_store.read_report(*usage_store.window(30)).gaps == {usage_store.today()}
     assert "synthetic-secret" not in caplog.text
     assert "provider.invalid" not in caplog.text
 

@@ -89,11 +89,14 @@ function routingErrorMessage(error: RoutingApiError | null, status: number): str
       return error.detail.message ?? 'Choose a destination inside the City of Vancouver.';
     case 'routing_rate_limited':
       return 'Route service is busy. Please wait a moment and try again.';
+    case 'daily_quota_exhausted':
+      return "Route searches have reached today's usage limit. Please try again tomorrow.";
     case 'routing_timeout':
       return 'Route service took too long to respond. Please try again.';
     case 'routing_not_configured':
     case 'routing_authentication_failed':
     case 'routing_provider_unavailable':
+    case 'daily_quota_unavailable':
       return 'Driving routes are temporarily unavailable. Please try again.';
     default:
       return status >= 500

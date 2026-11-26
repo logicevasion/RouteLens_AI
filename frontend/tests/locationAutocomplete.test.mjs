@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { setImmediate } from 'node:timers/promises';
 import ts from 'typescript';
 
 const source = readFileSync(new URL('../src/LocationAutocomplete.tsx', import.meta.url), 'utf8');
@@ -13,7 +14,7 @@ const { outputText } = ts.transpileModule(source, {
 });
 
 // Run the component's input handler and effect with just the hooks needed for this interaction.
-function mountAutocomplete(marker, fetch) {
+function mountAutocomplete(marker, fetch, onSelect = () => {}) {
   const state = [];
   const refs = [];
   let stateIndex = 0;
@@ -63,7 +64,7 @@ function mountAutocomplete(marker, fetch) {
     marker,
     selectedLocation: null,
     onQueryEdit() {},
-    onSelect() {},
+    onSelect,
   };
 
   function render() {
@@ -79,7 +80,8 @@ function mountAutocomplete(marker, fetch) {
   }
 
   return {
-    input: findInput(render()),
+    input: [...elements(render())].find(({ type }) => type === 'input'),
+    render,
     search() {
       render();
       assert.equal(typeof debounce, 'function', 'typing should schedule a search');
@@ -91,13 +93,41 @@ function mountAutocomplete(marker, fetch) {
   };
 }
 
-function findInput(element) {
-  if (element?.type === 'input') return element;
-  for (const child of element?.children ?? []) {
-    const input = findInput(child);
-    if (input) return input;
+function* elements(element) {
+  if (Array.isArray(element)) {
+    for (const child of element) yield* elements(child);
+  } else if (element?.type) {
+    yield element;
+    yield* elements(element.children);
   }
 }
+
+test('autocomplete displays the local quota message and can select a later successful result', async (t) => {
+  const selected = [];
+  const place = { name: 'Stanley Park', latitude: 49.3, longitude: -123.14 };
+  const fetch = t.mock.fn(async () => ({ ok: true, status: 200, json: async () => [place] }));
+  fetch.mock.mockImplementationOnce(async () => ({
+    ok: false, status: 429, json: async () => ({ detail: { code: 'daily_quota_exhausted' } }),
+  }));
+  const autocomplete = mountAutocomplete('destination-marker', fetch, (location) => selected.push(location));
+  t.after(() => autocomplete.unmount());
+
+  autocomplete.input.props.onChange({ target: { value: 'Stanley' } });
+  autocomplete.search();
+  await setImmediate();
+  assert.deepEqual(
+    [...elements(autocomplete.render())].find(({ props }) => props?.role === 'status').children,
+    ["Location search has reached today's usage limit. Please try again tomorrow."],
+  );
+
+  autocomplete.input.props.onChange({ target: { value: 'Stanley Park' } });
+  autocomplete.search();
+  await setImmediate();
+  const option = [...elements(autocomplete.render())].find(({ props }) => props?.role === 'option');
+  option.props.onClick();
+  assert.deepEqual(selected, [place]);
+  assert.equal([...elements(autocomplete.render())].some(({ props }) => props?.role === 'listbox'), false);
+});
 
 for (const [role, query] of [['destination', 'Stanley Park'], ['origin', 'A&B café #1']]) {
   test(`typing in the ${role} field sends role=${role}`, (t) => {
