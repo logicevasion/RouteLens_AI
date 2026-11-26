@@ -60,11 +60,16 @@ def settings(monkeypatch, usage_store):
     return configure
 
 
-@pytest.mark.parametrize(("operation", "other", "message"), [
-    (MAPTILER, ORS, "Location search has reached today's usage limit. Please try again tomorrow."),
-    (ORS, MAPTILER, "Route searches have reached today's usage limit. Please try again tomorrow."),
+@pytest.mark.parametrize(("operation", "other", "limit", "message"), [
+    (MAPTILER, ORS, 200, "Location search has reached today's usage limit. Please try again tomorrow."),
+    (ORS, MAPTILER, 100, "Route searches have reached today's usage limit. Please try again tomorrow."),
 ])
-def test_default_limit_counts_once_and_is_independent(usage_store, mock_providers, operation, other, message):
+def test_default_limit_counts_once_and_is_independent(
+    usage_store, mock_providers, monkeypatch, operation, other, limit, message,
+):
+    monkeypatch.delenv("MAPTILER_GEOCODING_DAILY_LIMIT", raising=False)
+    monkeypatch.delenv("OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT", raising=False)
+    assert api_usage.configured_daily_limits()[operation] == limit
     dispatches = []
 
     def dispatch(request):
@@ -77,21 +82,21 @@ def test_default_limit_counts_once_and_is_independent(usage_store, mock_provider
         async with client() as api:
             assert (await search(api, operation)).status_code == 200
             assert usage_store.read_report(*usage_store.window(30)).operation_totals()[operation] == 1
-            for _ in range(99):
+            for _ in range(limit - 1):
                 assert (await search(api, operation)).status_code == 200
             exceeded = await search(api, operation)
             assert exceeded.status_code == 429
             assert exceeded.json() == {"detail": {"code": "daily_quota_exhausted", "message": message}}
             assert exceeded.headers["Retry-After"] == "43200"
-            assert len(dispatches) == 100
+            assert len(dispatches) == limit
             assert (await search(api, other)).status_code == 200
             report = (await api.get("/api/usage")).json()
             assert report["status"] == "ok"
             totals = {row["provider"]: row["attempts"] for row in report["providers"]}
-            assert (totals[operation.provider], totals[other.provider]) == (100, 1)
+            assert (totals[operation.provider], totals[other.provider]) == (limit, 1)
 
     asyncio.run(run())
-    assert len(dispatches) == 101
+    assert len(dispatches) == limit + 1
 
 
 @pytest.mark.parametrize(("operation", "failure", "status", "code"), [
@@ -335,6 +340,6 @@ print(list(app.state.usage._daily_limits.values()))
     failed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=10)
     assert failed.returncode != 0
     assert "MAPTILER_GEOCODING_DAILY_LIMIT must be an integer" in failed.stderr
-    monkeypatch.setenv("MAPTILER_GEOCODING_DAILY_LIMIT", "3")
+    monkeypatch.setenv("MAPTILER_GEOCODING_DAILY_LIMIT", "100")
     started = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10)
-    assert started.stdout.strip() == "[3, 4]"
+    assert started.stdout.strip() == "[100, 4]"

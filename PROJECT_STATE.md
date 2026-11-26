@@ -4,7 +4,7 @@
 
 - **Implementation checkout:** `feature/api-usage-controls`. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 (`9ff8482`) are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current status:** Phases 1A–1D are human accepted. Phase 2A's audit is complete. Phase 2B passed manual browser testing and independent Claude Code QA. Phase 2C is implemented and awaits human review.
+- **Current status:** Phases 1A–1D are accepted and merged into `main`. Phase 2 codebase implementation and QA are accepted. Phase 2D verification is complete, and the codebase is ready for human review and merge. Production deployment and live verification are deferred.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
@@ -33,7 +33,7 @@
 
 **Phase 2A — Complete.** The read-only audit covered runtime providers, caching, existing budgets, and feasible dispatch-level instrumentation.
 
-**Phase 2B — Accepted.** Dispatch accounting was implemented at `3e15368` and the reliability follow-up at `57344fa`. The header's API Usage disclosure opens a read-only `GET /api/usage` report over 30 UTC dates including today. The public Vancouver camera images row counts frame requests. The diagnostic CLI `backend/scripts/api_usage_report.py --days 30 --daily --operations` includes catalogue, HTML-page, and frame attempts in its provider, daily, and operation totals. Uncapped pagination and followed redirects count per outbound attempt.
+**Phase 2B — Accepted.** Manual browser verification and independent QA passed. Dispatch accounting was implemented at `3e15368` and the reliability follow-up at `57344fa`. The header's API Usage disclosure opens a read-only `GET /api/usage` report over 30 UTC dates including today. The public Vancouver camera images row counts frame requests. Run `backend/.venv/bin/python backend/scripts/api_usage_report.py --days 30 --daily --operations` from the repository root for diagnostic totals that include catalogue, HTML-page, and frame attempts. Uncapped pagination and followed redirects count per outbound attempt.
 
 The app and CLI share `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in both process environments to use a different persistent directory. Relative paths resolve from the repo root. SQLite keeps one count per UTC date and operation, plus UTC dates with known missed monitoring writes. Uncapped requests proceed if accounting fails, and reports mark the affected dates degraded. Gap dates first held in process memory are saved with the next successful increment. Unreadable data produces an unavailable report.
 
@@ -43,13 +43,15 @@ The app and CLI share `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DA
 
 **Phase 2B reliability follow-up.** One dedicated executor serializes SQLite work per process. Shutdown drains queued writes and releases the worker. The follow-up probes recorded all 220 attempts without measurable delay to unrelated default-executor work. An independent two-process check recorded all 40 increments. All 122 focused tests, 518 backend tests, Ruff, and `git diff --check` passed offline.
 
-**Phase 2 accounting limits.** Browser-side MapTiler resources and calls predating instrumentation have no counters. An abrupt exit can lose pending best-effort writes and in-memory gap flags.
+**Phase 2 limitations.** Browser-side MapTiler resources and requests predating instrumentation have no counters. The README covers best-effort write loss, autocomplete quota use, fail-closed behavior under load, and the shared-storage and request-scope requirements. [API usage reports](README.md#api-usage-reports)
 
-**Phase 2C — Implemented, pending review.** MapTiler geocoding and openrouteservice directions use independent, global quotas of 100 attempts per UTC day by default. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` are validated at startup after `.env` loading. Both must be positive integers. A short `BEGIN IMMEDIATE` transaction on the existing accounting worker conditionally increments the same daily row used by the dashboard and CLI. The HTTPX hook reserves once before transport. A committed slot survives a restart and remains used after an upstream failure, cancellation, or transport setup error. Counts are application reservations and best-effort observations, so provider-account totals can differ.
+**Phase 2C — Accepted.** MapTiler geocoding and openrouteservice directions use independent, global quotas. The defaults are 200 and 100 attempts per UTC day, respectively. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` are validated at startup after `.env` loading. Both must be positive integers. A short `BEGIN IMMEDIATE` transaction on the existing accounting worker conditionally increments the same daily row used by the dashboard and CLI. The HTTPX hook reserves once before transport. A committed slot survives a restart and remains used after an upstream failure, cancellation, or transport setup error. Counts are application reservations and best-effort observations, so provider-account totals can differ.
 
 Capped operations return a local HTTP 429 with `daily_quota_exhausted` and `Retry-After` until midnight UTC, or sanitized HTTP 503 with `daily_quota_unavailable` when admission fails. Admission waits up to one second with at most 128 queued or running admissions per worker. Existing provider error responses, uncapped best-effort accounting, and OpenWeather and OpenRouter budgets remain in effect.
 
-**Phase 2C verification.** The 123 focused backend tests, all 540 backend tests, all 15 frontend test files, Ruff, and `git diff --check` passed. The TypeScript/Vite production build passed with the existing large-chunk advisory. Simultaneous requests and two independent processes each granted the last slot once. Locked, corrupt, unwritable, and unavailable storage blocked both capped providers. The read-only CLI reproduced the API's 100/1 and 1/100 totals from temporary databases. Automated checks skipped the real `.env`, made no live provider or paid inference calls, and recorded zero blocked backend network attempts. Manual browser testing and independent Claude Code QA are pending.
+**Phase 2C acceptance.** The developer accepted `e807dd6` after manual testing and independent QA with non-blocking findings. The subsequent MapTiler default increase remains in the working tree. Its focused tests verified the 200/201 MapTiler and 100/101 openrouteservice boundaries and that a MapTiler override of 100 takes precedence.
+
+**Phase 2D — Ready for human review and merge.** All 540 backend tests, Ruff, all 15 frontend test files, the TypeScript/Vite production build, and `git diff --check` passed with the final 200/100 defaults. The backend run reported 24 multiprocessing fork deprecation warnings, and Vite reported its existing large-chunk advisory. Verification used a temporary checkout with the established environments, mocked providers, no real `.env`, and zero outbound backend attempts. The worktree contains only the expected quota adjustment and reconciliation files. There are no staged changes or unexpected untracked files.
 
 ## Alpha UX implementation status
 
@@ -115,7 +117,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Run the Phase 2C manual browser check and independent Claude Code QA before deciding on human acceptance.
+The developer reviews and commits the quota adjustment and reconciliation, then merges `feature/api-usage-controls` into `main`. Phase 2 production deployment and live verification are deferred to the separate AWS session in Vancouver. The next planned development work is ShellSquire and AgentGuard Lab. [Deferred deployment checklist](BUILD_PLAN.md#deferred-aws-deployment-and-live-verification)
 
 ## Archive and integration-note references
 

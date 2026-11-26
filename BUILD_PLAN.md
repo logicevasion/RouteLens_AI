@@ -43,8 +43,19 @@ This file defines the currently selected bounded assignment. Planning approval d
 ## Phase 2 — API usage visibility and controls
 
 - **Phase 2A complete.** Read-only audit of provider integrations, caches, budgets, and tracking feasibility.
-- **Phase 2B accepted.** The 30-day usage disclosure and read-only CLI passed manual verification and independent Claude Code QA. Commit `57344fa` resolved SQLite contention and failure isolation. [Implementation and verification](PROJECT_STATE.md#phase-2-status)
-- **Phase 2C implemented.** MapTiler geocoding and openrouteservice directions each default to 100 globally shared reservations per UTC day. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` set independent positive integer limits. SQLite commits each admission to the existing daily totals before dispatch and the date rolls over at midnight UTC. Reservations count even when transport or the provider fails. Exhaustion returns HTTP 429 with `Retry-After`. Unsafe admission fails closed with HTTP 503. Uncapped monitoring remains best effort and existing OpenWeather and OpenRouter controls remain in effect. Manual browser testing and independent Claude Code QA are pending before human acceptance. [Configuration and usage reporting](README.md#api-usage-reports)
+- **Phase 2B accepted.** The 30-day usage disclosure and read-only CLI passed manual verification and independent Claude Code QA. Commit `57344fa` serialized in-process SQLite writes and isolated accounting failures. [Implementation and verification](PROJECT_STATE.md#phase-2-status)
+- **Phase 2C accepted after independent Claude Code QA.** MapTiler geocoding defaults to 200 globally shared reservations per UTC day. Openrouteservice directions defaults to 100. `MAPTILER_GEOCODING_DAILY_LIMIT` and `OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT` set independent positive integer limits. SQLite commits each admission to the existing daily totals before dispatch and the date rolls over at midnight UTC. Reservations count even when transport or the provider fails. Exhaustion returns HTTP 429 with `Retry-After`. Unsafe admission fails closed with HTTP 503. Uncapped monitoring remains best effort and existing OpenWeather and OpenRouter controls remain in effect. [Configuration and usage reporting](README.md#api-usage-reports)
+- **Phase 2D covers final documentation, offline verification, and merge preparation.** Phase 2 codebase implementation and QA are accepted. The developer controls the merge. [Final verification and handoff status](PROJECT_STATE.md#phase-2-status)
+
+### Deferred AWS deployment and live verification
+
+The separate AWS deployment session in Vancouver will cover these checks.
+
+- Provision persistent SQLite storage and set `ROUTELENS_DATA_DIR` consistently for all backend workers and the diagnostic CLI.
+- Configure the production environment and verify the 200 MapTiler and 100 openrouteservice daily defaults and any intended overrides.
+- Verify the public API Usage disclosure and its `/api/usage` endpoint through the production reverse proxy.
+- Verify the existing OpenRouter budgets and OpenWeather daily controls.
+- Review the existing CloudFront, WAF, and Nginx configuration and complete the related postponed deployment work.
 
 ## Completed correction assignment
 

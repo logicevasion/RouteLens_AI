@@ -22,7 +22,6 @@ DEFAULT_DAYS = 30
 BUSY_TIMEOUT_SECONDS = 0.25
 ADMISSION_TIMEOUT_SECONDS = 1.0
 MAX_PENDING_ADMISSIONS = 128
-DEFAULT_DAILY_LIMIT = 100
 MAX_SQLITE_INTEGER = 2**63 - 1
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 logger = logging.getLogger(__name__)
@@ -51,9 +50,9 @@ class Operation(str, Enum):
 
 PROVIDERS = tuple(dict.fromkeys(operation.provider for operation in Operation))
 BROWSER_MAP_PROVIDER = "maptiler_map_resources"
-DAILY_LIMIT_ENV = {
-    Operation.MAPTILER_GEOCODING: "MAPTILER_GEOCODING_DAILY_LIMIT",
-    Operation.ORS_DIRECTIONS: "OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT",
+DAILY_QUOTA_SETTINGS = {
+    Operation.MAPTILER_GEOCODING: ("MAPTILER_GEOCODING_DAILY_LIMIT", 200),
+    Operation.ORS_DIRECTIONS: ("OPENROUTESERVICE_DIRECTIONS_DAILY_LIMIT", 100),
 }
 
 
@@ -72,8 +71,8 @@ class DailyQuotaUnavailable(Exception):
 
 def configured_daily_limits() -> dict[Operation, int]:
     limits = {}
-    for operation, name in DAILY_LIMIT_ENV.items():
-        value = os.environ.get(name, str(DEFAULT_DAILY_LIMIT)).strip()
+    for operation, (name, default) in DAILY_QUOTA_SETTINGS.items():
+        value = os.environ.get(name, str(default)).strip()
         try:
             if value.isascii() and value.isdecimal():
                 limit = int(value)
@@ -128,7 +127,7 @@ class UsageStore:
         self.path = path.absolute()
         self._now = now
         self._daily_limits = (
-            dict.fromkeys(DAILY_LIMIT_ENV, DEFAULT_DAILY_LIMIT)
+            {operation: default for operation, (_, default) in DAILY_QUOTA_SETTINGS.items()}
             if daily_limits is None else daily_limits.copy()
         )
         self._gap_dates: set[date] = set()
@@ -374,7 +373,7 @@ def usage_hooks(operation: Operation) -> dict[str, list[Callable[[object], Await
     if store is None:
         return {}
 
-    if operation in DAILY_LIMIT_ENV:
+    if operation in DAILY_QUOTA_SETTINGS:
         async def reserve_before_request(_request: object) -> None:
             await store.reserve(operation)
 
