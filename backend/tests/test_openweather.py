@@ -9,6 +9,8 @@ import pytest
 
 from app.api_usage import Operation, observe_usage
 from app.openweather import (
+    CURRENT_PRODUCT,
+    TIMELINE_PRODUCT,
     DailyRequestBudget,
     OpenWeatherClient,
     OpenWeatherError,
@@ -372,6 +374,7 @@ def test_budget_exhaustion_uses_stale_cache_without_request(tmp_path, usage_stor
     assert exhausted.current.status.stale and exhausted.forecast.status.stale
     assert "budget exhausted" in (exhausted.current.status.error or "")
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {
         (day, Operation.OPENWEATHER_CURRENT): 1,
         (day, Operation.OPENWEATHER_TIMELINE): 1,
@@ -494,3 +497,27 @@ def test_request_uses_only_approved_metric_products_and_parameters(tmp_path):
     assert all(request.url.params["units"] == "metric" for request in requests)
     assert all(request.url.params["lat"] == str(COORDS.latitude) for request in requests)
     assert all(request.url.params["lon"] == str(COORDS.longitude) for request in requests)
+
+
+@pytest.mark.parametrize(
+    ("product", "path", "operation"),
+    [
+        (CURRENT_PRODUCT, "/data/4.0/onecall/current", Operation.OPENWEATHER_CURRENT),
+        (TIMELINE_PRODUCT, "/data/4.0/onecall/timeline/15min", Operation.OPENWEATHER_TIMELINE),
+    ],
+)
+def test_openweather_attributes_each_product_to_its_own_operation(
+    tmp_path, usage_store, product, path, operation,
+):
+    def handler(request):
+        assert request.url.path == path
+        return httpx.Response(200, json={})
+
+    client = OpenWeatherClient(
+        api_key="test", cache_dir=tmp_path / "cache", transport=httpx.MockTransport(handler)
+    )
+    with observe_usage(usage_store):
+        asyncio.run(client._request(product, COORDS, NOW))
+    asyncio.run(usage_store.flush())
+    day = usage_store.today()
+    assert usage_store.read_report(day, day).counts == {(day, operation): 1}

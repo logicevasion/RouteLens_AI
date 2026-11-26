@@ -152,6 +152,7 @@ def test_transport_timeout_and_redirect_budget_are_bounded(tmp_path, usage_store
         assert asyncio.run(store.get_view(item, view)) is not None
     assert len(calls) == 3
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.CAMERA_FRAME): 3}
 
 
@@ -573,4 +574,5 @@ def test_api_contract_and_image_endpoint(monkeypatch, tmp_path, usage_store):
     assert invalid.status_code == 404
     assert outside.status_code == 422
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.CAMERA_FRAME): 1}

@@ -1,6 +1,7 @@
 """FastAPI application entry point for the local RouteLens API."""
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,11 +15,12 @@ from app.api_usage import (
     PROVIDERS,
     Operation,
     UsageStore,
-    UsageUnavailable,
     configured_usage_path,
     observe_usage,
 )
 from app.routes import router
+
+logger = logging.getLogger(__name__)
 
 # Resolve the usage path from the process environment, as the diagnostic CLI does.
 usage_path = configured_usage_path()
@@ -31,11 +33,11 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store: UsageStore = app.state.usage
-    await asyncio.to_thread(store.initialize)
     try:
+        await store.start()
         yield
     finally:
-        await store.flush()
+        await asyncio.to_thread(store.close)
 
 
 async def track_provider_attempts(request: Request) -> AsyncIterator[None]:
@@ -59,11 +61,11 @@ async def get_usage(request: Request, response: Response) -> dict:
     """Report observed backend attempts in the last 30 UTC calendar dates."""
     response.headers["Cache-Control"] = "no-store"
     store: UsageStore = request.app.state.usage
-    await store.flush()
     start, end = store.window(DEFAULT_DAYS)
     try:
-        report = await asyncio.to_thread(store.read_report, start, end)
-    except UsageUnavailable:
+        report = await store.report(start, end)
+    except Exception as error:  # noqa: BLE001 - Usage reports are best effort.
+        logger.warning("api_usage.report_error exception_class=%s", type(error).__name__)
         status = "unavailable"
         totals = dict.fromkeys(PROVIDERS)
     else:

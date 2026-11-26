@@ -319,6 +319,7 @@ def test_pagination_completes_snapshot_and_uses_bounded_fixed_query(tmp_path, mo
     assert requests[0].url.params["sortby"] == "date_tm-value"
     assert requests[0].url.params["limit"] == "500"
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.ECCC_PAGE): 2}
 
 

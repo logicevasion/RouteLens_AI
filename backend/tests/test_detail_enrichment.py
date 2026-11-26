@@ -209,6 +209,7 @@ def test_same_host_http_to_https_redirect_is_allowed(tmp_path: Path, usage_store
     assert cached.from_cache
     assert requests[0].startswith("http://") and requests[1].startswith("https://")
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.ROAD_AHEAD_DETAIL): 2}
 
 

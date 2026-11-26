@@ -4,7 +4,7 @@
 
 - **Implementation checkout:** `feature/api-usage-controls`. Alpha-UX-1 (`ed955d1`) and Alpha-UX-2 (`9ff8482`) are accepted baseline work.
 - **Accepted corrections:** QAR-1 `d1bbcd4`, QAR-2 `45015aa`, USER-001 `b5dd20b`, USER-002 `40df498`, and Alpha-UX-1 `ed955d1` are accepted checkpoints.
-- **Current status:** Phases 1A–1D are human accepted. Phase 2A's audit is complete. The developer reported successful Phase 2B browser testing before the camera-count refinement. The refinement is ready for human review.
+- **Current status:** Phases 1A–1D are human accepted. Phase 2A's audit is complete. Phase 2B was committed and pushed at `3e15368`, passed manual browser testing, and received independent Claude Code acceptance with concerns. The reliability follow-up is ready for human review.
 - **Git control:** Human developers retain staging and Git history control. No staging, commit, push, reset, or history change was performed for this assignment.
 
 ## Phase 1 status
@@ -40,6 +40,8 @@ The app and CLI share `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DA
 **Routing endpoint migration.** The developer reproduced upstream HTTP 410 from the retired openrouteservice host. The same failure affected Phase 1. HeiGIT removed the old host on November 24, 2026. The adapter now uses `https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson` with the existing key, request payload, parser, timeout, usage accounting, and sanitized diagnostics. The 54 focused tests, all 510 backend tests, Ruff, and `git diff --check` passed offline. [Provider shutdown notice](https://ask.openrouteservice.org/t/url-api-openrouteservice-org-removed/8189)
 
 **Camera-count verification.** The public API and CLI were tested against the same temporary database. The 9 focused backend tests, all 511 backend tests, 14 focused frontend tests, all 15 frontend test files, Ruff, the production build, and `git diff --check` passed. The existing SQLite concurrency test failed on the first run alongside the frontend build and passed on the isolated rerun.
+
+**QA reliability follow-up.** The usage store now serializes SQLite work on one dedicated executor. Shutdown drains accepted writes and releases the worker. Ordinary hook and write exceptions log sanitized diagnostics and mark the date degraded. A failed report returns unavailable. The original probes lost 1 of 220 attempts and delayed unrelated default-executor work by 3.39 seconds under a SQLite lock. The corrected probes recorded 220 of 220 and measured no delay at their reporting precision. An independent two-process check recorded 40 of 40 increments. All 122 focused tests, 518 backend tests, Ruff, and `git diff --check` passed offline. Separate processes can still contend past the SQLite busy timeout. Phase 2C strict quotas will require separate atomic admission and increment logic.
 
 **Limits and verification.** Browser-side MapTiler resources and calls predating instrumentation have no counters. Counts reflect best-effort backend observations. An abrupt exit can lose pending writes and gap flags that have yet to reach SQLite. Phase 2C daily quotas remain a separate assignment. The initial Phase 2B verification passed 505 backend tests, Ruff, all 15 frontend test files, the TypeScript/Vite production build with its existing large-chunk advisory, and `git diff --check`. The CLI also ran against a temporary database. Verification used mocked providers and skipped real `.env` loading.
 
@@ -107,7 +109,7 @@ No external API or paid provider was used. QAR-1 was human accepted and committe
 
 ## Next action
 
-Review the camera-count refinement and complete independent QA before deciding on Phase 2B acceptance. Authorize Phase 2C separately.
+Review the QA reliability follow-up before deciding on Phase 2B acceptance. Authorize Phase 2C separately.
 
 ## Archive and integration-note references
 

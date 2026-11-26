@@ -310,6 +310,7 @@ def test_concurrent_gets_coalesce_refresh_and_never_fetch_image_bytes(tmp_path: 
     assert calls.count("opendata.vancouver.ca/api/explore/v2.1/catalog/datasets/web-cam-url-links/records") == 1
     assert all("cameraimages" not in call for call in calls)
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {
         (day, Operation.CAMERA_CATALOGUE): 1,
         (day, Operation.CAMERA_PAGE): 1,

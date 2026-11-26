@@ -369,6 +369,7 @@ def test_identical_snapshot_reuse_and_frame_change_invalidates(tmp_path, usage_s
     assert calls == 2 and not third.cache_reused
     assert first.observation.included_views[0].sha256 != third.observation.included_views[0].sha256
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.OPENROUTER_VISION): 2}
 
 

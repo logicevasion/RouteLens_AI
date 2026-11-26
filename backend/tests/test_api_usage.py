@@ -39,17 +39,70 @@ def rows_by_provider(payload):
     return {row["provider"]: (row["status"], row["attempts"]) for row in payload["providers"]}
 
 
-def test_creation_atomic_increments_and_persistence(usage_store):
+def test_concurrent_dispatch_increments_and_persistence(usage_store):
     path, day = usage_store.path, usage_store.today()
     assert not path.exists()
-    usage_store.record(Operation.ORS_DIRECTIONS, day)
-    # Use independent connections and store instances, as separate workers would.
-    with ThreadPoolExecutor(max_workers=8) as workers:
-        list(workers.map(lambda _: UsageStore(path).record(Operation.ORS_DIRECTIONS, day), range(80)))
+
+    async def run():
+        with observe_usage(usage_store):
+            async with httpx.AsyncClient(
+                transport=httpx.MockTransport(lambda _: httpx.Response(200)),
+                event_hooks=usage_hooks(Operation.CAMERA_PAGE),
+            ) as client:
+                responses = await asyncio.gather(
+                    *(client.get("https://example.invalid") for _ in range(220))
+                )
+        assert all(response.status_code == 200 for response in responses)
+        await usage_store.flush()
+
+    asyncio.run(run())
+    usage_store.close()
 
     report = UsageStore(path).read_report(day, day)
-    assert report.counts == {(day, Operation.ORS_DIRECTIONS): 81}
+    assert report.counts == {(day, Operation.CAMERA_PAGE): 220}
     assert not report.gaps
+
+
+def test_contended_accounting_leaves_the_default_executor_free(usage_store):
+    usage_store.initialize()
+
+    async def run():
+        asyncio.get_running_loop().set_default_executor(ThreadPoolExecutor(max_workers=1))
+        with closing(sqlite3.connect(usage_store.path)) as blocker:
+            blocker.execute("BEGIN IMMEDIATE")
+            for _ in range(12):
+                usage_store.count_dispatch(Operation.CAMERA_FRAME)
+            assert await asyncio.wait_for(asyncio.to_thread(lambda: "available"), 2) == "available"
+        await usage_store.flush()
+
+    asyncio.run(run())
+
+
+def test_shutdown_drains_pending_attempts(usage_store, monkeypatch):
+    release_write = Event()
+    original_record, original_close = usage_store.record, usage_store.close
+
+    def record(operation, day):
+        assert release_write.wait(5), "shutdown did not release the pending test write"
+        original_record(operation, day)
+
+    def close():
+        release_write.set()
+        original_close()
+
+    monkeypatch.setattr(usage_store, "record", record)
+    monkeypatch.setattr(usage_store, "close", close)
+
+    async def run():
+        async with running_api():
+            usage_store.count_dispatch(Operation.ECCC_PAGE)
+
+    asyncio.run(run())
+    day = usage_store.today()
+    assert release_write.is_set()
+    assert UsageStore(usage_store.path).read_report(day, day).counts == {
+        (day, Operation.ECCC_PAGE): 1
+    }
 
 
 def test_api_uses_utc_window_and_groups_all_providers(monkeypatch, usage_store):
@@ -211,6 +264,47 @@ def test_contended_write_does_not_gate_provider_and_gap_survives_recovery(
     assert reopened.read_report(*usage_store.window(30)).gaps == {usage_store.today()}
 
 
+@pytest.mark.parametrize("failure", ["hook", "record", "read"])
+def test_unexpected_accounting_failure_does_not_interrupt_provider(
+    usage_store, monkeypatch, caplog, failure,
+):
+    def fail(*_args):
+        raise TypeError("synthetic secret https://example.invalid/private?key=hidden")
+
+    method = {"hook": "count_dispatch", "record": "record", "read": "read_report"}[failure]
+    monkeypatch.setattr(usage_store, method, fail)
+    geocoder = geocoding.MapTilerGeocoder(
+        api_key="synthetic",
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, json={"type": "FeatureCollection", "features": []})
+        ),
+    )
+    monkeypatch.setattr(routes, "MapTilerGeocoder", lambda: geocoder)
+
+    async def run():
+        async with running_api() as client:
+            provider_response = await client.get("/api/geocoding/search", params={"q": "test"})
+            assert provider_response.status_code == 200 and provider_response.json() == []
+            return await client.get("/api/usage")
+
+    response = asyncio.run(run())
+    assert response.status_code == 200
+    if failure == "read":
+        assert response.json()["status"] == "unavailable"
+        assert rows_by_provider(response.json())["maptiler"] == ("unavailable", None)
+        assert "api_usage.report_error exception_class=TypeError" in caplog.messages
+    else:
+        assert response.json()["status"] == "degraded"
+        assert rows_by_provider(response.json())["maptiler"] == ("tracked", 0)
+        stage = "request_hook" if failure == "hook" else "record"
+        assert (
+            f"api_usage.{stage}_error operation=maptiler.geocoding exception_class=TypeError"
+            in caplog.messages
+        )
+    assert "synthetic secret" not in caplog.text
+    assert "example.invalid" not in caplog.text
+
+
 def test_pending_write_cannot_delay_dispatch_and_uses_date_at_dispatch(monkeypatch, usage_store):
     clock = [datetime(2026, 11, 25, 23, 59, tzinfo=timezone.utc)]
     store = UsageStore(usage_store.path, now=lambda: clock[0])
@@ -236,7 +330,10 @@ def test_pending_write_cannot_delay_dispatch_and_uses_date_at_dispatch(monkeypat
                 assert (await client.get("https://example.invalid")).status_code == 200
         await store.flush()
 
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        store.close()
     assert store.read_report(*store.window(30)).counts == {
         (date(2026, 11, 25), Operation.ECCC_PAGE): 1,
     }
@@ -255,6 +352,11 @@ def test_cli_uses_configured_database_and_is_read_only(tmp_path, monkeypatch, ca
     assert run() == 1
     assert "missing or unreadable" in capsys.readouterr().err
     assert not directory.exists()
+
+    directory.mkdir()
+    assert run() == 1
+    assert "missing or unreadable" in capsys.readouterr().err
+    assert list(directory.iterdir()) == []
 
     # Freeze the same default clock used by the executable, including its implicit window.
     class FrozenDateTime(datetime):

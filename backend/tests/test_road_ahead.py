@@ -177,6 +177,7 @@ def test_paginated_download_retrieves_every_page_and_validates_total(tmp_path, u
     assert all(status.success for status in result.source_statuses)
     assert len(result.events) == 2 * (PAGE_SIZE + 1)
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {
         (day, Operation.ROAD_AHEAD_CLOSURES): 2,
         (day, Operation.ROAD_AHEAD_CONSTRUCTION): 2,

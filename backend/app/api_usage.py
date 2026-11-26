@@ -8,6 +8,7 @@ import os
 import sqlite3
 from collections import Counter
 from collections.abc import Awaitable, Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -87,7 +88,7 @@ class UsageStore:
         self._now = now
         self._gap_dates: set[date] = set()
         self._gap_lock = Lock()
-        self._pending: set[asyncio.Future[None]] = set()
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="api-usage")
 
     def today(self) -> date:
         return self._now().astimezone(timezone.utc).date()
@@ -130,6 +131,17 @@ class UsageStore:
         with self._gap_lock:
             self._gap_dates.add(day)
 
+    async def start(self) -> None:
+        """Initialize without using the application's default executor."""
+        try:
+            await asyncio.wrap_future(self._executor.submit(self.initialize))
+        except Exception as error:  # noqa: BLE001 - Accounting must not prevent startup.
+            logger.warning("api_usage.initialize_error exception_class=%s", type(error).__name__)
+
+    def close(self) -> None:
+        """Drain accepted writes and release the worker."""
+        self._executor.shutdown(wait=True)
+
     def record(self, operation: Operation, day: date) -> None:
         """Atomically increment one daily row, using a short, bounded write."""
         with self._gap_lock:
@@ -161,23 +173,44 @@ class UsageStore:
         # outside provider deadlines, and cancellation of the request must not
         # cancel the accounting write for an already dispatched attempt.
         day = self.today()
-        loop = asyncio.get_running_loop()
         try:
-            future = loop.run_in_executor(None, self.record, operation, day)
-        except RuntimeError as error:
+            self._executor.submit(self._record_attempt, operation, day)
+        except Exception as error:  # noqa: BLE001 - Failed submissions must not stop dispatch.
+            self._hook_error(operation, error, day)
+
+    def _hook_error(
+        self, operation: Operation, error: Exception, day: date | None = None
+    ) -> None:
+        if day is None:
+            try:
+                day = self.today()
+            except Exception:  # noqa: BLE001 - Keep diagnostics available if the store clock fails.
+                day = utc_now().date()
+        self._record_gap(day)
+        logger.warning(
+            "api_usage.request_hook_error operation=%s exception_class=%s",
+            operation.value,
+            type(error).__name__,
+        )
+
+    def _record_attempt(self, operation: Operation, day: date) -> None:
+        try:
+            self.record(operation, day)
+        except Exception as error:  # noqa: BLE001 - Preserve a gap for unexpected write failures.
             self._record_gap(day)
             logger.warning(
-                "api_usage.request_hook_error operation=%s exception_class=%s",
+                "api_usage.record_error operation=%s exception_class=%s",
                 operation.value,
                 type(error).__name__,
             )
-            return
-        self._pending.add(future)
-        future.add_done_callback(self._pending.discard)
 
     async def flush(self) -> None:
-        """Wait for the attempts already submitted when a report or shutdown starts."""
-        await asyncio.gather(*(asyncio.shield(future) for future in self._pending))
+        """Wait for previously submitted writes on the single-worker executor."""
+        await asyncio.wrap_future(self._executor.submit(lambda: None))
+
+    async def report(self, start: date, end: date) -> UsageReport:
+        """Read after previously submitted writes on the same executor."""
+        return await asyncio.wrap_future(self._executor.submit(self.read_report, start, end))
 
     def read_report(self, start: date, end: date) -> UsageReport:
         """Read one snapshot of daily counts and gaps without creating the database."""
@@ -227,6 +260,9 @@ def usage_hooks(operation: Operation) -> dict[str, list[Callable[[object], Await
         return {}
 
     async def before_request(_request: object) -> None:
-        store.count_dispatch(operation)
+        try:
+            store.count_dispatch(operation)
+        except Exception as error:  # noqa: BLE001 - HTTPX propagates hook exceptions.
+            store._hook_error(operation, error)
 
     return {"request": [before_request]}

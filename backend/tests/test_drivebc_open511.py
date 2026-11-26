@@ -212,6 +212,7 @@ def test_documented_next_url_pagination_retrieves_every_page(tmp_path, usage_sto
     assert result.source_status.records_received == 5
     assert len(result.events) == 5
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.DRIVEBC_PAGE): 3}
 
 

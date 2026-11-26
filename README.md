@@ -109,6 +109,16 @@ You will need Python 3.10 or newer, Node.js with npm, and provider credentials f
 
    Open the local URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` requests to the backend at `http://localhost:8000`.
 
+## API usage reports
+
+The backend stores usage in `data/app/api-usage.sqlite3` by default. Set `ROUTELENS_DATA_DIR` in the process environment to use another persistent directory. Relative paths resolve from the repository root. Run the CLI with the same directory setting as the backend.
+
+```bash
+backend/.venv/bin/python backend/scripts/api_usage_report.py --days 30 --daily --operations
+```
+
+The command is read-only. `--days` selects the number of UTC dates including today and defaults to 30. `--daily` adds per-date totals, and `--operations` adds per-operation totals. The counts are best-effort observations of backend request attempts. Provider-account totals can differ.
+
 ## Data credits and licensing
 
 The application labels its evidence sources and displays the ECCC attribution. This README credits the providers below. When reusing data, follow the terms that apply to the specific dataset, API plan, and asset:

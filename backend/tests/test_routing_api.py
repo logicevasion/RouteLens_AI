@@ -139,7 +139,7 @@ def test_provider_failure_uses_machine_readable_safe_error(
     [
         ("upstream", "openrouteservice.upstream_http_error status=503"),
         ("transport", "openrouteservice.transport_error exception_class=ConnectError"),
-        ("usage_hook", "openrouteservice.usage_hook_error exception_class=ConnectError"),
+        ("usage_hook", "openrouteservice.upstream_http_error status=503"),
     ],
 )
 def test_routing_logs_the_failure_stage_without_exposing_request_details(
@@ -172,10 +172,17 @@ def test_routing_logs_the_failure_stage_without_exposing_request_details(
             "message": "Driving routes are temporarily unavailable.",
         },
     }
-    assert len(dispatches) == (0 if failure == "usage_hook" else 1)
+    assert len(dispatches) == 1
     records = [record for record in caplog.records if record.name == "app.routing"]
     assert [record.getMessage() for record in records] == [diagnostic]
     assert all(record.exc_info is None for record in records)
+    if failure == "usage_hook":
+        assert (
+            "api_usage.request_hook_error operation=openrouteservice.directions exception_class=ConnectError"
+            in caplog.messages
+        )
+        usage_store.initialize()
+        assert usage_store.read_report(*usage_store.window(30)).gaps == {usage_store.today()}
     assert "synthetic-secret" not in caplog.text
     assert "provider.invalid" not in caplog.text
 

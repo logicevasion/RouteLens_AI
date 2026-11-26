@@ -126,27 +126,20 @@ def test_request_uses_geojson_axis_order_profile_and_approved_alternative_parame
     assert body["alternative_routes"] == ALTERNATIVE_ROUTES
     assert REQUEST_TIMEOUT_SECONDS > 0
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.ORS_DIRECTIONS): 1}
     assert not any(record.name == "app.routing" for record in caplog.records)
 
 
-def test_executor_rejection_logs_hook_failure_and_still_returns_routes(
-    usage_store, monkeypatch, caplog,
-) -> None:
+def test_executor_rejection_logs_hook_failure_and_still_returns_routes(usage_store, caplog):
     router = OpenRouteServiceRouter(
         "synthetic-key", transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload()))
     )
 
-    async def run():
-        def reject_submission(*_args):
-            raise RuntimeError("synthetic-secret executor error")
-
-        with monkeypatch.context() as patch, observe_usage(usage_store):
-            patch.setattr(asyncio.get_running_loop(), "run_in_executor", reject_submission)
-            return await router.routes(*locations())
-
     usage_store.initialize()
-    routes = asyncio.run(run())
+    usage_store.close()
+    with observe_usage(usage_store):
+        routes = asyncio.run(router.routes(*locations()))
     assert len(routes) == 3
     report = usage_store.read_report(*usage_store.window(30))
     assert report.counts == {} and report.gaps == {usage_store.today()}
@@ -154,7 +147,6 @@ def test_executor_rejection_logs_hook_failure_and_still_returns_routes(
         "api_usage.request_hook_error operation=openrouteservice.directions exception_class=RuntimeError"
         in caplog.messages
     )
-    assert "synthetic-secret" not in caplog.text
 
 
 @pytest.mark.parametrize(

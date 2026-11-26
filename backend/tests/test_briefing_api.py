@@ -731,6 +731,7 @@ def test_duplicate_attempt_dispatches_only_once(tmp_path, usage_store):
     assert sorted(item.failure_code or "ok" for item in results) == ["duplicate_attempt", "ok"]
     assert len(json.loads(budget_path.read_text())["attempts"]) == 1
     day = usage_store.today()
+    asyncio.run(usage_store.flush())
     assert usage_store.read_report(day, day).counts == {(day, Operation.OPENROUTER_BRIEFING): 1}
 
 

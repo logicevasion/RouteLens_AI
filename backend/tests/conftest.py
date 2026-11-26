@@ -14,4 +14,7 @@ def usage_store(tmp_path, monkeypatch):
     now = datetime(2026, 11, 26, 12, tzinfo=timezone.utc)
     store = UsageStore(tmp_path / "usage" / "api-usage.sqlite3", now=lambda: now)
     monkeypatch.setattr(app.state, "usage", store)
-    return store
+    try:
+        yield store
+    finally:
+        store.close()
